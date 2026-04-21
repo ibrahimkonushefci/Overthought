@@ -1,0 +1,459 @@
+{
+  "version": 1,
+  "baseScore": 50,
+  "scoreClamp": {
+    "min": 0,
+    "max": 100
+  },
+  "caps": {
+    "maxPositiveEvidenceReduction": 45,
+    "maxWeakEvidenceIncrease": 45,
+    "maxContextModifierAdjustment": 10,
+    "maxApplicationsPerSignal": 1
+  },
+  "verdictBands": [
+    {
+      "min": 0,
+      "max": 20,
+      "label": "barely_delusional"
+    },
+    {
+      "min": 21,
+      "max": 40,
+      "label": "slight_reach"
+    },
+    {
+      "min": 41,
+      "max": 60,
+      "label": "mild_delusion"
+    },
+    {
+      "min": 61,
+      "max": 80,
+      "label": "dangerous_overthinking"
+    },
+    {
+      "min": 81,
+      "max": 100,
+      "label": "full_clown_territory"
+    }
+  ],
+  "signals": [
+    {
+      "id": "single_low_signal",
+      "type": "weak_evidence",
+      "defaultWeight": 16,
+      "categoryWeightOverrides": {
+        "social": 12
+      },
+      "patterns": [
+        "liked my story",
+        "viewed my story",
+        "liked my post",
+        "liked a post",
+        "watched my story",
+        "watched my highlights",
+        "reacted with an emoji",
+        "sent an emoji"
+      ]
+    },
+    {
+      "id": "delayed_reply",
+      "type": "weak_evidence",
+      "defaultWeight": 14,
+      "patterns": [
+        "replied after",
+        "answered late",
+        "took hours to reply",
+        "took all day to reply",
+        "replied after 8 hours",
+        "replied after 9 hours"
+      ]
+    },
+    {
+      "id": "vague_language",
+      "type": "weak_evidence",
+      "defaultWeight": 18,
+      "categoryWeightOverrides": {
+        "social": 14
+      },
+      "patterns": [
+        "maybe",
+        "sometime",
+        "we should hang out",
+        "haha",
+        "lol",
+        "sounds fun",
+        "one day"
+      ]
+    },
+    {
+      "id": "no_concrete_followup",
+      "type": "weak_evidence",
+      "defaultWeight": 22,
+      "patterns": [
+        "didn't make plans",
+        "did not make plans",
+        "never followed up",
+        "no date",
+        "no plan",
+        "didn't text again",
+        "did not text again"
+      ]
+    },
+    {
+      "id": "mixed_signals",
+      "type": "weak_evidence",
+      "defaultWeight": 20,
+      "patterns": [
+        "hot and cold",
+        "texts then ghosts",
+        "acts interested then disappears",
+        "sometimes flirty sometimes distant",
+        "mixed signals"
+      ]
+    },
+    {
+      "id": "assumption_without_action",
+      "type": "weak_evidence",
+      "defaultWeight": 12,
+      "patterns": [
+        "i think this means",
+        "this must mean",
+        "probably likes me",
+        "surely interested",
+        "maybe this is a sign"
+      ]
+    },
+    {
+      "id": "friendliness_misread_as_interest",
+      "type": "weak_evidence",
+      "defaultWeight": 15,
+      "categoryWeightOverrides": {
+        "friendship": 10
+      },
+      "patterns": [
+        "smiled at me",
+        "was nice to me",
+        "complimented me once",
+        "helped me",
+        "answered politely"
+      ]
+    },
+    {
+      "id": "social_media_overread",
+      "type": "weak_evidence",
+      "defaultWeight": 18,
+      "categoryWeightOverrides": {
+        "friendship": 14,
+        "social": 20
+      },
+      "patterns": [
+        "liked old photo",
+        "watched story twice",
+        "followed back quickly",
+        "close friends view"
+      ]
+    },
+    {
+      "id": "one_off_event",
+      "type": "weak_evidence",
+      "defaultWeight": 10,
+      "patterns": [
+        "once",
+        "one time",
+        "yesterday only",
+        "just this one thing"
+      ]
+    },
+    {
+      "id": "third_party_interpretation",
+      "type": "weak_evidence",
+      "defaultWeight": 8,
+      "patterns": [
+        "my friend says",
+        "everyone thinks",
+        "someone told me"
+      ]
+    },
+    {
+      "id": "direct_action",
+      "type": "positive_evidence",
+      "defaultWeight": -28,
+      "categoryWeightOverrides": {
+        "friendship": -18,
+        "social": -16
+      },
+      "patterns": [
+        "asked me out",
+        "made plans",
+        "picked a date",
+        "called me",
+        "invited me",
+        "followed up"
+      ]
+    },
+    {
+      "id": "consistent_effort",
+      "type": "positive_evidence",
+      "defaultWeight": -20,
+      "categoryWeightOverrides": {
+        "friendship": -14
+      },
+      "patterns": [
+        "texts every day",
+        "checks in often",
+        "keeps conversation going",
+        "followed up again",
+        "multiple times this week"
+      ]
+    },
+    {
+      "id": "specific_interest",
+      "type": "positive_evidence",
+      "defaultWeight": -16,
+      "patterns": [
+        "remembered details",
+        "asked personal questions",
+        "brought up future plans",
+        "made individual effort"
+      ]
+    },
+    {
+      "id": "clear_language",
+      "type": "positive_evidence",
+      "defaultWeight": -24,
+      "patterns": [
+        "i like you",
+        "let's meet friday",
+        "i want to see you",
+        "are you free this weekend"
+      ]
+    },
+    {
+      "id": "reciprocity",
+      "type": "positive_evidence",
+      "defaultWeight": -14,
+      "categoryWeightOverrides": {
+        "social": -10
+      },
+      "patterns": [
+        "matched effort",
+        "both initiate",
+        "conversation is balanced",
+        "replied quickly more than once"
+      ]
+    },
+    {
+      "id": "work_context",
+      "type": "context_modifier",
+      "defaultWeight": 10,
+      "patterns": [
+        "coworker",
+        "manager",
+        "client",
+        "colleague",
+        "project",
+        "work meeting"
+      ]
+    },
+    {
+      "id": "friend_group_context",
+      "type": "context_modifier",
+      "defaultWeight": 8,
+      "patterns": [
+        "group chat",
+        "same friend group",
+        "everyone was there",
+        "party group"
+      ]
+    },
+    {
+      "id": "existing_relationship_context",
+      "type": "context_modifier",
+      "defaultWeight": -10,
+      "patterns": [
+        "we already hang out often",
+        "we talk every day already",
+        "we are already close"
+      ]
+    },
+    {
+      "id": "update_strengthens_case",
+      "type": "context_modifier",
+      "defaultWeight": -12,
+      "patterns": [
+        "now they made plans",
+        "now they followed up",
+        "now they asked directly"
+      ]
+    },
+    {
+      "id": "update_weakens_case",
+      "type": "context_modifier",
+      "defaultWeight": 14,
+      "patterns": [
+        "turns out it was only about work",
+        "they stopped replying again",
+        "it was just friendliness"
+      ]
+    }
+  ],
+  "nextMoveTemplates": {
+    "81-100": [
+      "Wait for real action before taking this seriously.",
+      "Do not escalate based on crumbs alone.",
+      "Let them show consistency instead of building a theory now.",
+      "Pause the narrative and look for something concrete.",
+      "Treat this as weak evidence until they do something clearer.",
+      "Do not reward ambiguity with certainty.",
+      "Take one step back and wait for follow-through.",
+      "Assume less, observe more.",
+      "Stop filling in blanks they have not filled in themselves.",
+      "Let the next move come from them before you decide this is real."
+    ],
+    "61-80": [
+      "Look for follow-through, not just vibes.",
+      "Get a little more evidence before deciding what this means.",
+      "Do not over-interpret one signal by itself.",
+      "Stay curious, but do not lock in a conclusion yet.",
+      "Watch whether the behavior repeats in a clear way.",
+      "Keep expectations moderate until there is actual effort.",
+      "Respond normally, but do not build a big story around this yet.",
+      "Give the pattern a little more time before judging it.",
+      "See whether words turn into action.",
+      "Let consistency decide this, not one interesting moment."
+    ],
+    "41-60": [
+      "Stay neutral and watch the pattern.",
+      "Give it a little time and see what repeats.",
+      "Look for consistency before making a call.",
+      "Keep things light and let the situation reveal itself.",
+      "Respond naturally and see if the energy is matched.",
+      "Do not force a meaning yet, but do not dismiss it either.",
+      "Pay attention to whether the next signal is clearer.",
+      "Let the situation develop before choosing a side.",
+      "Keep expectations balanced and stay observant.",
+      "Notice whether effort increases, decreases, or stays vague."
+    ],
+    "21-40": [
+      "Proceed naturally, but keep expectations realistic.",
+      "Respond and see whether they match your energy.",
+      "This has some basis, but consistency still matters.",
+      "You can treat this as reasonably promising without overcommitting.",
+      "Stay normal and let the direct signals speak for themselves.",
+      "Engage, but keep reading the full pattern.",
+      "The evidence is decent, so there is no need to overthink every detail.",
+      "Keep it simple and see whether the effort continues.",
+      "This is one of the better signs, but follow-through still matters.",
+      "You can move forward without turning it into a fantasy."
+    ],
+    "0-20": [
+      "This looks reasonably supported, so respond normally.",
+      "The evidence is stronger than usual here.",
+      "You do not need to over-analyze this one as much.",
+      "Treat this like a real signal unless the pattern changes.",
+      "This is grounded enough that you can relax a bit.",
+      "The situation appears clear enough to drop the detective work.",
+      "Respond in a straightforward way and keep it moving.",
+      "This has enough clarity that overthinking would add more noise than value.",
+      "The signal looks concrete, so normal behavior is the best move.",
+      "You can take this more at face value than most cases."
+    ]
+  },
+  "dominantSignalOverrides": {
+    "no_concrete_followup": [
+      "Wait for an actual plan, not a vague maybe.",
+      "Without follow-up, the case stays weaker than it sounds.",
+      "If nothing concrete happens next, do not upgrade the meaning."
+    ],
+    "mixed_signals": [
+      "Do not judge this from the highs only. Watch the full pattern.",
+      "Mixed signals mean the average matters more than the best moments.",
+      "If the pattern is unstable, your conclusion should stay unstable too."
+    ],
+    "direct_action": [
+      "The signal is clear enough to respond normally instead of guessing.",
+      "Concrete action matters more than hints, and this counts as action.",
+      "When someone makes a real move, you do not need to over-interpret."
+    ],
+    "single_low_signal": [
+      "One tiny social signal is not enough to carry a full theory.",
+      "Treat this as a breadcrumb, not a conclusion.",
+      "A small interaction can be interesting without meaning much."
+    ],
+    "vague_language": [
+      "Vague wording is not the same as clear intent.",
+      "If the language stays soft and noncommittal, keep your read soft too.",
+      "Do not convert a maybe into a promise."
+    ],
+    "social_media_overread": [
+      "Social media activity is easy to overvalue, so keep this grounded.",
+      "Online signals can look louder than they really are.",
+      "Do not let app behavior outweigh real-world effort."
+    ],
+    "consistent_effort": [
+      "Consistency is one of the strongest signals in the app, and that helps this case.",
+      "Repeated effort carries more weight than one exciting moment.",
+      "Consistency makes this easier to treat as real."
+    ],
+    "delayed_reply": [
+      "A delayed reply by itself does not justify a big emotional reading.",
+      "Slow replies weaken the case unless stronger signals offset them.",
+      "Timing matters, and delay usually lowers confidence."
+    ]
+  },
+  "explanationTemplates": {
+    "high": [
+      "This is leaning delusional because the evidence is thin and the follow-through is weak.",
+      "Most of the case is built on crumbs rather than clear effort.",
+      "There is not enough solid action here to support the conclusion yet.",
+      "The interpretation is doing more work than the actual evidence.",
+      "This looks like over-reading small signals without enough concrete follow-up.",
+      "The clues are weak, vague, or one-sided, which makes this a stretch right now.",
+      "Right now the theory is stronger than the facts.",
+      "There are hints, but not enough substance to justify the confidence level.",
+      "This feels more like pattern-inventing than pattern-recognition.",
+      "The signal is too small and too isolated to carry this conclusion.",
+      "Too much of this rests on vibes and not enough on direct effort.",
+      "The evidence here is flimsy, and the gap is being filled with hope.",
+      "This is mostly suggestive, not persuasive.",
+      "The case is being propped up by ambiguity instead of clarity.",
+      "Nothing here clearly supports the leap being made."
+    ],
+    "mid": [
+      "There is something here, but not enough to call it solid yet.",
+      "The situation has a little substance, but the pattern is still mixed.",
+      "This is not baseless, but it is also not strong enough to feel settled.",
+      "There are a few real signals here, but they are not decisive yet.",
+      "This could go either way, so it is better to stay neutral for now.",
+      "There is some basis for the read, but not enough to be fully confident.",
+      "The evidence is neither empty nor strong, which keeps this in the gray zone.",
+      "There is a little momentum here, but it still needs clearer follow-through.",
+      "The read is understandable, but the overall pattern is still incomplete.",
+      "This is plausible, just not proven.",
+      "There are enough signals to pay attention, but not enough to call it clear.",
+      "The case has some foundation, but the ambiguity has not gone away.",
+      "This is not pure delusion, but it still needs more evidence to feel real.",
+      "There is just enough here to keep watching, not enough to conclude.",
+      "The situation has potential, but the proof is still developing."
+    ],
+    "low": [
+      "This looks more grounded than delusional.",
+      "There is actual effort or direct action here, which makes this stronger than a random signal.",
+      "This has more substance than the average overthinking case.",
+      "The read seems reasonably supported by real behavior.",
+      "There is enough directness here that you do not need to invent extra meaning.",
+      "This is one of the clearer cases, not one built on scraps.",
+      "The evidence is concrete enough to treat this as plausible.",
+      "This looks supported by follow-through, not just surface-level hints.",
+      "There is a real pattern here, and it is doing most of the work.",
+      "The conclusion looks proportionate to the evidence.",
+      "This is more reality-based than imagination-based.",
+      "There is enough mutuality or directness here to lower the clown risk.",
+      "The behavior described gives this a stronger footing than usual.",
+      "This looks like an actual signal, not just a hopeful read.",
+      "The evidence is solid enough that you can respond normally without over-analyzing it."
+    ]
+  }
+}
