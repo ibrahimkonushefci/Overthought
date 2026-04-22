@@ -27,7 +27,7 @@ export interface CaseAnalysisInput {
 export interface VerdictBand {
   min: number;
   max: number;
-  label: string;
+  label: VerdictLabel;
 }
 
 export interface ScoreClamp {
@@ -83,7 +83,7 @@ export interface AnalysisDebugInfo {
 }
 
 export interface CaseAnalysisResult {
-  verdictLabel: string;
+  verdictLabel: VerdictLabel;
   delusionScore: number;
   explanationText: string;
   nextMoveText: string;

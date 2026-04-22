@@ -127,6 +127,7 @@ export function analyzeCase(
     delusionScore,
     explanationText,
     nextMoveText,
+    verdictVersion: config.version,
     triggeredSignals: matchedSignals.map((signal) => signal.id),
     confidenceLevel,
   };

@@ -97,4 +97,4 @@ export function assertValidVerdictConfig(value: unknown): asserts value is Verdi
 
 assertValidVerdictConfig(rawConfig);
 
-export const verdictConfig: VerdictEngineConfig = rawConfig;
+export const verdictConfig: VerdictEngineConfig = rawConfig as VerdictEngineConfig;
