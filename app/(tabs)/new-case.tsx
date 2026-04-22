@@ -9,7 +9,7 @@ import { CategoryPill } from '../../src/features/cases/components/CategoryPill';
 import { Button } from '../../src/shared/ui/Button';
 import { AppText } from '../../src/shared/ui/Text';
 import { Screen } from '../../src/shared/ui/Screen';
-import { colors, radii, spacing } from '../../src/shared/theme/tokens';
+import { colors, radii, spacing, typography } from '../../src/shared/theme/tokens';
 import { useGuestStore } from '../../src/store/guestStore';
 
 const categories: CaseCategory[] = ['romance', 'friendship', 'social', 'general'];
@@ -53,7 +53,7 @@ export default function NewCaseRoute() {
     <Screen>
       <View style={styles.topRow}>
         <Pressable accessibilityRole="button" onPress={() => router.back()} style={styles.backButton}>
-          <ArrowLeft color={colors.text.primary} size={22} />
+          <ArrowLeft color={colors.text.primary} size={20} />
         </Pressable>
         <AppText variant="eyebrow">New case</AppText>
         <View style={styles.backButtonPlaceholder} />
@@ -71,6 +71,7 @@ export default function NewCaseRoute() {
             key={item}
             category={item}
             selected={item === category}
+            mode="category"
             onPress={() => {
               setCategory(item);
               setPreferredCategory(item);
@@ -113,7 +114,7 @@ export default function NewCaseRoute() {
             }}
             style={styles.example}
           >
-            <AppText variant="body" color={colors.text.secondary}>
+            <AppText variant="body" color={colors.text.secondary} style={styles.exampleText}>
               "{item}"
             </AppText>
           </Pressable>
@@ -138,30 +139,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: spacing.xl,
+    marginBottom: spacing.lg,
   },
   backButton: {
     alignItems: 'center',
     backgroundColor: colors.bg.surface,
     borderColor: colors.ui.border,
-    borderRadius: 16,
+    borderRadius: 14,
     borderWidth: 1,
-    height: 46,
+    height: 40,
     justifyContent: 'center',
-    width: 46,
+    width: 40,
   },
   backButtonPlaceholder: {
-    height: 46,
-    width: 46,
+    height: 40,
+    width: 40,
   },
   script: {
-    fontFamily: 'Georgia',
-    fontStyle: 'italic',
-    fontWeight: '400',
+    fontFamily: typography.family.editorial,
   },
   subtitle: {
     marginTop: spacing.md,
-    fontWeight: '400',
+    fontFamily: typography.family.body,
+    fontSize: 14,
   },
   categoryRow: {
     flexDirection: 'row',
@@ -181,8 +181,8 @@ const styles = StyleSheet.create({
   input: {
     color: colors.text.primary,
     flex: 1,
+    fontFamily: typography.family.bodyMedium,
     fontSize: 15,
-    fontWeight: '500',
     lineHeight: 22,
     minHeight: 102,
   },
@@ -193,6 +193,8 @@ const styles = StyleSheet.create({
   examplesTitle: {
     marginTop: spacing.xl,
     marginBottom: spacing.md,
+    fontSize: 10,
+    letterSpacing: 1.8,
   },
   examples: {
     gap: spacing.sm,
@@ -202,6 +204,11 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
+  },
+  exampleText: {
+    fontFamily: typography.family.body,
+    fontSize: 13,
+    lineHeight: 18,
   },
   submitWrap: {
     marginTop: spacing.xl,

@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { ArrowRight, BarChart3, Inbox } from 'lucide-react-native';
+import { ArrowRight, BarChart3 } from 'lucide-react-native';
 import { AppText } from '../../src/shared/ui/Text';
 import { Screen } from '../../src/shared/ui/Screen';
 import { Card } from '../../src/shared/ui/Card';
@@ -9,7 +9,7 @@ import { CaseCard } from '../../src/features/cases/components/CaseCard';
 import { HeroActionCard } from '../../src/features/cases/components/HeroActionCard';
 import { useCases } from '../../src/features/cases/services/useCases';
 import { useAuthStore } from '../../src/store/authStore';
-import { colors, spacing } from '../../src/shared/theme/tokens';
+import { colors, spacing, typography } from '../../src/shared/theme/tokens';
 
 export default function HomeRoute() {
   const router = useRouter();
@@ -52,7 +52,7 @@ export default function HomeRoute() {
       </View>
 
       <View style={styles.sectionHeader}>
-        <AppText variant="title">Recent cases</AppText>
+        <AppText variant="title" style={styles.sectionTitle}>Recent cases</AppText>
         {cases.length > 0 ? (
           <Pressable accessibilityRole="button" onPress={() => router.push('/cases')} style={styles.seeAll}>
             <AppText variant="body" color={colors.text.secondary} style={styles.seeAllText}>See all</AppText>
@@ -68,7 +68,7 @@ export default function HomeRoute() {
           ))}
         </View>
       ) : (
-        <EmptyState title="No cases yet." body="Start your first one above." icon={Inbox} />
+        <EmptyState title="No cases yet." body="Start your first one above." emoji="🫧" />
       )}
 
       {sessionMode === 'guest' ? (
@@ -86,12 +86,10 @@ export default function HomeRoute() {
 const styles = StyleSheet.create({
   header: {
     gap: spacing.sm,
-    marginBottom: spacing.xl,
+    marginBottom: spacing.lg,
   },
   script: {
-    fontFamily: 'Georgia',
-    fontStyle: 'italic',
-    fontWeight: '400',
+    fontFamily: typography.family.editorial,
   },
   faceButton: {
     alignItems: 'center',
@@ -130,9 +128,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   statSuffix: {
+    fontFamily: typography.family.displayMedium,
     fontSize: 15,
     lineHeight: 19,
-    fontWeight: '500',
+  },
+  sectionTitle: {
+    fontFamily: typography.family.displaySemiBold,
+    fontSize: 17,
+    lineHeight: 21,
   },
   sectionHeader: {
     alignItems: 'center',
@@ -147,14 +150,16 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   seeAllText: {
-    fontWeight: '400',
+    fontFamily: typography.family.body,
+    fontSize: 14,
   },
   list: {
     gap: spacing.md,
   },
   guestNote: {
     marginTop: spacing.xl,
-    fontWeight: '400',
+    fontFamily: typography.family.body,
+    fontSize: 12,
   },
   footerIcon: {
     height: 1,

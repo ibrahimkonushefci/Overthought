@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import type { TextProps as NativeTextProps, TextStyle } from 'react-native';
+import type { StyleProp, TextProps as NativeTextProps, TextStyle } from 'react-native';
 import { StyleSheet, Text as NativeText } from 'react-native';
 import { colors, typography } from '../theme/tokens';
 
@@ -10,7 +10,7 @@ interface TextProps extends NativeTextProps {
   variant?: TextVariant;
   color?: string;
   center?: boolean;
-  style?: TextStyle | TextStyle[];
+  style?: StyleProp<TextStyle>;
 }
 
 export function AppText({
@@ -40,45 +40,43 @@ export function AppText({
 const styles = StyleSheet.create({
   base: {
     color: colors.text.primary,
-    fontFamily: typography.family.regular,
+    fontFamily: typography.family.body,
   },
   eyebrow: {
     color: colors.text.secondary,
     fontSize: typography.size.sm,
-    fontWeight: '700',
-    letterSpacing: 0,
+    fontFamily: typography.family.displaySemiBold,
+    letterSpacing: 1.8,
     textTransform: 'uppercase',
   },
   display: {
-    fontFamily: typography.family.display,
+    fontFamily: typography.family.displayBold,
     fontSize: typography.size.display,
-    lineHeight: 40,
-    fontWeight: '800',
+    lineHeight: 35,
     letterSpacing: 0,
   },
   title: {
-    fontFamily: typography.family.display,
+    fontFamily: typography.family.displaySemiBold,
     fontSize: typography.size.xl,
     lineHeight: 26,
-    fontWeight: '700',
     letterSpacing: 0,
   },
   subtitle: {
     color: colors.text.secondary,
     fontSize: typography.size.lg,
     lineHeight: 21,
-    fontWeight: '400',
+    fontFamily: typography.family.body,
   },
   body: {
     fontSize: typography.size.md,
     lineHeight: 20,
-    fontWeight: '400',
+    fontFamily: typography.family.body,
   },
   meta: {
     color: colors.text.secondary,
     fontSize: typography.size.sm,
     lineHeight: 17,
-    fontWeight: '600',
+    fontFamily: typography.family.bodyMedium,
   },
   center: {
     textAlign: 'center',

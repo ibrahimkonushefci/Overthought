@@ -3,8 +3,8 @@ import { useRouter } from 'expo-router';
 import type { CaseEntity } from '../types';
 import { getCaseId } from '../types';
 import { AppText } from '../../../shared/ui/Text';
-import { colors, radii, spacing } from '../../../shared/theme/tokens';
-import { categoryIcons, categoryLabels, scoreToneBackground, scoreColor, verdictLabels } from '../../../shared/utils/verdict';
+import { colors, radii, spacing, typography } from '../../../shared/theme/tokens';
+import { categoryIcons, categoryLabels, scoreToneBackground, scoreColor, verdictIcons, verdictLabels } from '../../../shared/utils/verdict';
 import { relativeTime } from '../../../shared/utils/date';
 
 interface CaseCardProps {
@@ -22,10 +22,10 @@ export function CaseCard({ item }: CaseCardProps) {
       style={({ pressed }) => [styles.card, pressed && styles.pressed]}
     >
       <View style={[styles.scoreBox, { backgroundColor: scoreToneBackground(item.delusionScore) }]}>
-        <AppText variant="title" color={scoreColor(item.delusionScore)} center>
+        <AppText variant="title" color={scoreColor(item.delusionScore)} center style={styles.scoreNumber}>
           {item.delusionScore}
         </AppText>
-        <AppText variant="eyebrow" color={scoreColor(item.delusionScore)} center>
+        <AppText variant="eyebrow" color={scoreColor(item.delusionScore)} center style={styles.scoreLabel}>
           Score
         </AppText>
       </View>
@@ -37,7 +37,7 @@ export function CaseCard({ item }: CaseCardProps) {
           {item.title ?? item.inputText}
         </AppText>
         <AppText variant="body" style={styles.verdict} numberOfLines={1}>
-          {verdictLabels[item.verdictLabel]}
+          {verdictIcons[item.verdictLabel]} {verdictLabels[item.verdictLabel]}
         </AppText>
       </View>
     </Pressable>
@@ -52,8 +52,8 @@ const styles = StyleSheet.create({
     borderRadius: radii.lg,
     borderWidth: 1,
     flexDirection: 'row',
-    gap: spacing.md,
-    minHeight: 82,
+    gap: spacing.sm,
+    minHeight: 74,
     padding: spacing.md,
   },
   pressed: {
@@ -61,23 +61,34 @@ const styles = StyleSheet.create({
   },
   scoreBox: {
     alignItems: 'center',
-    borderRadius: 16,
-    height: 56,
+    borderRadius: 14,
+    height: 52,
     justifyContent: 'center',
-    width: 56,
+    width: 52,
+  },
+  scoreNumber: {
+    fontFamily: typography.family.displayBold,
+    fontSize: 21,
+    lineHeight: 23,
+  },
+  scoreLabel: {
+    fontFamily: typography.family.displaySemiBold,
+    fontSize: 8,
+    letterSpacing: 0.8,
+    lineHeight: 10,
   },
   body: {
     flex: 1,
-    gap: spacing.xs,
+    gap: 2,
   },
   title: {
     fontSize: 14,
     lineHeight: 18,
-    fontWeight: '700',
+    fontFamily: typography.family.bodyMedium,
   },
   verdict: {
-    fontSize: 14,
-    lineHeight: 18,
-    fontWeight: '800',
+    fontFamily: typography.family.displaySemiBold,
+    fontSize: 12,
+    lineHeight: 16,
   },
 });

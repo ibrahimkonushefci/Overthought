@@ -8,7 +8,7 @@ import { Screen } from '../../../../src/shared/ui/Screen';
 import { AppText } from '../../../../src/shared/ui/Text';
 import { Button } from '../../../../src/shared/ui/Button';
 import { Card } from '../../../../src/shared/ui/Card';
-import { colors, radii, spacing } from '../../../../src/shared/theme/tokens';
+import { colors, radii, spacing, typography } from '../../../../src/shared/theme/tokens';
 
 export default function DeleteAccountRoute() {
   const router = useRouter();
@@ -41,7 +41,7 @@ export default function DeleteAccountRoute() {
     <Screen>
       <View style={styles.topRow}>
         <Pressable accessibilityRole="button" onPress={() => router.back()} style={styles.backButton}>
-          <ArrowLeft color={colors.text.primary} size={22} />
+          <ArrowLeft color={colors.text.primary} size={20} />
         </Pressable>
       </View>
       <AppText variant="display">
@@ -72,22 +72,20 @@ const styles = StyleSheet.create({
   topRow: {
     alignItems: 'center',
     flexDirection: 'row',
-    marginBottom: spacing.xl,
+    marginBottom: spacing.lg,
   },
   backButton: {
     alignItems: 'center',
     backgroundColor: colors.bg.surface,
     borderColor: colors.ui.border,
-    borderRadius: 16,
+    borderRadius: 14,
     borderWidth: 1,
-    height: 46,
+    height: 40,
     justifyContent: 'center',
-    width: 46,
+    width: 40,
   },
   script: {
-    fontFamily: 'Georgia',
-    fontStyle: 'italic',
-    fontWeight: '400',
+    fontFamily: typography.family.editorial,
   },
   body: {
     marginTop: spacing.md,

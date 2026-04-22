@@ -2,7 +2,7 @@ import { StyleSheet, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AppText } from '../../../shared/ui/Text';
-import { colors, gradients, radii, shadows, spacing } from '../../../shared/theme/tokens';
+import { colors, gradients, radii, shadows, spacing, typography } from '../../../shared/theme/tokens';
 import { scoreColor, verdictIcons, verdictLabels } from '../../../shared/utils/verdict';
 import type { VerdictLabel } from '../../../types/shared';
 
@@ -13,7 +13,7 @@ interface ScorePanelProps {
 
 export function ScorePanel({ score, verdictLabel }: ScorePanelProps) {
   const stroke = scoreColor(score);
-  const circumference = 2 * Math.PI * 72;
+  const circumference = 2 * Math.PI * 91;
   const offset = circumference - (score / 100) * circumference;
 
   return (
@@ -25,20 +25,20 @@ export function ScorePanel({ score, verdictLabel }: ScorePanelProps) {
         {verdictLabels[verdictLabel]}
       </AppText>
       <View style={styles.ringWrap}>
-        <Svg width={190} height={190} viewBox="0 0 190 190">
-          <Circle cx="95" cy="95" r="72" stroke={colors.bg.muted} strokeWidth="22" fill="none" />
+        <Svg width={200} height={200} viewBox="0 0 200 200">
+          <Circle cx="100" cy="100" r="91" stroke={colors.bg.muted} strokeWidth="18" fill="none" />
           <Circle
-            cx="95"
-            cy="95"
-            r="72"
+            cx="100"
+            cy="100"
+            r="91"
             stroke={stroke}
-            strokeWidth="22"
+            strokeWidth="18"
             fill="none"
             strokeLinecap="round"
             strokeDasharray={`${circumference} ${circumference}`}
             strokeDashoffset={offset}
             rotation="-90"
-            origin="95, 95"
+            origin="100, 100"
           />
         </Svg>
         <View style={styles.center}>
@@ -59,10 +59,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.bg.surface,
     borderColor: colors.brand.ink,
-    borderRadius: radii.xl,
+    borderRadius: radii.signature,
     borderWidth: 2,
-    gap: spacing.md,
-    padding: spacing.lg,
+    gap: spacing.lg,
+    marginBottom: spacing.xl,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xxl,
+    paddingBottom: spacing.xl,
     ...shadows.hard,
   },
   icon: {
@@ -70,19 +73,20 @@ const styles = StyleSheet.create({
     lineHeight: 30,
   },
   verdict: {
-    fontSize: 29,
-    lineHeight: 34,
-    fontWeight: '800',
+    fontFamily: typography.family.displaySemiBold,
+    fontSize: 31,
+    lineHeight: 35,
   },
   ringWrap: {
     alignItems: 'center',
-    height: 190,
+    height: 200,
     justifyContent: 'center',
-    width: 190,
+    width: 200,
   },
   score: {
-    fontSize: 50,
-    lineHeight: 54,
+    fontFamily: typography.family.displayBold,
+    fontSize: 56,
+    lineHeight: 60,
   },
   center: {
     alignItems: 'center',

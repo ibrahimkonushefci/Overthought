@@ -62,17 +62,23 @@ export const spacing = {
 
 export const radii = {
   sm: 12,
-  md: 18,
-  lg: 24,
-  xl: 32,
+  md: 16,
+  lg: 20,
+  xl: 28,
+  signature: 32,
   pill: 999,
 } as const;
 
 export const typography = {
   family: {
-    regular: 'System',
-    display: 'Avenir Next',
-    editorial: 'Georgia',
+    body: 'FamiljenGrotesk_400Regular',
+    bodyMedium: 'FamiljenGrotesk_500Medium',
+    bodySemiBold: 'FamiljenGrotesk_600SemiBold',
+    displayRegular: 'SpaceGrotesk_400Regular',
+    displayMedium: 'SpaceGrotesk_500Medium',
+    displaySemiBold: 'SpaceGrotesk_600SemiBold',
+    displayBold: 'SpaceGrotesk_700Bold',
+    editorial: 'InstrumentSerif_400Regular_Italic',
   },
   size: {
     xs: 10,
@@ -81,17 +87,24 @@ export const typography = {
     lg: 15,
     xl: 21,
     xxl: 32,
-    display: 36,
+    display: 32,
   },
 } as const;
 
 export const shadows = {
   hard: {
     shadowColor: colors.brand.ink,
-    shadowOffset: { width: 0, height: 9 },
+    shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 1,
     shadowRadius: 0,
-    elevation: 9,
+    elevation: 8,
+  },
+  hardSmall: {
+    shadowColor: colors.brand.ink,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 0,
+    elevation: 4,
   },
   soft: {
     shadowColor: colors.brand.ink,

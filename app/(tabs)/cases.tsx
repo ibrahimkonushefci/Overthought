@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { StyleSheet, TextInput, View } from 'react-native';
+import { ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Archive, Search } from 'lucide-react-native';
 import type { CaseCategory } from '../../src/types/shared';
@@ -9,7 +9,7 @@ import { EmptyState } from '../../src/shared/ui/EmptyState';
 import { CaseCard } from '../../src/features/cases/components/CaseCard';
 import { CategoryPill } from '../../src/features/cases/components/CategoryPill';
 import { useCases } from '../../src/features/cases/services/useCases';
-import { colors, radii, spacing } from '../../src/shared/theme/tokens';
+import { colors, radii, spacing, typography } from '../../src/shared/theme/tokens';
 
 type Filter = CaseCategory | 'all';
 const filters: Filter[] = ['all', 'romance', 'friendship', 'social', 'general'];
@@ -53,11 +53,16 @@ export default function CasesRoute() {
         />
       </View>
 
-      <View style={styles.filterRow}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.filterRow}
+        style={styles.filterScroller}
+      >
         {filters.map((item) => (
           <CategoryPill key={item} category={item} selected={filter === item} onPress={() => setFilter(item)} />
         ))}
-      </View>
+      </ScrollView>
 
       {visibleCases.length > 0 ? (
         <View style={styles.list}>
@@ -69,7 +74,7 @@ export default function CasesRoute() {
         <EmptyState
           title="Your archive is suspiciously empty."
           body="Add your first case to get started."
-          emoji="📫"
+          emoji="📭"
           icon={Archive}
           actionLabel="Create a case"
           onAction={() => router.push('/new-case')}
@@ -82,12 +87,10 @@ export default function CasesRoute() {
 const styles = StyleSheet.create({
   header: {
     gap: spacing.sm,
-    marginBottom: spacing.xl,
+    marginBottom: spacing.lg,
   },
   script: {
-    fontFamily: 'Georgia',
-    fontStyle: 'italic',
-    fontWeight: '400',
+    fontFamily: typography.family.editorial,
   },
   search: {
     alignItems: 'center',
@@ -103,14 +106,22 @@ const styles = StyleSheet.create({
   searchInput: {
     color: colors.text.primary,
     flex: 1,
+    fontFamily: typography.family.bodyMedium,
     fontSize: 15,
-    fontWeight: '600',
+  },
+  filterScroller: {
+    flexGrow: 0,
+    height: 32,
+    marginBottom: spacing.lg,
+    marginTop: spacing.lg,
+    maxHeight: 32,
+    overflow: 'visible',
   },
   filterRow: {
+    alignItems: 'center',
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: spacing.sm,
-    marginVertical: spacing.lg,
+    paddingRight: spacing.xl,
   },
   list: {
     gap: spacing.md,

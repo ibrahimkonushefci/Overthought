@@ -8,7 +8,7 @@ import type { CaseEntity } from '../../../../src/features/cases/types';
 import { Screen } from '../../../../src/shared/ui/Screen';
 import { AppText } from '../../../../src/shared/ui/Text';
 import { Button } from '../../../../src/shared/ui/Button';
-import { colors, radii, spacing } from '../../../../src/shared/theme/tokens';
+import { colors, radii, spacing, typography } from '../../../../src/shared/theme/tokens';
 import { useGuestStore } from '../../../../src/store/guestStore';
 
 export default function AddUpdateRoute() {
@@ -47,7 +47,7 @@ export default function AddUpdateRoute() {
     <Screen>
       <View style={styles.topRow}>
         <Pressable accessibilityRole="button" onPress={() => router.back()} style={styles.backButton}>
-          <ArrowLeft color={colors.text.primary} size={22} />
+          <ArrowLeft color={colors.text.primary} size={20} />
         </Pressable>
         <AppText variant="eyebrow">Add update</AppText>
         <View style={styles.backButtonPlaceholder} />
@@ -99,26 +99,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: spacing.xl,
+    marginBottom: spacing.lg,
   },
   backButton: {
     alignItems: 'center',
     backgroundColor: colors.bg.surface,
     borderColor: colors.ui.border,
-    borderRadius: 16,
+    borderRadius: 14,
     borderWidth: 1,
-    height: 46,
+    height: 40,
     justifyContent: 'center',
-    width: 46,
+    width: 40,
   },
   backButtonPlaceholder: {
-    height: 46,
-    width: 46,
+    height: 40,
+    width: 40,
   },
   script: {
-    fontFamily: 'Georgia',
-    fontStyle: 'italic',
-    fontWeight: '400',
+    fontFamily: typography.family.editorial,
   },
   subtitle: {
     marginTop: spacing.md,
@@ -135,8 +133,8 @@ const styles = StyleSheet.create({
   input: {
     color: colors.text.primary,
     flex: 1,
+    fontFamily: typography.family.bodyMedium,
     fontSize: 15,
-    fontWeight: '700',
     lineHeight: 22,
     minHeight: 102,
   },

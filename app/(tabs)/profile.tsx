@@ -12,7 +12,7 @@ import { Button } from '../../src/shared/ui/Button';
 import { Card } from '../../src/shared/ui/Card';
 import { useAuthStore } from '../../src/store/authStore';
 import { useCases } from '../../src/features/cases/services/useCases';
-import { colors, gradients, radii, shadows, spacing } from '../../src/shared/theme/tokens';
+import { colors, gradients, radii, shadows, spacing, typography } from '../../src/shared/theme/tokens';
 
 export default function ProfileRoute() {
   const router = useRouter();
@@ -38,7 +38,7 @@ export default function ProfileRoute() {
         <View style={styles.accountRow}>
           <View style={styles.avatar}>
             <AppText variant="title" color={colors.accent.lime} style={styles.avatarText}>
-              :)
+              ☹
             </AppText>
           </View>
           <View style={styles.accountCopy}>
@@ -87,7 +87,9 @@ export default function ProfileRoute() {
         <SettingsRow icon={Shield} title="Privacy" />
         <SettingsRow icon={FileText} title="Terms and policies" />
         <Pressable accessibilityRole="button" onPress={() => void restore()} style={styles.row}>
-          <Crown color={colors.text.secondary} size={20} />
+          <View style={styles.settingIcon}>
+            <Crown color={colors.text.secondary} size={17} />
+          </View>
           <AppText variant="body" style={styles.rowTitle}>
             Restore purchases
           </AppText>
@@ -103,7 +105,7 @@ export default function ProfileRoute() {
       />
 
       <AppText variant="meta" center style={styles.footer}>
-        Overthought · v0.1 · Made with concern
+        Overthought · v0.1 · Made with ❤️ and concerning questions
       </AppText>
     </Screen>
   );
@@ -120,7 +122,9 @@ function SettingsRow({
 }) {
   return (
     <View style={styles.row}>
-      <Icon color={colors.text.secondary} size={20} />
+      <View style={styles.settingIcon}>
+        <Icon color={colors.text.secondary} size={17} />
+      </View>
       <AppText variant="body" style={styles.rowTitle}>
         {title}
       </AppText>
@@ -133,12 +137,10 @@ function SettingsRow({
 const styles = StyleSheet.create({
   header: {
     gap: spacing.sm,
-    marginBottom: spacing.xl,
+    marginBottom: spacing.lg,
   },
   script: {
-    fontFamily: 'Georgia',
-    fontStyle: 'italic',
-    fontWeight: '400',
+    fontFamily: typography.family.editorial,
   },
   accountRow: {
     alignItems: 'center',
@@ -148,10 +150,10 @@ const styles = StyleSheet.create({
   avatar: {
     alignItems: 'center',
     backgroundColor: colors.brand.ink,
-    borderRadius: 16,
-    height: 50,
+    borderRadius: 14,
+    height: 48,
     justifyContent: 'center',
-    width: 50,
+    width: 48,
   },
   avatarText: {
     color: colors.accent.orange,
@@ -163,16 +165,17 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   accountTitle: {
-    fontSize: 20,
-    lineHeight: 24,
-    fontWeight: '800',
+    fontFamily: typography.family.displaySemiBold,
+    fontSize: 18,
+    lineHeight: 22,
   },
   accountSubtitle: {
+    fontFamily: typography.family.body,
     fontSize: 14,
     lineHeight: 19,
   },
   signInButton: {
-    width: 92,
+    width: 100,
   },
   signInPill: {
     alignItems: 'center',
@@ -181,11 +184,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.xs,
     justifyContent: 'center',
-    minHeight: 38,
+    minHeight: 36,
     paddingHorizontal: spacing.md,
   },
   signInText: {
-    fontWeight: '600',
+    fontFamily: typography.family.displaySemiBold,
+    fontSize: 13,
   },
   premium: {
     borderColor: colors.brand.ink,
@@ -193,8 +197,8 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     marginTop: spacing.xl,
     gap: spacing.sm,
-    minHeight: 188,
-    padding: spacing.lg,
+    minHeight: 218,
+    padding: 24,
     ...shadows.hard,
   },
   badge: {
@@ -208,14 +212,15 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
   },
   premiumTitle: {
+    fontFamily: typography.family.displayBold,
     fontSize: 26,
     lineHeight: 31,
-    fontWeight: '800',
     marginTop: 0,
   },
   premiumSubtitle: {
-    fontSize: 15,
-    lineHeight: 21,
+    fontFamily: typography.family.body,
+    fontSize: 14,
+    lineHeight: 20,
   },
   premiumButton: {
     marginTop: spacing.xs,
@@ -234,12 +239,22 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     flexDirection: 'row',
     gap: spacing.md,
-    minHeight: 58,
+    minHeight: 64,
     paddingHorizontal: spacing.lg,
+  },
+  settingIcon: {
+    alignItems: 'center',
+    backgroundColor: colors.bg.muted,
+    borderRadius: 10,
+    height: 32,
+    justifyContent: 'center',
+    width: 32,
   },
   rowTitle: {
     flex: 1,
-    fontWeight: '600',
+    fontFamily: typography.family.bodyMedium,
+    fontSize: 15,
+    lineHeight: 20,
   },
   footer: {
     marginTop: spacing.xl,

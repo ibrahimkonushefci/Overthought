@@ -7,7 +7,7 @@ import { EmptyState } from '../../src/shared/ui/EmptyState';
 import { Card } from '../../src/shared/ui/Card';
 import { useCases } from '../../src/features/cases/services/useCases';
 import { categoryIcons, categoryLabels } from '../../src/shared/utils/verdict';
-import { colors, gradients, radii, shadows, spacing } from '../../src/shared/theme/tokens';
+import { colors, gradients, radii, shadows, spacing, typography } from '../../src/shared/theme/tokens';
 import { LinearGradient } from 'expo-linear-gradient';
 
 const categories: CaseCategory[] = ['romance', 'friendship', 'social', 'general'];
@@ -46,11 +46,14 @@ export default function StatsRoute() {
                 Most overthinking
               </AppText>
             </View>
-            <AppText variant="display" color={colors.text.onBrand} style={styles.heroTitle}>
-              {categoryIcons[mostCommon.category]} {categoryLabels[mostCommon.category]}
-            </AppText>
+            <View style={styles.heroTitleRow}>
+              <AppText style={styles.heroEmoji}>{categoryIcons[mostCommon.category]}</AppText>
+              <AppText variant="display" color={colors.text.onBrand} style={styles.heroTitle}>
+                {categoryLabels[mostCommon.category]}
+              </AppText>
+            </View>
             <AppText variant="subtitle" color={colors.text.onBrand} style={styles.heroSubtitle}>
-              "You're spiraling like it's a sport."
+              "Reading rooms that aren't there."
             </AppText>
             <AppText variant="eyebrow" color={colors.text.onBrand}>
               Avg {average}/100 · {mostCommon.count} cases
@@ -85,7 +88,7 @@ export default function StatsRoute() {
                   <View style={styles.barTrack}>
                     <View style={[styles.barFill, { width: `${Math.max(ratio * 100, count > 0 ? 8 : 0)}%` }]} />
                   </View>
-                  <AppText variant="body" color={colors.text.secondary}>
+                  <AppText variant="body" color={colors.text.secondary} style={styles.categoryCount}>
                     {count}
                   </AppText>
                 </View>
@@ -93,10 +96,12 @@ export default function StatsRoute() {
             })}
           </View>
 
-          <Card>
+          <Card style={styles.trackCard}>
             <AppText variant="eyebrow">Track record</AppText>
-            <AppText variant="display">{accuracy}%</AppText>
-            <AppText variant="subtitle">accuracy on resolved cases</AppText>
+            <View style={styles.trackRow}>
+              <AppText variant="display" style={styles.trackNumber}>{accuracy}%</AppText>
+              <AppText variant="subtitle" style={styles.trackCopy}>accuracy on resolved cases</AppText>
+            </View>
           </Card>
         </View>
       )}
@@ -107,12 +112,10 @@ export default function StatsRoute() {
 const styles = StyleSheet.create({
   header: {
     gap: spacing.sm,
-    marginBottom: spacing.xl,
+    marginBottom: spacing.lg,
   },
   script: {
-    fontFamily: 'Georgia',
-    fontStyle: 'italic',
-    fontWeight: '400',
+    fontFamily: typography.family.editorial,
   },
   stack: {
     gap: spacing.lg,
@@ -122,8 +125,8 @@ const styles = StyleSheet.create({
     borderRadius: radii.xl,
     borderWidth: 2,
     gap: spacing.sm,
-    minHeight: 196,
-    padding: spacing.lg,
+    minHeight: 206,
+    padding: 24,
     ...shadows.hard,
   },
   badge: {
@@ -134,16 +137,25 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
   },
   heroTitle: {
-    fontSize: 30,
-    lineHeight: 37,
-    fontWeight: '700',
+    fontFamily: typography.family.displayBold,
+    fontSize: 40,
+    lineHeight: 44,
+  },
+  heroTitleRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.md,
+    marginTop: spacing.md,
+  },
+  heroEmoji: {
+    fontSize: 46,
+    lineHeight: 50,
   },
   heroSubtitle: {
-    fontFamily: 'Georgia',
-    fontSize: 15,
-    lineHeight: 21,
-    fontStyle: 'italic',
-    fontWeight: '400',
+    fontFamily: typography.family.editorial,
+    fontSize: 18,
+    lineHeight: 24,
+    marginTop: spacing.xs,
   },
   statsRow: {
     flexDirection: 'row',
@@ -163,9 +175,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   statSuffix: {
+    fontFamily: typography.family.displayMedium,
     fontSize: 15,
     lineHeight: 19,
-    fontWeight: '500',
   },
   categoryList: {
     gap: spacing.md,
@@ -176,19 +188,47 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   categoryLabel: {
-    flex: 1,
-    fontWeight: '600',
+    fontFamily: typography.family.displaySemiBold,
+    fontSize: 15,
+    lineHeight: 20,
+    width: 122,
   },
   barTrack: {
     backgroundColor: colors.bg.muted,
     borderRadius: radii.pill,
-    flex: 1.5,
-    height: 10,
+    flex: 1,
+    height: 8,
     overflow: 'hidden',
   },
   barFill: {
     backgroundColor: colors.brand.ink,
     borderRadius: radii.pill,
-    height: 10,
+    height: 8,
+  },
+  categoryCount: {
+    fontFamily: typography.family.bodyMedium,
+    fontSize: 14,
+    lineHeight: 18,
+    textAlign: 'right',
+    width: 24,
+  },
+  trackCard: {
+    padding: spacing.xl,
+  },
+  trackRow: {
+    alignItems: 'baseline',
+    flexDirection: 'row',
+    gap: spacing.md,
+    marginTop: spacing.sm,
+  },
+  trackNumber: {
+    fontSize: 36,
+    lineHeight: 38,
+  },
+  trackCopy: {
+    flex: 1,
+    fontFamily: typography.family.body,
+    fontSize: 15,
+    lineHeight: 20,
   },
 });

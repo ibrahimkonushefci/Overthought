@@ -3,7 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Plus } from 'lucide-react-native';
 import { Button } from '../../../shared/ui/Button';
 import { AppText } from '../../../shared/ui/Text';
-import { colors, gradients, radii, shadows, spacing } from '../../../shared/theme/tokens';
+import { colors, gradients, radii, shadows, spacing, typography } from '../../../shared/theme/tokens';
 
 interface HeroActionCardProps {
   onStart: () => void;
@@ -35,9 +35,9 @@ const styles = StyleSheet.create({
     borderColor: colors.brand.ink,
     borderRadius: radii.xl,
     borderWidth: 2,
-    gap: spacing.sm,
-    minHeight: 192,
-    padding: spacing.lg,
+    gap: spacing.md,
+    minHeight: 204,
+    padding: spacing.xl,
     ...shadows.hard,
   },
   badge: {
@@ -48,20 +48,20 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
   },
   title: {
-    fontSize: 25,
-    lineHeight: 30,
-    fontWeight: '800',
+    fontFamily: typography.family.displayBold,
+    fontSize: 28,
+    lineHeight: 31,
     marginTop: 0,
   },
   subtitle: {
-    fontSize: 15,
-    lineHeight: 21,
-    fontWeight: '400',
+    fontFamily: typography.family.body,
+    fontSize: 14,
+    lineHeight: 20,
     maxWidth: 280,
   },
   buttonWrap: {
     alignSelf: 'flex-start',
     marginTop: 0,
-    minWidth: 176,
+    minWidth: 178,
   },
 });

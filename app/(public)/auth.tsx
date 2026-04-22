@@ -6,7 +6,7 @@ import { authService } from '../../src/features/auth/authService';
 import { Button } from '../../src/shared/ui/Button';
 import { AppText } from '../../src/shared/ui/Text';
 import { Screen } from '../../src/shared/ui/Screen';
-import { colors, radii, spacing } from '../../src/shared/theme/tokens';
+import { colors, radii, spacing, typography } from '../../src/shared/theme/tokens';
 
 export default function AuthRoute() {
   const router = useRouter();
@@ -66,9 +66,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   script: {
-    fontFamily: 'Georgia',
-    fontStyle: 'italic',
-    fontWeight: '400',
+    fontFamily: typography.family.editorial,
   },
   input: {
     backgroundColor: colors.bg.surface,
@@ -76,8 +74,8 @@ const styles = StyleSheet.create({
     borderRadius: radii.lg,
     borderWidth: 1,
     color: colors.text.primary,
+    fontFamily: typography.family.bodyMedium,
     fontSize: 15,
-    fontWeight: '700',
     marginBottom: spacing.lg,
     minHeight: 50,
     paddingHorizontal: spacing.lg,

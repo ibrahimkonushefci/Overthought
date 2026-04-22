@@ -14,7 +14,7 @@ import { AppText } from '../../../../src/shared/ui/Text';
 import { Card } from '../../../../src/shared/ui/Card';
 import { Button } from '../../../../src/shared/ui/Button';
 import { EmptyState } from '../../../../src/shared/ui/EmptyState';
-import { colors, radii, spacing } from '../../../../src/shared/theme/tokens';
+import { colors, radii, spacing, typography } from '../../../../src/shared/theme/tokens';
 import { categoryIcons, categoryLabels, verdictLabels } from '../../../../src/shared/utils/verdict';
 import { relativeTime } from '../../../../src/shared/utils/date';
 
@@ -74,38 +74,38 @@ export default function CaseDetailRoute() {
     <Screen>
       <View style={styles.topRow}>
         <Pressable accessibilityRole="button" onPress={() => router.back()} style={styles.iconButton}>
-          <ArrowLeft color={colors.text.primary} size={22} />
+          <ArrowLeft color={colors.text.primary} size={20} />
         </Pressable>
         <View style={styles.categoryPill}>
-          <AppText variant="body" color={colors.text.secondary}>
+          <AppText variant="body" color={colors.text.secondary} style={styles.categoryText}>
             {categoryIcons[record.category]} {categoryLabels[record.category]}
           </AppText>
         </View>
         <Pressable accessibilityRole="button" onPress={() => void share()} style={styles.iconButton}>
-          <Share2 color={colors.text.primary} size={21} />
+          <Share2 color={colors.text.primary} size={20} />
         </Pressable>
       </View>
 
       <ScorePanel score={record.delusionScore} verdictLabel={record.verdictLabel} />
 
-      <Card>
-        <AppText variant="eyebrow">The read</AppText>
+      <Card style={styles.readCard}>
+        <AppText variant="eyebrow" style={styles.sectionLabel}>The read</AppText>
         <AppText variant="body" style={styles.bigBody}>
           {record.explanationText}
         </AppText>
       </Card>
 
       <View style={styles.nextMove}>
-        <AppText variant="eyebrow" color={colors.text.secondary}>
+        <AppText variant="eyebrow" color="rgba(246, 240, 226, 0.56)" style={styles.sectionLabel}>
           Next move
         </AppText>
-        <AppText variant="title" color={colors.text.onBrand}>
+        <AppText variant="title" color={colors.text.onBrand} style={styles.nextMoveText}>
           {record.nextMoveText}
         </AppText>
       </View>
 
       <View style={styles.sectionHeader}>
-        <AppText variant="eyebrow">Original situation</AppText>
+        <AppText variant="eyebrow" style={styles.sectionLabel}>Original situation</AppText>
       </View>
       <View style={styles.quote}>
         <AppText variant="subtitle" style={styles.italic}>
@@ -114,10 +114,10 @@ export default function CaseDetailRoute() {
       </View>
 
       <View style={styles.sectionHeaderRow}>
-        <AppText variant="eyebrow">Updates · {updates.length}</AppText>
+        <AppText variant="eyebrow" style={styles.sectionLabel}>Updates · {updates.length}</AppText>
         <Pressable accessibilityRole="button" onPress={() => router.push(`/case/${id}/add-update`)} style={styles.addUpdate}>
           <Plus color={colors.brand.pink} size={20} />
-          <AppText variant="body" color={colors.brand.pink}>
+          <AppText variant="body" color={colors.brand.pink} style={styles.addUpdateText}>
             Add update
           </AppText>
         </Pressable>
@@ -147,7 +147,7 @@ export default function CaseDetailRoute() {
         </View>
       )}
 
-      <AppText variant="eyebrow" style={styles.outcomeTitle}>
+      <AppText variant="eyebrow" style={[styles.sectionLabel, styles.outcomeTitle]}>
         How did it end?
       </AppText>
       <View style={styles.outcomes}>
@@ -189,37 +189,63 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: spacing.lg,
+    marginBottom: spacing.xxl,
   },
   iconButton: {
     alignItems: 'center',
     backgroundColor: colors.bg.surface,
     borderColor: colors.ui.border,
-    borderRadius: 16,
+    borderRadius: 14,
     borderWidth: 1,
-    height: 46,
+    height: 40,
     justifyContent: 'center',
-    width: 46,
+    width: 40,
   },
   categoryPill: {
     backgroundColor: colors.bg.muted,
     borderRadius: radii.pill,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+  },
+  categoryText: {
+    fontFamily: typography.family.bodyMedium,
+    fontSize: 13,
+    lineHeight: 17,
+  },
+  readCard: {
+    padding: spacing.xl,
+  },
+  sectionLabel: {
+    fontFamily: typography.family.displayMedium,
+    fontSize: 10,
+    letterSpacing: 1.6,
+    lineHeight: 13,
   },
   bigBody: {
-    fontSize: 16,
-    lineHeight: 25,
-    marginTop: spacing.md,
+    fontFamily: typography.family.body,
+    fontSize: 15,
+    lineHeight: 24,
+    marginTop: spacing.lg,
   },
   nextMove: {
     backgroundColor: colors.brand.ink,
     borderRadius: radii.lg,
     gap: spacing.sm,
-    padding: spacing.lg,
+    marginTop: spacing.xl,
+    padding: spacing.xl,
+    shadowColor: colors.brand.ink,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 0,
+    elevation: 4,
+  },
+  nextMoveText: {
+    fontFamily: typography.family.displayMedium,
+    fontSize: 18,
+    lineHeight: 24,
   },
   sectionHeader: {
-    marginTop: spacing.lg,
+    marginTop: spacing.xxl,
   },
   sectionHeaderRow: {
     alignItems: 'center',
@@ -230,16 +256,22 @@ const styles = StyleSheet.create({
   quote: {
     backgroundColor: colors.bg.muted,
     borderRadius: radii.lg,
-    marginTop: spacing.md,
-    padding: spacing.lg,
+    marginTop: spacing.lg,
+    padding: spacing.xl,
   },
   italic: {
-    fontStyle: 'italic',
+    fontFamily: typography.family.editorial,
+    fontSize: 16,
+    lineHeight: 20,
   },
   addUpdate: {
     alignItems: 'center',
     flexDirection: 'row',
     gap: spacing.xs,
+  },
+  addUpdateText: {
+    fontFamily: typography.family.bodyMedium,
+    fontSize: 14,
   },
   updateList: {
     gap: spacing.md,
@@ -278,7 +310,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
   },
   outcomeLabel: {
-    fontWeight: '500',
+    fontFamily: typography.family.displayMedium,
+    fontSize: 12,
+    lineHeight: 15,
   },
   outcomeSelected: {
     backgroundColor: colors.accent.lime,

@@ -3,7 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import type { LucideProps } from 'lucide-react-native';
 import { AppText } from './Text';
 import { Button } from './Button';
-import { colors, radii, spacing } from '../theme/tokens';
+import { colors, radii, spacing, typography } from '../theme/tokens';
 
 interface EmptyStateProps {
   title: string;
@@ -16,7 +16,7 @@ interface EmptyStateProps {
 
 export function EmptyState({ title, body, emoji, icon: Icon, actionLabel, onAction }: EmptyStateProps) {
   return (
-    <View style={styles.wrap}>
+    <View style={[styles.wrap, actionLabel && styles.withAction]}>
       {emoji ? <AppText variant="title" center style={styles.emoji}>{emoji}</AppText> : null}
       {!emoji && Icon ? <Icon color={colors.text.secondary} size={36} strokeWidth={2.2} /> : null}
       <AppText variant="title" center style={styles.title}>
@@ -41,15 +41,15 @@ const styles = StyleSheet.create({
     borderRadius: radii.lg,
     borderStyle: 'dashed',
     borderWidth: 1,
-    gap: spacing.sm,
+    gap: spacing.xs,
     justifyContent: 'center',
-    minHeight: 168,
-    padding: spacing.lg,
+    minHeight: 180,
+    padding: spacing.xxl,
   },
   title: {
-    fontSize: 18,
-    lineHeight: 23,
-    fontWeight: '700',
+    fontFamily: typography.family.displaySemiBold,
+    fontSize: 15,
+    lineHeight: 19,
   },
   emoji: {
     fontSize: 30,
@@ -57,6 +57,10 @@ const styles = StyleSheet.create({
   },
   action: {
     marginTop: spacing.md,
-    minWidth: 220,
+    minWidth: 190,
+  },
+  withAction: {
+    minHeight: 244,
+    padding: spacing.xxxl,
   },
 });

@@ -2,7 +2,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { ArrowLeft, UserRound } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { AppText } from './Text';
-import { colors, radii, spacing } from '../theme/tokens';
+import { colors, radii, spacing, typography } from '../theme/tokens';
 
 interface HeaderProps {
   eyebrow?: string;
@@ -20,14 +20,14 @@ export function Header({ eyebrow, title, accent, showBack, showProfile }: Header
       <View style={styles.topRow}>
         {showBack ? (
           <Pressable accessibilityRole="button" onPress={() => router.back()} style={styles.iconButton}>
-            <ArrowLeft color={colors.text.primary} size={22} strokeWidth={2.4} />
+            <ArrowLeft color={colors.text.primary} size={20} strokeWidth={2.4} />
           </Pressable>
         ) : (
           <View />
         )}
         {showProfile ? (
           <Pressable accessibilityRole="button" onPress={() => router.push('/profile')} style={styles.iconButton}>
-            <UserRound color={colors.text.primary} size={21} strokeWidth={2.4} />
+            <UserRound color={colors.text.primary} size={20} strokeWidth={2.4} />
           </Pressable>
         ) : null}
       </View>
@@ -54,17 +54,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.bg.surface,
     borderColor: colors.ui.border,
-    borderRadius: radii.lg,
+    borderRadius: radii.sm,
     borderWidth: 1,
-    height: 46,
+    height: 40,
     justifyContent: 'center',
-    width: 46,
+    width: 40,
   },
   title: {
     flexWrap: 'wrap',
   },
   accent: {
-    fontStyle: 'italic',
-    fontWeight: '500',
+    fontFamily: typography.family.editorial,
   },
 });

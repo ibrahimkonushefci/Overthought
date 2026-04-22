@@ -2,7 +2,7 @@ import type { ComponentType, ReactNode } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import type { LucideProps } from 'lucide-react-native';
-import { colors, gradients, radii, shadows, spacing } from '../theme/tokens';
+import { colors, gradients, radii, shadows, spacing, typography } from '../theme/tokens';
 
 type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'accent' | 'ghost' | 'danger';
 
@@ -26,6 +26,7 @@ export function Button({
   children,
 }: ButtonProps) {
   const isPrimary = variant === 'primary';
+  const isLoud = variant === 'primary' || variant === 'accent';
   const contentColor =
     variant === 'primary' || variant === 'secondary' || variant === 'danger'
       ? colors.text.onBrand
@@ -35,7 +36,7 @@ export function Button({
     <View style={styles.row}>
       {loading ? <ActivityIndicator color={contentColor} /> : null}
       {!loading && Icon ? <Icon color={contentColor} size={17} strokeWidth={2.7} /> : null}
-      <Text style={[styles.text, { color: contentColor }]} numberOfLines={1}>
+      <Text style={[styles.text, isLoud && styles.loudText, { color: contentColor }]} numberOfLines={1}>
         {children ?? title}
       </Text>
     </View>
@@ -66,7 +67,7 @@ export function Button({
 
 const styles = StyleSheet.create({
   base: {
-    minHeight: 46,
+    minHeight: 44,
     borderRadius: radii.pill,
     borderWidth: 2,
     borderColor: colors.brand.ink,
@@ -75,6 +76,7 @@ const styles = StyleSheet.create({
   },
   primary: {
     backgroundColor: colors.brand.pink,
+    minHeight: 56,
     ...shadows.hard,
   },
   secondary: {
@@ -85,10 +87,11 @@ const styles = StyleSheet.create({
   },
   accent: {
     backgroundColor: colors.accent.lime,
+    minHeight: 54,
     ...shadows.hard,
   },
   ghost: {
-    minHeight: 36,
+    minHeight: 34,
     borderWidth: 0,
     backgroundColor: 'transparent',
   },
@@ -109,9 +112,12 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   text: {
-    fontSize: 14,
-    fontWeight: '800',
+    fontFamily: typography.family.displaySemiBold,
+    fontSize: 13,
     letterSpacing: 0,
+  },
+  loudText: {
+    fontSize: 15,
   },
   disabled: {
     opacity: 0.55,
