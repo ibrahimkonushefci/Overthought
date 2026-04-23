@@ -16,6 +16,7 @@ interface GuestState {
   cases: GuestCaseLocal[];
   drafts: DraftState;
   migratedCaseMap: Record<string, string>;
+  migrationPromptByUserId: Record<string, 'skipped' | 'completed'>;
   ensureGuestSession: () => string;
   setCaseDraft: (caseText: string) => void;
   setPreferredCategory: (category: CaseCategory) => void;
@@ -26,6 +27,9 @@ interface GuestState {
   updateOutcome: (caseId: string, outcomeStatus: OutcomeStatus) => void;
   archiveCase: (caseId: string) => void;
   markCaseMigrated: (localCaseId: string, remoteCaseId: string) => void;
+  markMigrationPromptSkipped: (userId: string) => void;
+  markMigrationPromptCompleted: (userId: string) => void;
+  clearGuestSessionData: () => void;
   clearMigratedCases: () => void;
   clearAllLocalData: () => void;
 }
@@ -43,6 +47,7 @@ export const useGuestStore = create<GuestState>()(
       cases: [],
       drafts: initialDrafts,
       migratedCaseMap: {},
+      migrationPromptByUserId: {},
       ensureGuestSession: () => {
         const existing = get().localGuestId;
 
@@ -133,6 +138,31 @@ export const useGuestStore = create<GuestState>()(
           ),
         }));
       },
+      markMigrationPromptSkipped: (userId) => {
+        set((state) => ({
+          migrationPromptByUserId: {
+            ...state.migrationPromptByUserId,
+            [userId]: 'skipped',
+          },
+        }));
+      },
+      markMigrationPromptCompleted: (userId) => {
+        set((state) => ({
+          migrationPromptByUserId: {
+            ...state.migrationPromptByUserId,
+            [userId]: 'completed',
+          },
+        }));
+      },
+      clearGuestSessionData: () => {
+        set((state) => ({
+          localGuestId: null,
+          cases: [],
+          drafts: initialDrafts,
+          migratedCaseMap: {},
+          migrationPromptByUserId: state.migrationPromptByUserId,
+        }));
+      },
       clearMigratedCases: () => {
         set((state) => ({
           cases: state.cases.filter((item) => !state.migratedCaseMap[item.localId]),
@@ -144,6 +174,7 @@ export const useGuestStore = create<GuestState>()(
           cases: [],
           drafts: initialDrafts,
           migratedCaseMap: {},
+          migrationPromptByUserId: {},
         });
       },
     }),
@@ -155,6 +186,7 @@ export const useGuestStore = create<GuestState>()(
         cases: state.cases,
         drafts: state.drafts,
         migratedCaseMap: state.migratedCaseMap,
+        migrationPromptByUserId: state.migrationPromptByUserId,
       }),
     },
   ),

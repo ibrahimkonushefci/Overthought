@@ -15,8 +15,10 @@ interface AuthState {
   sessionMode: SessionMode;
   user: AuthUser | null;
   profile: Profile | null;
+  hasCompletedEntry: boolean;
   setLoading: () => void;
   setGuest: () => void;
+  markEntryComplete: () => void;
   setAuthenticated: (user: AuthUser, profile?: Profile | null) => void;
   setProfile: (profile: Profile | null) => void;
   signOutLocal: () => void;
@@ -28,10 +30,12 @@ export const useAuthStore = create<AuthState>()(
       sessionMode: 'loading',
       user: null,
       profile: null,
+      hasCompletedEntry: false,
       setLoading: () => set({ sessionMode: 'loading' }),
       setGuest: () => set({ sessionMode: 'guest', user: null, profile: null }),
+      markEntryComplete: () => set({ hasCompletedEntry: true }),
       setAuthenticated: (user, profile = null) =>
-        set({ sessionMode: 'authenticated', user, profile }),
+        set({ sessionMode: 'authenticated', user, profile, hasCompletedEntry: true }),
       setProfile: (profile) => set({ profile }),
       signOutLocal: () => set({ sessionMode: 'guest', user: null, profile: null }),
     }),
@@ -42,6 +46,7 @@ export const useAuthStore = create<AuthState>()(
         sessionMode: state.sessionMode === 'authenticated' ? 'loading' : state.sessionMode,
         user: null,
         profile: null,
+        hasCompletedEntry: state.hasCompletedEntry,
       }),
     },
   ),

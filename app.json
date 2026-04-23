@@ -7,10 +7,12 @@
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.overthought.app",
+      "bundleIdentifier": "com.ibrahim.overthought.dev",
       "newArchEnabled": true
     },
     "plugins": [
@@ -21,6 +23,9 @@
           "launchMode": "most-recent"
         }
       ]
-    ]
+    ],
+    "android": {
+      "package": "com.overthought.app"
+    }
   }
 }

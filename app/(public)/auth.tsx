@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Alert, StyleSheet, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, Mail } from 'lucide-react-native';
 import { authService } from '../../src/features/auth/authService';
+import { useAuthStore } from '../../src/store/authStore';
 import { Button } from '../../src/shared/ui/Button';
 import { AppText } from '../../src/shared/ui/Text';
 import { Screen } from '../../src/shared/ui/Screen';
@@ -10,14 +11,32 @@ import { colors, radii, spacing, typography } from '../../src/shared/theme/token
 
 export default function AuthRoute() {
   const router = useRouter();
+  const sessionMode = useAuthStore((state) => state.sessionMode);
   const [email, setEmail] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [emailLoading, setEmailLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+
+  useEffect(() => {
+    if (sessionMode === 'authenticated') {
+      router.replace('/home');
+    }
+  }, [router, sessionMode]);
 
   const submit = async () => {
-    setLoading(true);
+    setEmailLoading(true);
     const result = await authService.signInWithEmail(email.trim());
-    setLoading(false);
+    setEmailLoading(false);
     Alert.alert(result.ok ? 'Email sent' : 'Email sign-in', result.message ?? 'Try again.');
+  };
+
+  const signInWithGoogle = async () => {
+    setGoogleLoading(true);
+    const result = await authService.signInWithGoogle();
+    setGoogleLoading(false);
+
+    if (!result.ok && !result.cancelled) {
+      Alert.alert('Sign-in failed', result.message ?? 'Try again.');
+    }
   };
 
   return (
@@ -43,9 +62,16 @@ export default function AuthRoute() {
       <Button
         title="Send magic link"
         icon={Mail}
-        loading={loading}
-        disabled={!email.includes('@') || loading}
+        loading={emailLoading}
+        disabled={!email.includes('@') || emailLoading || googleLoading}
         onPress={() => void submit()}
+      />
+      <Button
+        title="Continue with Google"
+        variant="outline"
+        loading={googleLoading}
+        disabled={emailLoading || googleLoading}
+        onPress={() => void signInWithGoogle()}
       />
       <Button
         title="Continue as guest"

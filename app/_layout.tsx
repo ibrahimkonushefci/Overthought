@@ -15,6 +15,7 @@ import {
   SpaceGrotesk_700Bold,
 } from '@expo-google-fonts/space-grotesk';
 import { authService } from '../src/features/auth/authService';
+import { MigrationPrompt } from '../src/features/migration/MigrationPrompt';
 import { colors } from '../src/shared/theme/tokens';
 
 export default function RootLayout() {
@@ -51,6 +52,7 @@ export default function RootLayout() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="(modals)" options={{ presentation: 'modal' }} />
       </Stack>
+      <MigrationPrompt />
     </>
   );
 }

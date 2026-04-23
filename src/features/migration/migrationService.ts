@@ -1,4 +1,4 @@
-import type { GuestMigrationPayload } from '../../types/shared';
+import type { GuestCaseLocal, GuestMigrationPayload } from '../../types/shared';
 import { supabase } from '../../lib/supabase/client';
 import { useAuthStore } from '../../store/authStore';
 import { useGuestStore } from '../../store/guestStore';
@@ -13,13 +13,15 @@ export const migrationService = {
   buildPayload(): GuestMigrationPayload | null {
     const guest = useGuestStore.getState();
 
-    if (!guest.localGuestId || guest.cases.length === 0) {
+    const migratableCases = guest.cases.filter((item) => !item.deletedAt);
+
+    if (!guest.localGuestId || migratableCases.length === 0) {
       return null;
     }
 
     return {
       guestLocalId: guest.localGuestId,
-      cases: guest.cases.map((item) => ({
+      cases: migratableCases.map((item) => ({
         localId: item.localId,
         title: item.title,
         category: item.category,
@@ -58,24 +60,14 @@ export const migrationService = {
     let skipped = 0;
     let failed = 0;
 
-    for (const item of guest.cases) {
+    for (const item of guest.cases.filter((caseItem) => !caseItem.deletedAt)) {
       if (guest.migratedCaseMap[item.localId]) {
         skipped += 1;
         continue;
       }
 
       try {
-        const { data: existing, error: existingError } = await supabase
-          .from('cases')
-          .select('id')
-          .eq('guest_local_id', item.localId)
-          .maybeSingle();
-
-        if (existingError) {
-          throw existingError;
-        }
-
-        const remoteCaseId = existing?.id ?? null;
+        const remoteCaseId = await findRemoteCaseId(auth.user.id, item.localId);
         const caseId = remoteCaseId ?? (await createRemoteCase(auth.user.id, item));
 
         for (const update of item.updates) {
@@ -116,7 +108,7 @@ export const migrationService = {
       }
     }
 
-    if (failed === 0 && migrated > 0) {
+    if (failed === 0 && (migrated > 0 || skipped > 0)) {
       useGuestStore.getState().clearMigratedCases();
     }
 
@@ -124,7 +116,26 @@ export const migrationService = {
   },
 };
 
-async function createRemoteCase(userId: string, item: ReturnType<typeof useGuestStore.getState>['cases'][number]) {
+async function findRemoteCaseId(userId: string, localCaseId: string): Promise<string | null> {
+  if (!supabase) {
+    throw new Error('Supabase is not configured.');
+  }
+
+  const { data, error } = await supabase
+    .from('cases')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('guest_local_id', localCaseId)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return data?.id ?? null;
+}
+
+async function createRemoteCase(userId: string, item: GuestCaseLocal) {
   if (!supabase) {
     throw new Error('Supabase is not configured.');
   }
@@ -152,6 +163,14 @@ async function createRemoteCase(userId: string, item: ReturnType<typeof useGuest
     .single();
 
   if (error) {
+    if ('code' in error && error.code === '23505') {
+      const existingId = await findRemoteCaseId(userId, item.localId);
+
+      if (existingId) {
+        return existingId;
+      }
+    }
+
     throw error;
   }
 

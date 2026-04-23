@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, Pressable, Share, StyleSheet, View } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Check, CircleHelp, Plus, Share2, Trash2, X } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
 import type { OutcomeStatus } from '../../../../src/types/shared';
@@ -37,6 +37,12 @@ export default function CaseDetailRoute() {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void refresh();
+    }, [refresh]),
+  );
 
   if (!record) {
     return (

@@ -22,7 +22,15 @@ export const caseRepository = {
       score: analysis.delusionScore,
     });
 
-    if (auth.sessionMode === 'authenticated' && auth.user && supabase) {
+    if (auth.sessionMode === 'authenticated' && !supabase) {
+      throw new Error('Supabase is not configured.');
+    }
+
+    if (auth.sessionMode === 'authenticated' && supabase) {
+      if (!auth.user) {
+        throw new Error('Authenticated session is missing a user.');
+      }
+
       const { data, error } = await supabase
         .from('cases')
         .insert({
@@ -78,10 +86,19 @@ export const caseRepository = {
   async listCases(): Promise<CaseEntity[]> {
     const auth = useAuthStore.getState();
 
+    if (auth.sessionMode === 'authenticated' && !supabase) {
+      throw new Error('Supabase is not configured.');
+    }
+
     if (auth.sessionMode === 'authenticated' && supabase) {
+      if (!auth.user) {
+        throw new Error('Authenticated session is missing a user.');
+      }
+
       const { data, error } = await supabase
         .from('cases')
         .select('*')
+        .eq('user_id', auth.user.id)
         .is('archived_at', null)
         .is('deleted_at', null)
         .order('updated_at', { ascending: false });
@@ -106,7 +123,19 @@ export const caseRepository = {
       return null;
     }
 
-    const { data, error } = await supabase.from('cases').select('*').eq('id', caseId).maybeSingle();
+    const auth = useAuthStore.getState();
+
+    if (auth.sessionMode !== 'authenticated' || !auth.user) {
+      return null;
+    }
+
+    const { data, error } = await supabase
+      .from('cases')
+      .select('*')
+      .eq('id', caseId)
+      .eq('user_id', auth.user.id)
+      .is('deleted_at', null)
+      .maybeSingle();
 
     if (error) {
       throw error;
@@ -124,10 +153,21 @@ export const caseRepository = {
     }
 
     if (!supabase) {
-      return;
+      throw new Error('Supabase is not configured.');
     }
 
-    const { error } = await supabase.from('cases').update({ outcome_status: outcomeStatus }).eq('id', caseId);
+    const auth = useAuthStore.getState();
+
+    if (auth.sessionMode !== 'authenticated' || !auth.user) {
+      throw new Error('Sign in again before updating this case.');
+    }
+
+    const { error } = await supabase
+      .from('cases')
+      .update({ outcome_status: outcomeStatus })
+      .eq('id', caseId)
+      .eq('user_id', auth.user.id)
+      .is('deleted_at', null);
 
     if (error) {
       throw error;
@@ -144,10 +184,21 @@ export const caseRepository = {
     }
 
     if (!supabase) {
-      return;
+      throw new Error('Supabase is not configured.');
     }
 
-    const { error } = await supabase.from('cases').update({ archived_at: nowIso() }).eq('id', caseId);
+    const auth = useAuthStore.getState();
+
+    if (auth.sessionMode !== 'authenticated' || !auth.user) {
+      throw new Error('Sign in again before archiving this case.');
+    }
+
+    const { error } = await supabase
+      .from('cases')
+      .update({ archived_at: nowIso() })
+      .eq('id', caseId)
+      .eq('user_id', auth.user.id)
+      .is('deleted_at', null);
 
     if (error) {
       throw error;

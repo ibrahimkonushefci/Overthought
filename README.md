@@ -22,6 +22,13 @@ This app does **not** target Expo Go. It uses `react-native-mmkv` v4, which depe
 
    - `EXPO_PUBLIC_SUPABASE_URL`
    - `EXPO_PUBLIC_SUPABASE_ANON_KEY`
+   - `EXPO_PUBLIC_SUPABASE_REDIRECT_URL`
+
+   Native Google sign-in also needs:
+
+   - `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`
+   - `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`
+   - `EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME`
 
 3. Build and run the iOS development app on a simulator:
 
@@ -82,12 +89,13 @@ Then open the installed Overthought development build on the iPhone.
 
 ## Native setup still required
 
-- Configure Supabase project URL/key and apply `supabase/migrations/0001_initial_schema.sql`.
+- Configure Supabase project URL/key and apply the SQL files under `supabase/migrations/`.
 - Use an iOS development build, not Expo Go, because MMKV/Nitro requires native pods and New Architecture codegen.
 - Set Apple Sign In entitlement and Supabase OAuth/native callback configuration.
-- Configure Google OAuth client IDs and native sign-in package.
+- Configure Google OAuth client IDs, the reversed iOS URL scheme, and the Supabase Google provider.
 - Add RevenueCat SDK/API key and wire restore/purchase calls.
 - Add a secured Supabase Edge Function for final `auth.users` deletion.
+- Rebuild the iOS development build after changing native auth credentials or config plugins.
 
 ## Test immediately
 
@@ -99,9 +107,15 @@ Then open the installed Overthought development build on the iPhone.
 - View stats generated from local cases.
 - Delete guest local data.
 
+## Test Commands
+
+```sh
+npm run typecheck
+npm test
+```
+
 ## Next build pass
 
-- Add dependency-locked native auth implementations.
-- Harden authenticated Supabase sync and guest migration prompts.
-- Add focused unit tests for verdict integration, migration idempotency, and premium flags.
-- Polish visual spacing against device screenshots.
+- Finish App Store account-deletion backend with a secured Supabase Edge Function.
+- Wire RevenueCat purchases/restores once products and API keys are available.
+- Broaden authenticated sync tests once a test Supabase project is configured.

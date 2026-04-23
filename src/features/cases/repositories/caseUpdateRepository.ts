@@ -3,6 +3,7 @@ import { trackEvent } from '../../../lib/analytics/analyticsService';
 import { supabase } from '../../../lib/supabase/client';
 import { nowIso } from '../../../shared/utils/date';
 import { createId } from '../../../shared/utils/id';
+import { useAuthStore } from '../../../store/authStore';
 import { useGuestStore } from '../../../store/guestStore';
 import { analysisService } from '../../analysis/analysisService';
 import type { CaseUpdateEntity } from '../types';
@@ -19,6 +20,12 @@ export const caseUpdateRepository = {
     }
 
     if (!supabase) {
+      return [];
+    }
+
+    const parentCase = await caseRepository.getCase(caseId);
+
+    if (!parentCase) {
       return [];
     }
 
@@ -82,6 +89,12 @@ export const caseUpdateRepository = {
       throw new Error('Supabase is not configured.');
     }
 
+    const auth = useAuthStore.getState();
+
+    if (auth.sessionMode !== 'authenticated' || !auth.user) {
+      throw new Error('Sign in again before adding an update.');
+    }
+
     const { data, error } = await supabase
       .from('case_updates')
       .insert({
@@ -111,7 +124,9 @@ export const caseUpdateRepository = {
         latest_verdict_version: analysis.verdictVersion,
         last_analyzed_at: timestamp,
       })
-      .eq('id', parentCase.id);
+      .eq('id', parentCase.id)
+      .eq('user_id', auth.user.id)
+      .is('deleted_at', null);
 
     if (updateError) {
       throw updateError;

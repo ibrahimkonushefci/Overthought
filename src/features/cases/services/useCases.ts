@@ -8,6 +8,7 @@ import type { CaseEntity } from '../types';
 export function useCases() {
   const authMode = useAuthStore((state) => state.sessionMode);
   const rawGuestCases = useGuestStore((state) => state.cases);
+  const migratedCaseCount = useGuestStore((state) => Object.keys(state.migratedCaseMap).length);
   const guestCases = useMemo(
     () =>
       rawGuestCases
@@ -20,6 +21,8 @@ export function useCases() {
 
   const refresh = useCallback(async () => {
     if (authMode !== 'authenticated') {
+      setRemoteCases([]);
+      setLoading(false);
       return;
     }
 
@@ -33,7 +36,7 @@ export function useCases() {
 
   useEffect(() => {
     void refresh();
-  }, [refresh]);
+  }, [migratedCaseCount, rawGuestCases.length, refresh]);
 
   useFocusEffect(
     useCallback(() => {

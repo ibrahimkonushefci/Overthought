@@ -28,7 +28,13 @@
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>overthought</string>
-				<string>com.overthought.app</string>
+				<string>com.ibrahim.overthought.dev</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.809230710060-cnihjla1hlm3i0prddfu8bhd7qg9h816</string>
 			</array>
 		</dict>
 		<dict>

@@ -1,8 +1,10 @@
+import { useEffect } from 'react';
 import type { StyleProp, TextStyle } from 'react-native';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { authService } from '../../src/features/auth/authService';
+import { useAuthStore } from '../../src/store/authStore';
 import { Button } from '../../src/shared/ui/Button';
 import { AppText } from '../../src/shared/ui/Text';
 import { Screen } from '../../src/shared/ui/Screen';
@@ -10,16 +12,30 @@ import { colors, gradients, shadows, spacing, typography } from '../../src/share
 
 export default function WelcomeRoute() {
   const router = useRouter();
+  const sessionMode = useAuthStore((state) => state.sessionMode);
+
+  useEffect(() => {
+    if (sessionMode === 'authenticated') {
+      router.replace('/home');
+    }
+  }, [router, sessionMode]);
 
   const continueGuest = () => {
     authService.continueAsGuest();
     router.replace('/home');
   };
 
-  const showNativeSetup = async (provider: 'apple' | 'google') => {
-    const result =
-      provider === 'apple' ? await authService.signInWithApple() : await authService.signInWithGoogle();
-    Alert.alert('Native setup needed', result.message ?? 'Provider setup is pending.');
+  const signInWithGoogle = async () => {
+    const result = await authService.signInWithGoogle();
+
+    if (result.ok) {
+      router.replace('/home');
+      return;
+    }
+
+    if (!result.cancelled) {
+      Alert.alert(result.needsNativeSetup ? 'Native setup needed' : 'Sign-in failed', result.message ?? 'Try again.');
+    }
   };
 
   return (
@@ -56,8 +72,7 @@ export default function WelcomeRoute() {
       <View style={styles.actions}>
         <Button title="Continue as guest →" onPress={continueGuest} />
         <View style={styles.providerRow}>
-          <ProviderButton glyph="" title="Apple" onPress={() => void showNativeSetup('apple')} />
-          <ProviderButton glyph="G" title="Google" onPress={() => void showNativeSetup('google')} glyphStyle={styles.googleGlyph} />
+          <ProviderButton glyph="G" title="Google" onPress={() => void signInWithGoogle()} glyphStyle={styles.googleGlyph} />
         </View>
         <Button title="Continue with email" variant="ghost" onPress={() => router.push('/auth')} />
       </View>
@@ -170,11 +185,11 @@ const styles = StyleSheet.create({
     borderColor: colors.brand.ink,
     borderRadius: 18,
     borderWidth: 2,
-    flex: 1,
     flexDirection: 'row',
     gap: spacing.md,
     justifyContent: 'center',
     minHeight: 54,
+    width: '100%',
   },
   providerPressed: {
     transform: [{ translateY: 1 }],

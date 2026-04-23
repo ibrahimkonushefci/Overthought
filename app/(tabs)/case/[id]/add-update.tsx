@@ -35,7 +35,7 @@ export default function AddUpdateRoute() {
     setLoading(true);
     try {
       await caseUpdateRepository.addUpdate(id, trimmed);
-      router.replace(`/case/${id}`);
+      router.back();
     } catch (error) {
       Alert.alert('Could not add update', error instanceof Error ? error.message : 'Try again.');
     } finally {
