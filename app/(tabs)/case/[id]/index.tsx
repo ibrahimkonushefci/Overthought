@@ -29,9 +29,13 @@ export default function CaseDetailRoute() {
       return;
     }
 
-    const nextRecord = await caseRepository.getCase(id);
-    setRecord(nextRecord);
-    setUpdates(nextRecord && isGuestCase(nextRecord) ? nextRecord.updates : await caseUpdateRepository.listUpdates(id));
+    try {
+      const nextRecord = await caseRepository.getCase(id);
+      setRecord(nextRecord);
+      setUpdates(nextRecord && isGuestCase(nextRecord) ? nextRecord.updates : await caseUpdateRepository.listUpdates(id));
+    } catch (error) {
+      Alert.alert('Could not refresh case', error instanceof Error ? error.message : 'Try again.');
+    }
   }, [id]);
 
   useEffect(() => {
@@ -59,8 +63,12 @@ export default function CaseDetailRoute() {
   };
 
   const setOutcome = async (outcomeStatus: OutcomeStatus) => {
-    await caseRepository.updateOutcome(id, outcomeStatus);
-    await refresh();
+    try {
+      await caseRepository.updateOutcome(id, outcomeStatus);
+      await refresh();
+    } catch (error) {
+      Alert.alert('Could not update outcome', error instanceof Error ? error.message : 'Try again.');
+    }
   };
 
   const archive = () => {
@@ -70,7 +78,12 @@ export default function CaseDetailRoute() {
         text: 'Delete',
         style: 'destructive',
         onPress: () => {
-          void caseRepository.archiveCase(id).then(() => router.replace('/cases'));
+          void caseRepository
+            .archiveCase(id)
+            .then(() => router.replace('/cases'))
+            .catch((error) => {
+              Alert.alert('Could not delete case', error instanceof Error ? error.message : 'Try again.');
+            });
         },
       },
     ]);

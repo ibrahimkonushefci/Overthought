@@ -1,11 +1,13 @@
 import { Alert, Pressable, StyleSheet, View } from 'react-native';
 import type { ComponentType } from 'react';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { Bell, ChevronRight, LogIn, Shield, Trash2, Crown, FileText, Sparkles } from 'lucide-react-native';
 import type { LucideProps } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useCallback } from 'react';
 import { authService } from '../../src/features/auth/authService';
 import { premiumService } from '../../src/features/premium/premiumService';
+import { isPremiumStateActive, usePremiumStore } from '../../src/store/premiumStore';
 import { Screen } from '../../src/shared/ui/Screen';
 import { AppText } from '../../src/shared/ui/Text';
 import { Button } from '../../src/shared/ui/Button';
@@ -17,12 +19,32 @@ import { colors, gradients, radii, shadows, spacing, typography } from '../../sr
 export default function ProfileRoute() {
   const router = useRouter();
   const auth = useAuthStore();
+  const premiumState = usePremiumStore((state) => state.premiumState);
+  const premiumLoading = usePremiumStore((state) => state.loading);
   const { cases } = useCases();
   const isGuest = auth.sessionMode !== 'authenticated';
+  const hasPremium = isPremiumStateActive(premiumState);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (auth.sessionMode === 'authenticated') {
+        void premiumService.refreshPremiumState();
+      }
+    }, [auth.sessionMode]),
+  );
 
   const restore = async () => {
-    await premiumService.restorePurchases();
-    Alert.alert('Restore purchases', 'RevenueCat restore is scaffolded and ready for native setup.');
+    const result = await premiumService.restorePurchases();
+    const title =
+      result.kind === 'restored'
+        ? 'Restore purchases'
+        : result.kind === 'already_active'
+          ? 'Premium active'
+          : result.kind === 'nothing_to_restore'
+            ? 'Nothing to restore'
+            : 'Could not restore';
+
+    Alert.alert(title, result.message);
   };
 
   return (
@@ -75,10 +97,17 @@ export default function ProfileRoute() {
           Sharper verdicts.
         </AppText>
         <AppText variant="subtitle" color={colors.text.onBrand} style={styles.premiumSubtitle}>
-          Deeper reads, share cards, tone modes and unlimited history.
+          {hasPremium
+            ? 'Premium is active on this account.'
+            : 'Deeper reads, share cards, tone modes and unlimited history.'}
         </AppText>
         <View style={styles.premiumButton}>
-          <Button title="Try Premium" variant="accent" icon={Sparkles} onPress={() => router.push('/paywall')} />
+          <Button
+            title={hasPremium ? 'Premium active' : premiumLoading ? 'Checking Premium' : 'Try Premium'}
+            variant="accent"
+            icon={Sparkles}
+            onPress={() => router.push('/paywall')}
+          />
         </View>
       </LinearGradient>
 
@@ -93,6 +122,7 @@ export default function ProfileRoute() {
           <AppText variant="body" style={styles.rowTitle}>
             Restore purchases
           </AppText>
+          {hasPremium ? <AppText variant="body" color={colors.text.secondary}>Active</AppText> : null}
           <ChevronRight color={colors.text.secondary} size={22} />
         </Pressable>
       </View>

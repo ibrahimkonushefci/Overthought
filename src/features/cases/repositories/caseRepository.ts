@@ -10,6 +10,10 @@ import { analysisService } from '../../analysis/analysisService';
 import type { CaseEntity } from '../types';
 import { mapCaseRow, type CaseRow } from './caseMappers';
 
+function authenticatedCaseId(caseId: string): string {
+  return useGuestStore.getState().migratedCaseMap[caseId] ?? caseId;
+}
+
 export const caseRepository = {
   async createCase(input: CreateCaseInput): Promise<CaseEntity> {
     const analysis = await analysisService.analyzeCase(input);
@@ -113,27 +117,30 @@ export const caseRepository = {
     return selectActiveGuestCases(useGuestStore.getState());
   },
   async getCase(caseId: string): Promise<CaseEntity | null> {
-    const guestCase = useGuestStore.getState().cases.find((item) => item.localId === caseId);
+    const auth = useAuthStore.getState();
 
-    if (guestCase) {
-      return guestCase;
+    if (auth.sessionMode !== 'authenticated') {
+      return (
+        useGuestStore
+          .getState()
+          .cases.find((item) => item.localId === caseId && !item.archivedAt && !item.deletedAt) ?? null
+      );
     }
 
     if (!supabase) {
-      return null;
+      throw new Error('Supabase is not configured.');
     }
 
-    const auth = useAuthStore.getState();
-
-    if (auth.sessionMode !== 'authenticated' || !auth.user) {
-      return null;
+    if (!auth.user) {
+      throw new Error('Authenticated session is missing a user.');
     }
 
     const { data, error } = await supabase
       .from('cases')
       .select('*')
-      .eq('id', caseId)
+      .eq('id', authenticatedCaseId(caseId))
       .eq('user_id', auth.user.id)
+      .is('archived_at', null)
       .is('deleted_at', null)
       .maybeSingle();
 
@@ -144,9 +151,15 @@ export const caseRepository = {
     return data ? mapCaseRow(data as CaseRow) : null;
   },
   async updateOutcome(caseId: string, outcomeStatus: OutcomeStatus): Promise<void> {
-    const guestCase = useGuestStore.getState().cases.find((item) => item.localId === caseId);
+    const auth = useAuthStore.getState();
 
-    if (guestCase) {
+    if (auth.sessionMode !== 'authenticated') {
+      const guestCase = useGuestStore.getState().cases.find((item) => item.localId === caseId);
+
+      if (!guestCase) {
+        throw new Error('Case not found.');
+      }
+
       useGuestStore.getState().updateOutcome(caseId, outcomeStatus);
       trackEvent('outcome_marked', { outcomeStatus, mode: 'guest' });
       return;
@@ -156,16 +169,14 @@ export const caseRepository = {
       throw new Error('Supabase is not configured.');
     }
 
-    const auth = useAuthStore.getState();
-
-    if (auth.sessionMode !== 'authenticated' || !auth.user) {
+    if (!auth.user) {
       throw new Error('Sign in again before updating this case.');
     }
 
     const { error } = await supabase
       .from('cases')
       .update({ outcome_status: outcomeStatus })
-      .eq('id', caseId)
+      .eq('id', authenticatedCaseId(caseId))
       .eq('user_id', auth.user.id)
       .is('deleted_at', null);
 
@@ -176,9 +187,15 @@ export const caseRepository = {
     trackEvent('outcome_marked', { outcomeStatus, mode: 'authenticated' });
   },
   async archiveCase(caseId: string): Promise<void> {
-    const guestCase = useGuestStore.getState().cases.find((item) => item.localId === caseId);
+    const auth = useAuthStore.getState();
 
-    if (guestCase) {
+    if (auth.sessionMode !== 'authenticated') {
+      const guestCase = useGuestStore.getState().cases.find((item) => item.localId === caseId);
+
+      if (!guestCase) {
+        throw new Error('Case not found.');
+      }
+
       useGuestStore.getState().archiveCase(caseId);
       return;
     }
@@ -187,16 +204,14 @@ export const caseRepository = {
       throw new Error('Supabase is not configured.');
     }
 
-    const auth = useAuthStore.getState();
-
-    if (auth.sessionMode !== 'authenticated' || !auth.user) {
+    if (!auth.user) {
       throw new Error('Sign in again before archiving this case.');
     }
 
     const { error } = await supabase
       .from('cases')
       .update({ archived_at: nowIso() })
-      .eq('id', caseId)
+      .eq('id', authenticatedCaseId(caseId))
       .eq('user_id', auth.user.id)
       .is('deleted_at', null);
 

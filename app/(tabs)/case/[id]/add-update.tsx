@@ -21,7 +21,12 @@ export default function AddUpdateRoute() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    void caseRepository.getCase(id).then(setRecord);
+    void caseRepository
+      .getCase(id)
+      .then(setRecord)
+      .catch((error) => {
+        Alert.alert('Could not load case', error instanceof Error ? error.message : 'Try again.');
+      });
   }, [id]);
 
   const submit = async () => {

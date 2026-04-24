@@ -1,6 +1,5 @@
 import type { AuthProvider, Profile } from '../../types/shared';
-import { requireSupabase, supabase } from '../../lib/supabase/client';
-import { nowIso } from '../../shared/utils/date';
+import { supabase } from '../../lib/supabase/client';
 
 interface ProfileRow {
   id: string;
@@ -48,28 +47,5 @@ export const profileRepository = {
     }
 
     return data ? mapProfile(data as ProfileRow) : null;
-  },
-  async markCurrentUserDeleted(): Promise<void> {
-    const client = requireSupabase();
-    const { data: sessionData } = await client.auth.getSession();
-    const userId = sessionData.session?.user.id;
-
-    if (!userId) {
-      return;
-    }
-
-    const { error } = await client
-      .from('profiles')
-      .update({
-        deleted_at: nowIso(),
-        display_name: null,
-      })
-      .eq('id', userId);
-
-    if (error) {
-      throw error;
-    }
-
-    // TODO: call a secured Supabase Edge Function with service-role access to delete auth.users.
   },
 };

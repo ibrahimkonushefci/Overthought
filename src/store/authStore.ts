@@ -22,6 +22,7 @@ interface AuthState {
   setAuthenticated: (user: AuthUser, profile?: Profile | null) => void;
   setProfile: (profile: Profile | null) => void;
   signOutLocal: () => void;
+  resetSession: () => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -38,6 +39,7 @@ export const useAuthStore = create<AuthState>()(
         set({ sessionMode: 'authenticated', user, profile, hasCompletedEntry: true }),
       setProfile: (profile) => set({ profile }),
       signOutLocal: () => set({ sessionMode: 'guest', user: null, profile: null }),
+      resetSession: () => set({ sessionMode: 'guest', user: null, profile: null, hasCompletedEntry: false }),
     }),
     {
       name: 'overthought-auth-store',

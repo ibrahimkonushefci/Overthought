@@ -10,7 +10,9 @@ export type AnalyticsEventName =
   | 'case_update_added'
   | 'outcome_marked'
   | 'paywall_viewed'
-  | 'restore_purchases_tapped';
+  | 'restore_purchases_tapped'
+  | 'premium_purchase_started'
+  | 'premium_purchase_completed';
 
 export function trackEvent(name: AnalyticsEventName, payload: Record<string, unknown> = {}) {
   if (__DEV__) {

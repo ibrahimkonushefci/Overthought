@@ -52,7 +52,7 @@ export default function DeleteAccountRoute() {
         <AppText variant="subtitle" style={styles.body}>
           {isGuest
             ? 'This clears guest cases, drafts, and local session markers from this device.'
-            : 'This marks your profile for deletion and signs you out. A secured Supabase function should complete auth-user deletion before release.'}
+            : 'This permanently deletes your Overthought account, synced cases, and local session data, then signs you out on this device.'}
         </AppText>
       </Card>
       <View style={styles.action}>

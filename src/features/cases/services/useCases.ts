@@ -18,17 +18,22 @@ export function useCases() {
   );
   const [remoteCases, setRemoteCases] = useState<CaseEntity[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
 
   const refresh = useCallback(async () => {
     if (authMode !== 'authenticated') {
       setRemoteCases([]);
       setLoading(false);
+      setError(null);
       return;
     }
 
     setLoading(true);
     try {
       setRemoteCases(await caseRepository.listCases());
+      setError(null);
+    } catch (refreshError) {
+      setError(refreshError instanceof Error ? refreshError : new Error('Unable to refresh cases.'));
     } finally {
       setLoading(false);
     }
@@ -47,6 +52,7 @@ export function useCases() {
   return {
     cases: authMode === 'authenticated' ? remoteCases : guestCases,
     loading,
+    error,
     refresh,
   };
 }

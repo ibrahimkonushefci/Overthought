@@ -47,6 +47,16 @@ export interface PremiumState {
   updatedAt: string;
 }
 
+export interface PremiumPackage {
+  identifier: string;
+  offeringIdentifier: string | null;
+  packageType: string;
+  productIdentifier: string;
+  title: string;
+  priceString: string;
+  periodLabel: string | null;
+}
+
 export interface AnalysisOutput {
   verdictLabel: VerdictLabel;
   delusionScore: number;

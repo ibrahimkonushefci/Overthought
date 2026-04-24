@@ -10,6 +10,7 @@ import { supabase } from '../../lib/supabase/client';
 import { useAuthStore } from '../../store/authStore';
 import { useGuestStore } from '../../store/guestStore';
 import { createId } from '../../shared/utils/id';
+import { premiumService } from '../premium/premiumService';
 import { profileRepository } from '../profile/profileRepository';
 
 const APPLE_AUTH_ENABLED = false;
@@ -20,6 +21,18 @@ export interface AuthActionResult {
   needsNativeSetup?: boolean;
   cancelled?: boolean;
 }
+
+interface DeleteAccountFunctionSuccess {
+  ok: true;
+}
+
+interface DeleteAccountFunctionFailure {
+  ok: false;
+  code: 'not_authenticated' | 'delete_failed';
+  message: string;
+}
+
+type DeleteAccountFunctionResponse = DeleteAccountFunctionSuccess | DeleteAccountFunctionFailure;
 
 let listenersStarted = false;
 function providerFromSupabase(provider?: string): AuthProvider {
@@ -74,6 +87,7 @@ async function applySession(session: Session | null): Promise<void> {
 
   if (!user) {
     useAuthStore.getState().setGuest();
+    await premiumService.handleAuthStateChange(null);
     return;
   }
 
@@ -86,6 +100,7 @@ async function applySession(session: Session | null): Promise<void> {
     },
     profile,
   );
+  await premiumService.handleAuthStateChange(user.id);
 }
 
 function startAuthListeners() {
@@ -122,6 +137,7 @@ export const authService = {
     if (!supabase) {
       if (authStore.sessionMode === 'loading') {
         useAuthStore.getState().setGuest();
+        await premiumService.handleAuthStateChange(null);
       }
 
       return;
@@ -139,6 +155,7 @@ export const authService = {
     if (!data.session?.user) {
       if (authStore.sessionMode === 'loading') {
         useAuthStore.getState().setGuest();
+        await premiumService.handleAuthStateChange(null);
       }
 
       return;
@@ -347,25 +364,70 @@ export const authService = {
     }
   },
   async signOut(): Promise<void> {
-    if (supabase) {
-      await supabase.auth.signOut();
+    let signOutError: unknown = null;
+
+    try {
+      if (supabase) {
+        await supabase.auth.signOut();
+      }
+    } catch (error) {
+      signOutError = error;
+    } finally {
+      useAuthStore.getState().signOutLocal();
+      await premiumService.handleAuthStateChange(null);
     }
 
-    useAuthStore.getState().signOutLocal();
+    if (signOutError) {
+      // Local cleanup already completed. Supabase sign-out failures should not leave the user stuck in auth state.
+      return;
+    }
   },
   async deleteAccount(): Promise<AuthActionResult> {
     if (useAuthStore.getState().sessionMode !== 'authenticated') {
       useGuestStore.getState().clearAllLocalData();
-      useAuthStore.getState().setGuest();
-      return { ok: true };
+      useAuthStore.getState().resetSession();
+      await premiumService.handleAuthStateChange(null);
+      return { ok: true, message: 'Local data deleted.' };
+    }
+
+    if (!supabase) {
+      return {
+        ok: false,
+        message: 'Supabase is not configured.',
+      };
     }
 
     try {
-      await profileRepository.markCurrentUserDeleted();
-      await this.signOut();
+      const { data, error } = await supabase.functions.invoke<DeleteAccountFunctionResponse>('delete-account', {
+        body: {},
+      });
+
+      if (error) {
+        return {
+          ok: false,
+          message: error.message,
+        };
+      }
+
+      if (!data?.ok) {
+        return {
+          ok: false,
+          message: data?.message ?? 'Unable to delete account right now.',
+        };
+      }
+
+      try {
+        await supabase.auth.signOut({ scope: 'local' });
+      } catch {
+        // The account may already be gone remotely; local cleanup still needs to complete.
+      }
+
+      useGuestStore.getState().clearAllLocalData();
+      useAuthStore.getState().resetSession();
+      await premiumService.handleAuthStateChange(null);
       return {
         ok: true,
-        message: 'Account deletion was requested. Complete auth-user deletion in the secured Supabase function.',
+        message: 'Account deleted.',
       };
     } catch (error) {
       return {

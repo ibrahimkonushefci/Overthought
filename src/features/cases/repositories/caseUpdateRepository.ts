@@ -11,35 +11,47 @@ import { isGuestCase } from '../types';
 import { mapCaseUpdateRow, type CaseUpdateRow } from './caseMappers';
 import { caseRepository } from './caseRepository';
 
+async function listRemoteUpdates(caseId: string): Promise<CaseUpdateEntity[]> {
+  if (!supabase) {
+    throw new Error('Supabase is not configured.');
+  }
+
+  const { data, error } = await supabase
+    .from('case_updates')
+    .select('*')
+    .eq('case_id', caseId)
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    throw error;
+  }
+
+  return (data as CaseUpdateRow[]).map(mapCaseUpdateRow);
+}
+
 export const caseUpdateRepository = {
   async listUpdates(caseId: string): Promise<CaseUpdateEntity[]> {
-    const guestCase = useGuestStore.getState().cases.find((item) => item.localId === caseId);
+    const auth = useAuthStore.getState();
 
-    if (guestCase) {
-      return guestCase.updates;
+    if (auth.sessionMode !== 'authenticated') {
+      const guestCase = useGuestStore
+        .getState()
+        .cases.find((item) => item.localId === caseId && !item.archivedAt && !item.deletedAt);
+
+      return guestCase?.updates ?? [];
     }
 
     if (!supabase) {
-      return [];
+      throw new Error('Supabase is not configured.');
     }
 
     const parentCase = await caseRepository.getCase(caseId);
 
-    if (!parentCase) {
+    if (!parentCase || isGuestCase(parentCase)) {
       return [];
     }
 
-    const { data, error } = await supabase
-      .from('case_updates')
-      .select('*')
-      .eq('case_id', caseId)
-      .order('created_at', { ascending: true });
-
-    if (error) {
-      throw error;
-    }
-
-    return (data as CaseUpdateRow[]).map(mapCaseUpdateRow);
+    return listRemoteUpdates(parentCase.id);
   },
   async addUpdate(caseId: string, updateText: string): Promise<CaseUpdateEntity> {
     const parentCase = await caseRepository.getCase(caseId);
@@ -50,7 +62,7 @@ export const caseUpdateRepository = {
 
     const updates = isGuestCase(parentCase)
       ? parentCase.updates
-      : await caseUpdateRepository.listUpdates(caseId);
+      : await listRemoteUpdates(parentCase.id);
 
     const analysis = await analysisService.analyzeCase({
       category: parentCase.category,
@@ -129,6 +141,18 @@ export const caseUpdateRepository = {
       .is('deleted_at', null);
 
     if (updateError) {
+      const { error: rollbackError } = await supabase
+        .from('case_updates')
+        .delete()
+        .eq('id', (data as CaseUpdateRow).id)
+        .eq('case_id', parentCase.id);
+
+      if (rollbackError) {
+        throw new Error(
+          `Update was saved but the parent case could not be refreshed: ${updateError.message}. Cleanup also failed: ${rollbackError.message}`,
+        );
+      }
+
       throw updateError;
     }
 
