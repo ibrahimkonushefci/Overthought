@@ -17,7 +17,7 @@ export default function HomeRoute() {
   const sessionMode = useAuthStore((state) => state.sessionMode);
   const average =
     cases.length > 0 ? Math.round(cases.reduce((total, item) => total + item.delusionScore, 0) / cases.length) : null;
-  const recent = cases.slice(0, 2);
+  const recent = cases.slice(0, 5);
 
   return (
     <Screen>

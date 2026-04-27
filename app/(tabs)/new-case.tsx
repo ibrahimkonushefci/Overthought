@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, Sparkles } from 'lucide-react-native';
 import type { CaseCategory } from '../../src/types/shared';
@@ -19,6 +19,13 @@ const examples = [
   "My friend suddenly started texting more this week.",
   "They watched my story but did not react.",
 ];
+const ANALYZING_DELAY_MS = 2000;
+
+function wait(milliseconds: number) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, milliseconds);
+  });
+}
 
 export default function NewCaseRoute() {
   const router = useRouter();
@@ -39,15 +46,36 @@ export default function NewCaseRoute() {
     }
 
     setLoading(true);
+    const minimumAnalyzingTime = wait(ANALYZING_DELAY_MS);
+
     try {
       const record = await caseRepository.createCase({ inputText: trimmed, category });
-      router.replace(`/case/${getCaseId(record)}`);
+      setCaseDraft('');
+      setInputText('');
+      await minimumAnalyzingTime;
+      router.replace(`/case/${getCaseId(record)}?fromAnalysis=1`);
     } catch (error) {
       Alert.alert('Could not save the case', error instanceof Error ? error.message : 'Try again.');
     } finally {
       setLoading(false);
     }
   };
+
+  if (loading) {
+    return (
+      <Screen scroll={false}>
+        <View style={styles.analyzingScreen}>
+          <ActivityIndicator color={colors.brand.pink} size="large" />
+          <AppText variant="display" center style={styles.analyzingTitle}>
+            Analyzing...
+          </AppText>
+          <AppText variant="subtitle" center style={styles.analyzingSubtitle}>
+            Working the magic. Judging respectfully.
+          </AppText>
+        </View>
+      </Screen>
+    );
+  }
 
   return (
     <Screen>
@@ -212,5 +240,17 @@ const styles = StyleSheet.create({
   },
   submitWrap: {
     marginTop: spacing.xl,
+  },
+  analyzingScreen: {
+    alignItems: 'center',
+    flex: 1,
+    gap: spacing.lg,
+    justifyContent: 'center',
+  },
+  analyzingTitle: {
+    marginTop: spacing.md,
+  },
+  analyzingSubtitle: {
+    maxWidth: 280,
   },
 });

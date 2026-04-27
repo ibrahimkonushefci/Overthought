@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Alert, Pressable, Share, StyleSheet, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, Animated, Pressable, Share, StyleSheet, View } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Check, CircleHelp, Plus, Share2, Trash2, X } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
@@ -7,7 +7,7 @@ import type { OutcomeStatus } from '../../../../src/types/shared';
 import { caseRepository } from '../../../../src/features/cases/repositories/caseRepository';
 import { caseUpdateRepository } from '../../../../src/features/cases/repositories/caseUpdateRepository';
 import type { CaseEntity, CaseUpdateEntity } from '../../../../src/features/cases/types';
-import { isGuestCase } from '../../../../src/features/cases/types';
+import { getCaseId, isGuestCase } from '../../../../src/features/cases/types';
 import { ScorePanel } from '../../../../src/features/cases/components/ScorePanel';
 import { Screen } from '../../../../src/shared/ui/Screen';
 import { AppText } from '../../../../src/shared/ui/Text';
@@ -18,14 +18,21 @@ import { colors, radii, spacing, typography } from '../../../../src/shared/theme
 import { categoryIcons, categoryLabels, verdictLabels } from '../../../../src/shared/utils/verdict';
 import { relativeTime } from '../../../../src/shared/utils/date';
 
+const detailScrollByCaseId = new Map<string, number>();
+
 export default function CaseDetailRoute() {
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, fromAnalysis } = useLocalSearchParams<{ id: string; fromAnalysis?: string }>();
   const [record, setRecord] = useState<CaseEntity | null>(null);
   const [updates, setUpdates] = useState<CaseUpdateEntity[]>([]);
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
+  const shouldPresentNewResult = fromAnalysis === '1';
+  const [shouldRunResultIntro, setShouldRunResultIntro] = useState(shouldPresentNewResult);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
 
   const refresh = useCallback(async () => {
     if (!id) {
+      setInitialLoadComplete(true);
       return;
     }
 
@@ -35,7 +42,16 @@ export default function CaseDetailRoute() {
       setUpdates(nextRecord && isGuestCase(nextRecord) ? nextRecord.updates : await caseUpdateRepository.listUpdates(id));
     } catch (error) {
       Alert.alert('Could not refresh case', error instanceof Error ? error.message : 'Try again.');
+    } finally {
+      setInitialLoadComplete(true);
     }
+  }, [id]);
+
+  useEffect(() => {
+    setInitialLoadComplete(false);
+    setRecord(null);
+    setUpdates([]);
+    setShouldRunResultIntro(shouldPresentNewResult);
   }, [id]);
 
   useEffect(() => {
@@ -48,10 +64,49 @@ export default function CaseDetailRoute() {
     }, [refresh]),
   );
 
+  const resultPresentationKey = shouldRunResultIntro
+    ? record
+      ? `new-analysis:${getCaseId(record)}`
+      : `new-analysis:${id}`
+    : undefined;
+  const restoredScrollY = shouldRunResultIntro ? 0 : detailScrollByCaseId.get(id) ?? 0;
+
+  useEffect(() => {
+    if (!record || !shouldRunResultIntro) {
+      fadeAnim.setValue(1);
+      return;
+    }
+
+    fadeAnim.setValue(0);
+    const animation = Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 220,
+      useNativeDriver: true,
+    });
+    animation.start(({ finished }) => {
+      if (finished) {
+        setShouldRunResultIntro(false);
+      }
+    });
+
+    return () => {
+      animation.stop();
+    };
+  }, [fadeAnim, id, record, resultPresentationKey, shouldRunResultIntro]);
+
   if (!record) {
     return (
-      <Screen>
-        <EmptyState title="Case not found." body="It may have been archived or deleted." />
+      <Screen scrollResetKey={resultPresentationKey}>
+        {initialLoadComplete ? (
+          <EmptyState title="Case not found." body="It may have been archived or deleted." />
+        ) : (
+          <View style={styles.initialLoadState}>
+            <ActivityIndicator color={colors.brand.pink} />
+            <AppText variant="meta" center>
+              {shouldRunResultIntro ? 'Preparing verdict...' : 'Loading case...'}
+            </AppText>
+          </View>
+        )}
       </Screen>
     );
   }
@@ -63,10 +118,13 @@ export default function CaseDetailRoute() {
   };
 
   const setOutcome = async (outcomeStatus: OutcomeStatus) => {
+    const previousRecord = record;
+    setRecord({ ...record, outcomeStatus });
+
     try {
       await caseRepository.updateOutcome(id, outcomeStatus);
-      await refresh();
     } catch (error) {
+      setRecord(previousRecord);
       Alert.alert('Could not update outcome', error instanceof Error ? error.message : 'Try again.');
     }
   };
@@ -90,7 +148,16 @@ export default function CaseDetailRoute() {
   };
 
   return (
-    <Screen>
+    <Screen
+      initialScrollY={restoredScrollY}
+      onScrollYChange={(scrollY) => {
+        if (!shouldRunResultIntro) {
+          detailScrollByCaseId.set(id, scrollY);
+        }
+      }}
+      scrollResetKey={resultPresentationKey}
+    >
+      <Animated.View style={{ opacity: fadeAnim }}>
       <View style={styles.topRow}>
         <Pressable accessibilityRole="button" onPress={() => router.back()} style={styles.iconButton}>
           <ArrowLeft color={colors.text.primary} size={20} />
@@ -176,6 +243,7 @@ export default function CaseDetailRoute() {
       </View>
 
       <Button title="Delete this case" variant="ghost" icon={Trash2} onPress={archive} />
+      </Animated.View>
     </Screen>
   );
 }
@@ -337,5 +405,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accent.lime,
     borderColor: colors.brand.ink,
     borderWidth: 2,
+  },
+  initialLoadState: {
+    alignItems: 'center',
+    flex: 1,
+    gap: spacing.md,
+    justifyContent: 'center',
   },
 });

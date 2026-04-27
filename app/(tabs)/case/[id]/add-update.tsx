@@ -38,9 +38,12 @@ export default function AddUpdateRoute() {
     }
 
     setLoading(true);
+
     try {
       await caseUpdateRepository.addUpdate(id, trimmed);
-      router.back();
+      setUpdateDraft(id, '');
+      setText('');
+      router.replace(`/case/${id}`);
     } catch (error) {
       Alert.alert('Could not add update', error instanceof Error ? error.message : 'Try again.');
     } finally {
@@ -88,7 +91,7 @@ export default function AddUpdateRoute() {
 
       <View style={styles.submitWrap}>
         <Button
-          title="Update the verdict"
+          title={loading ? 'Updating...' : 'Update the verdict'}
           icon={Sparkles}
           loading={loading}
           disabled={loading || text.trim().length < 8}
