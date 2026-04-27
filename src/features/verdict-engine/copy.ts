@@ -1,5 +1,10 @@
 import { toTitleCase } from './normalize';
-import type { ConfidenceLevel, TriggeredSignal, VerdictEngineConfig } from './types';
+import type {
+  ConfidenceLevel,
+  ScenarioOverride,
+  TriggeredSignal,
+  VerdictEngineConfig,
+} from './types';
 
 const SIGNAL_COPY: Record<string, string> = {
   single_low_signal: 'a very small signal',
@@ -13,6 +18,7 @@ const SIGNAL_COPY: Record<string, string> = {
   one_off_event: 'too much meaning from one moment',
   third_party_interpretation: 'other people shaping the conclusion',
   direct_action: 'direct effort',
+  booked_logistics: 'handled logistics',
   consistent_effort: 'consistent effort',
   specific_interest: 'specific personal interest',
   clear_language: 'clear wording',
@@ -50,7 +56,7 @@ export function scoreBucket(
   score: number,
   config: VerdictEngineConfig,
 ): keyof VerdictEngineConfig['explanationTemplates'] {
-  if (score >= 61) {
+  if (score >= 71) {
     return 'high';
   }
 
@@ -74,19 +80,20 @@ export function buildExplanationText(args: {
   scoreSeed: string;
   config: VerdictEngineConfig;
   topSignals: TriggeredSignal[];
+  scenarioOverride?: ScenarioOverride;
   previousScoreDelta?: number;
 }): string {
+  if (args.scenarioOverride) {
+    return pickDeterministic(
+      args.scenarioOverride.explanationTemplates,
+      `${args.scoreSeed}|scenario|${args.scenarioOverride.id}`,
+    );
+  }
+
   const baseTemplate = pickDeterministic(
     args.config.explanationTemplates[scoreBucket(args.score, args.config)],
     args.scoreSeed,
   );
-
-  const topDescriptions = args.topSignals.slice(0, 3).map((signal) => describeSignal(signal.id));
-
-  const signalSentence =
-    topDescriptions.length > 0
-      ? ` Main reasons: ${joinNaturalList(topDescriptions)}.`
-      : '';
 
   let updateSentence = '';
   if (typeof args.previousScoreDelta === 'number') {
@@ -98,15 +105,23 @@ export function buildExplanationText(args: {
     }
   }
 
-  return `${baseTemplate}${signalSentence}${updateSentence}`.trim();
+  return `${baseTemplate}${updateSentence}`.trim();
 }
 
 export function buildNextMoveText(args: {
   score: number;
   scoreSeed: string;
   config: VerdictEngineConfig;
+  scenarioOverride?: ScenarioOverride;
   dominantSignalId?: string;
 }): string {
+  if (args.scenarioOverride) {
+    return pickDeterministic(
+      args.scenarioOverride.nextMoveTemplates,
+      `${args.scoreSeed}|scenario-next|${args.scenarioOverride.id}`,
+    );
+  }
+
   if (
     args.dominantSignalId &&
     args.config.dominantSignalOverrides[args.dominantSignalId]?.length
@@ -139,20 +154,4 @@ export function inferConfidenceLevel(topSignals: TriggeredSignal[], score: numbe
   }
 
   return 'low';
-}
-
-function joinNaturalList(values: string[]): string {
-  if (values.length === 0) {
-    return '';
-  }
-
-  if (values.length === 1) {
-    return values[0];
-  }
-
-  if (values.length === 2) {
-    return `${values[0]} and ${values[1]}`;
-  }
-
-  return `${values.slice(0, -1).join(', ')}, and ${values[values.length - 1]}`;
 }

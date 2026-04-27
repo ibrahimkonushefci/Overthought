@@ -5,7 +5,9 @@ import type {
   CaseAnalysisInput,
   CaseAnalysisResult,
   Category,
+  ScenarioOverride,
   SignalDefinition,
+  SignalNeutralizer,
   TriggeredSignal,
   VerdictEngineConfig,
 } from './types';
@@ -16,6 +18,73 @@ function getAppliedWeight(signal: SignalDefinition, category: Category): number 
 
 function capDelta(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
+}
+
+function hasEverySignal(requiredSignalIds: string[], signalIds: Set<string>): boolean {
+  return requiredSignalIds.every((signalId) => signalIds.has(signalId));
+}
+
+function applySignalNeutralizers(
+  matchedSignals: TriggeredSignal[],
+  neutralizers: SignalNeutralizer[],
+): TriggeredSignal[] {
+  const signalIds = new Set(matchedSignals.map((signal) => signal.id));
+  const activeNeutralizers = neutralizers.filter((neutralizer) =>
+    hasEverySignal(neutralizer.requiredSignalIds, signalIds),
+  );
+
+  if (activeNeutralizers.length === 0) {
+    return matchedSignals;
+  }
+
+  return matchedSignals.map((signal) => {
+    const neutralizedBy = activeNeutralizers
+      .filter((neutralizer) => neutralizer.affectedSignalIds.includes(signal.id))
+      .map((neutralizer) => neutralizer.id);
+
+    if (neutralizedBy.length === 0) {
+      return signal;
+    }
+
+    return {
+      ...signal,
+      originalWeightApplied: signal.originalWeightApplied ?? signal.weightApplied,
+      weightApplied: 0,
+      neutralizedBy: [...(signal.neutralizedBy ?? []), ...neutralizedBy],
+    };
+  });
+}
+
+function findScenarioOverride(
+  scenarios: ScenarioOverride[],
+  category: Category,
+  matchedSignals: TriggeredSignal[],
+): ScenarioOverride | undefined {
+  const signalIds = new Set(matchedSignals.map((signal) => signal.id));
+
+  return scenarios.find(
+    (scenario) =>
+      (!scenario.category || scenario.category === category) &&
+      hasEverySignal(scenario.requiredSignalIds, signalIds),
+  );
+}
+
+function applyScenarioBounds(score: number, scenario?: ScenarioOverride): number {
+  if (!scenario) {
+    return score;
+  }
+
+  let adjustedScore = score;
+
+  if (typeof scenario.scoreFloor === 'number') {
+    adjustedScore = Math.max(adjustedScore, scenario.scoreFloor);
+  }
+
+  if (typeof scenario.scoreCeiling === 'number') {
+    adjustedScore = Math.min(adjustedScore, scenario.scoreCeiling);
+  }
+
+  return adjustedScore;
 }
 
 export function analyzeCase(
@@ -44,15 +113,17 @@ export function analyzeCase(
     })
     .filter((value): value is TriggeredSignal => Boolean(value));
 
-  const weakEvidenceRaw = matchedSignals
+  const weightedSignals = applySignalNeutralizers(matchedSignals, config.signalNeutralizers);
+
+  const weakEvidenceRaw = weightedSignals
     .filter((signal) => signal.type === 'weak_evidence')
     .reduce((total, signal) => total + Math.max(signal.weightApplied, 0), 0);
 
-  const positiveEvidenceRaw = matchedSignals
+  const positiveEvidenceRaw = weightedSignals
     .filter((signal) => signal.type === 'positive_evidence')
     .reduce((total, signal) => total + Math.min(signal.weightApplied, 0), 0);
 
-  const contextModifierRaw = matchedSignals
+  const contextModifierRaw = weightedSignals
     .filter((signal) => signal.type === 'context_modifier')
     .reduce((total, signal) => total + signal.weightApplied, 0);
 
@@ -77,8 +148,16 @@ export function analyzeCase(
   const rawScore =
     config.baseScore + weakEvidenceDelta + positiveEvidenceDelta + contextModifierDelta;
 
+  const scenarioOverride = findScenarioOverride(
+    config.scenarioOverrides,
+    input.category,
+    weightedSignals,
+  );
+
+  const scenarioAdjustedScore = applyScenarioBounds(rawScore, scenarioOverride);
+
   const delusionScore = clampNumber(
-    Math.round(rawScore),
+    Math.round(scenarioAdjustedScore),
     config.scoreClamp.min,
     config.scoreClamp.max,
   );
@@ -87,7 +166,7 @@ export function analyzeCase(
     config.verdictBands.find((band) => delusionScore >= band.min && delusionScore <= band.max)
       ?.label ?? config.verdictBands[config.verdictBands.length - 1].label;
 
-  const topSignals = [...matchedSignals].sort(
+  const topSignals = [...weightedSignals].sort(
     (left, right) => Math.abs(right.weightApplied) - Math.abs(left.weightApplied),
   );
 
@@ -110,6 +189,7 @@ export function analyzeCase(
     scoreSeed,
     config,
     topSignals,
+    scenarioOverride,
     previousScoreDelta,
   });
 
@@ -117,6 +197,7 @@ export function analyzeCase(
     score: delusionScore,
     scoreSeed,
     config,
+    scenarioOverride,
     dominantSignalId,
   });
 
@@ -142,7 +223,8 @@ export function analyzeCase(
       clampedScore: delusionScore,
       previousScoreDelta,
       dominantSignalId,
-      matchedSignals,
+      scenarioOverrideId: scenarioOverride?.id,
+      matchedSignals: weightedSignals,
     };
   }
 

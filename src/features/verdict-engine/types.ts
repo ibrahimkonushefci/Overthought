@@ -50,6 +50,22 @@ export interface SignalDefinition {
   patterns: string[];
 }
 
+export interface SignalNeutralizer {
+  id: string;
+  requiredSignalIds: string[];
+  affectedSignalIds: string[];
+}
+
+export interface ScenarioOverride {
+  id: string;
+  category?: Category;
+  requiredSignalIds: string[];
+  scoreFloor?: number;
+  scoreCeiling?: number;
+  explanationTemplates: string[];
+  nextMoveTemplates: string[];
+}
+
 export interface VerdictEngineConfig {
   version: number;
   baseScore: number;
@@ -57,6 +73,8 @@ export interface VerdictEngineConfig {
   caps: EngineCaps;
   verdictBands: VerdictBand[];
   signals: SignalDefinition[];
+  signalNeutralizers: SignalNeutralizer[];
+  scenarioOverrides: ScenarioOverride[];
   nextMoveTemplates: Record<string, string[]>;
   dominantSignalOverrides: Record<string, string[]>;
   explanationTemplates: Record<'high' | 'mid' | 'low', string[]>;
@@ -66,6 +84,8 @@ export interface TriggeredSignal {
   id: string;
   type: SignalType;
   weightApplied: number;
+  originalWeightApplied?: number;
+  neutralizedBy?: string[];
   matchedPatterns: string[];
   source: 'input' | 'update' | 'both';
 }
@@ -79,6 +99,7 @@ export interface AnalysisDebugInfo {
   clampedScore: number;
   previousScoreDelta?: number;
   dominantSignalId?: string;
+  scenarioOverrideId?: string;
   matchedSignals: TriggeredSignal[];
 }
 

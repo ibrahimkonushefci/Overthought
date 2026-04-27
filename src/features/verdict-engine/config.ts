@@ -1,5 +1,11 @@
 import rawConfig from './config/verdict-config.v1.json';
-import type { SignalDefinition, VerdictBand, VerdictEngineConfig } from './types';
+import type {
+  ScenarioOverride,
+  SignalDefinition,
+  SignalNeutralizer,
+  VerdictBand,
+  VerdictEngineConfig,
+} from './types';
 
 function assertVerdictBand(value: unknown): asserts value is VerdictBand {
   if (!value || typeof value !== 'object') {
@@ -29,6 +35,37 @@ function assertSignalDefinition(value: unknown): asserts value is SignalDefiniti
     !Array.isArray(signal.patterns)
   ) {
     throw new Error(`Invalid signal definition shape for signal: ${String(signal?.id)}`);
+  }
+}
+
+function assertSignalNeutralizer(value: unknown): asserts value is SignalNeutralizer {
+  if (!value || typeof value !== 'object') {
+    throw new Error('Invalid signal neutralizer: expected object.');
+  }
+
+  const neutralizer = value as SignalNeutralizer;
+  if (
+    typeof neutralizer.id !== 'string' ||
+    !Array.isArray(neutralizer.requiredSignalIds) ||
+    !Array.isArray(neutralizer.affectedSignalIds)
+  ) {
+    throw new Error(`Invalid signal neutralizer shape for: ${String(neutralizer?.id)}`);
+  }
+}
+
+function assertScenarioOverride(value: unknown): asserts value is ScenarioOverride {
+  if (!value || typeof value !== 'object') {
+    throw new Error('Invalid scenario override: expected object.');
+  }
+
+  const scenario = value as ScenarioOverride;
+  if (
+    typeof scenario.id !== 'string' ||
+    !Array.isArray(scenario.requiredSignalIds) ||
+    !Array.isArray(scenario.explanationTemplates) ||
+    !Array.isArray(scenario.nextMoveTemplates)
+  ) {
+    throw new Error(`Invalid scenario override shape for: ${String(scenario?.id)}`);
   }
 }
 
@@ -76,6 +113,18 @@ export function assertValidVerdictConfig(value: unknown): asserts value is Verdi
   }
 
   config.signals.forEach(assertSignalDefinition);
+
+  if (!Array.isArray(config.signalNeutralizers)) {
+    throw new Error('Verdict config missing signalNeutralizers.');
+  }
+
+  config.signalNeutralizers.forEach(assertSignalNeutralizer);
+
+  if (!Array.isArray(config.scenarioOverrides)) {
+    throw new Error('Verdict config missing scenarioOverrides.');
+  }
+
+  config.scenarioOverrides.forEach(assertScenarioOverride);
 
   if (!config.nextMoveTemplates || typeof config.nextMoveTemplates !== 'object') {
     throw new Error('Verdict config missing nextMoveTemplates.');

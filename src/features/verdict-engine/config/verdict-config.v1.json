@@ -6,9 +6,9 @@
     "max": 100
   },
   "caps": {
-    "maxPositiveEvidenceReduction": 45,
-    "maxWeakEvidenceIncrease": 45,
-    "maxContextModifierAdjustment": 10,
+    "maxPositiveEvidenceReduction": 50,
+    "maxWeakEvidenceIncrease": 50,
+    "maxContextModifierAdjustment": 35,
     "maxApplicationsPerSignal": 1
   },
   "verdictBands": [
@@ -24,16 +24,16 @@
     },
     {
       "min": 41,
-      "max": 60,
+      "max": 70,
       "label": "mild_delusion"
     },
     {
-      "min": 61,
-      "max": 80,
+      "min": 71,
+      "max": 85,
       "label": "dangerous_overthinking"
     },
     {
-      "min": 81,
+      "min": 86,
       "max": 100,
       "label": "full_clown_territory"
     }
@@ -48,6 +48,7 @@
       },
       "patterns": [
         "liked my story",
+        "liked my instagram story",
         "viewed my story",
         "liked my post",
         "liked a post",
@@ -58,16 +59,46 @@
       ]
     },
     {
+      "id": "stale_social_media_signal",
+      "type": "weak_evidence",
+      "defaultWeight": 22,
+      "patterns": [
+        "three weeks ago",
+        "from three weeks ago",
+        "old story",
+        "old photo",
+        "liked old photo",
+        "liked an old story"
+      ]
+    },
+    {
+      "id": "no_response_after_match",
+      "type": "weak_evidence",
+      "defaultWeight": 30,
+      "patterns": [
+        "hasn't texted me back",
+        "has not texted me back",
+        "hasn't replied",
+        "has not replied",
+        "since we matched",
+        "after we matched"
+      ]
+    },
+    {
       "id": "delayed_reply",
       "type": "weak_evidence",
-      "defaultWeight": 14,
+      "defaultWeight": 15,
       "patterns": [
         "replied after",
         "answered late",
         "took hours to reply",
         "took all day to reply",
-        "replied after 8 hours",
-        "replied after 9 hours"
+        "took her 14 hours",
+        "took him 14 hours",
+        "took 14 hours",
+        "left me on read for two days",
+        "on read for two days",
+        "for two days"
       ]
     },
     {
@@ -80,6 +111,8 @@
       "patterns": [
         "maybe",
         "sometime",
+        "maybe sometime",
+        "maybe sometime next week",
         "we should hang out",
         "haha",
         "lol",
@@ -88,9 +121,21 @@
       ]
     },
     {
-      "id": "no_concrete_followup",
+      "id": "soft_decline",
       "type": "weak_evidence",
       "defaultWeight": 22,
+      "patterns": [
+        "maybe sometime next week",
+        "maybe sometime haha",
+        "sometime next week haha",
+        "just replied maybe sometime",
+        "replied maybe sometime"
+      ]
+    },
+    {
+      "id": "no_concrete_followup",
+      "type": "weak_evidence",
+      "defaultWeight": 30,
       "patterns": [
         "didn't make plans",
         "did not make plans",
@@ -98,13 +143,16 @@
         "no date",
         "no plan",
         "didn't text again",
-        "did not text again"
+        "did not text again",
+        "never texted again",
+        "zero texts",
+        "no texts"
       ]
     },
     {
       "id": "mixed_signals",
       "type": "weak_evidence",
-      "defaultWeight": 20,
+      "defaultWeight": 22,
       "patterns": [
         "hot and cold",
         "texts then ghosts",
@@ -114,26 +162,58 @@
       ]
     },
     {
+      "id": "unavailable_in_person",
+      "type": "weak_evidence",
+      "defaultWeight": 34,
+      "patterns": [
+        "whenever i ask to hang out",
+        "ask to hang out in person",
+        "hang out in person",
+        "really busy with work right now",
+        "busy with work right now",
+        "too busy to hang out",
+        "won't hang out",
+        "will not hang out"
+      ]
+    },
+    {
       "id": "assumption_without_action",
       "type": "weak_evidence",
-      "defaultWeight": 12,
+      "defaultWeight": 14,
       "patterns": [
         "i think this means",
         "this must mean",
+        "must mean",
         "probably likes me",
         "surely interested",
-        "maybe this is a sign"
+        "maybe this is a sign",
+        "really wants me there",
+        "does this mean"
+      ]
+    },
+    {
+      "id": "main_character_syndrome",
+      "type": "weak_evidence",
+      "defaultWeight": 40,
+      "patterns": [
+        "everyone at the party was looking at me",
+        "everyone was looking at me",
+        "they all want to be my best friend",
+        "all want to be my best friend",
+        "want to be my best friend"
       ]
     },
     {
       "id": "friendliness_misread_as_interest",
       "type": "weak_evidence",
-      "defaultWeight": 15,
+      "defaultWeight": 16,
       "categoryWeightOverrides": {
         "friendship": 10
       },
       "patterns": [
         "smiled at me",
+        "smiles at me",
+        "smiles at me a lot",
         "was nice to me",
         "complimented me once",
         "helped me",
@@ -152,18 +232,34 @@
         "liked old photo",
         "watched story twice",
         "followed back quickly",
-        "close friends view"
+        "close friends view",
+        "instagram story"
       ]
     },
     {
-      "id": "one_off_event",
+      "id": "casual_content",
       "type": "weak_evidence",
-      "defaultWeight": 10,
+      "defaultWeight": 26,
       "patterns": [
-        "once",
-        "one time",
-        "yesterday only",
-        "just this one thing"
+        "tiktok",
+        "tik tok",
+        "reel",
+        "reels",
+        "meme"
+      ]
+    },
+    {
+      "id": "pet_specific_interest",
+      "type": "weak_evidence",
+      "defaultWeight": 24,
+      "patterns": [
+        "dog's birthday",
+        "dogs birthday",
+        "my dog's birthday",
+        "my dogs birthday",
+        "asked about him",
+        "asked about her",
+        "golden retriever"
       ]
     },
     {
@@ -179,9 +275,9 @@
     {
       "id": "direct_action",
       "type": "positive_evidence",
-      "defaultWeight": -28,
+      "defaultWeight": -32,
       "categoryWeightOverrides": {
-        "friendship": -18,
+        "friendship": -20,
         "social": -16
       },
       "patterns": [
@@ -190,7 +286,21 @@
         "picked a date",
         "called me",
         "invited me",
-        "followed up"
+        "followed up",
+        "asked if i wanted to hang out"
+      ]
+    },
+    {
+      "id": "booked_logistics",
+      "type": "positive_evidence",
+      "defaultWeight": -36,
+      "patterns": [
+        "booked the reservation",
+        "booked a reservation",
+        "booked the dinner",
+        "booked dinner",
+        "handled the logistics",
+        "made the reservation"
       ]
     },
     {
@@ -198,11 +308,15 @@
       "type": "positive_evidence",
       "defaultWeight": -20,
       "categoryWeightOverrides": {
-        "friendship": -14
+        "friendship": -14,
+        "general": -10
       },
       "patterns": [
         "texts every day",
+        "texts me every single day",
+        "every single day without fail",
         "checks in often",
+        "checks in every morning",
         "keeps conversation going",
         "followed up again",
         "multiple times this week"
@@ -214,6 +328,8 @@
       "defaultWeight": -16,
       "patterns": [
         "remembered details",
+        "remembered my dog",
+        "remembered my dog's birthday",
         "asked personal questions",
         "brought up future plans",
         "made individual effort"
@@ -222,12 +338,27 @@
     {
       "id": "clear_language",
       "type": "positive_evidence",
-      "defaultWeight": -24,
+      "defaultWeight": -30,
       "patterns": [
         "i like you",
+        "i had a great time",
         "let's meet friday",
+        "let's get dinner",
+        "let's get dinner on friday",
         "i want to see you",
         "are you free this weekend"
+      ]
+    },
+    {
+      "id": "workplace_perk",
+      "type": "positive_evidence",
+      "defaultWeight": -18,
+      "patterns": [
+        "buys me coffee",
+        "bought me coffee",
+        "always buys me coffee",
+        "gets me coffee",
+        "free coffee"
       ]
     },
     {
@@ -247,25 +378,75 @@
     {
       "id": "work_context",
       "type": "context_modifier",
-      "defaultWeight": 10,
+      "defaultWeight": 14,
       "patterns": [
         "coworker",
         "manager",
         "client",
         "colleague",
         "project",
-        "work meeting"
+        "current project",
+        "work meeting",
+        "work right now",
+        "office",
+        "1-on-1",
+        "1 on 1"
+      ]
+    },
+    {
+      "id": "authority_work_context",
+      "type": "context_modifier",
+      "defaultWeight": 30,
+      "patterns": [
+        "manager",
+        "boss",
+        "1-on-1",
+        "1 on 1"
+      ]
+    },
+    {
+      "id": "professional_routine_context",
+      "type": "context_modifier",
+      "defaultWeight": 8,
+      "patterns": [
+        "coworker checks in every morning",
+        "checks in every morning",
+        "current project",
+        "project is going"
+      ]
+    },
+    {
+      "id": "group_invite_context",
+      "type": "context_modifier",
+      "defaultWeight": 34,
+      "patterns": [
+        "entire office",
+        "whole office",
+        "invited the entire office",
+        "invited the whole office",
+        "everyone at the office"
       ]
     },
     {
       "id": "friend_group_context",
       "type": "context_modifier",
-      "defaultWeight": 8,
+      "defaultWeight": 10,
       "patterns": [
         "group chat",
         "same friend group",
         "everyone was there",
-        "party group"
+        "party group",
+        "party"
+      ]
+    },
+    {
+      "id": "best_friend_context",
+      "type": "context_modifier",
+      "defaultWeight": 12,
+      "patterns": [
+        "best friend",
+        "no longer friends",
+        "are we no longer friends"
       ]
     },
     {
@@ -299,161 +480,328 @@
       ]
     }
   ],
+  "signalNeutralizers": [
+    {
+      "id": "office_group_neutralizes_direct_invite",
+      "requiredSignalIds": [
+        "group_invite_context",
+        "direct_action"
+      ],
+      "affectedSignalIds": [
+        "direct_action"
+      ]
+    },
+    {
+      "id": "authority_work_neutralizes_perks",
+      "requiredSignalIds": [
+        "authority_work_context",
+        "workplace_perk"
+      ],
+      "affectedSignalIds": [
+        "workplace_perk"
+      ]
+    },
+    {
+      "id": "unavailable_in_person_neutralizes_texting",
+      "requiredSignalIds": [
+        "unavailable_in_person",
+        "consistent_effort"
+      ],
+      "affectedSignalIds": [
+        "consistent_effort"
+      ]
+    },
+    {
+      "id": "professional_routine_neutralizes_checkins",
+      "requiredSignalIds": [
+        "professional_routine_context",
+        "consistent_effort"
+      ],
+      "affectedSignalIds": [
+        "consistent_effort"
+      ]
+    },
+    {
+      "id": "pet_interest_neutralizes_romantic_specificity",
+      "requiredSignalIds": [
+        "pet_specific_interest",
+        "specific_interest"
+      ],
+      "affectedSignalIds": [
+        "specific_interest"
+      ]
+    }
+  ],
+  "scenarioOverrides": [
+    {
+      "id": "green_flag_booked_date",
+      "category": "romance",
+      "requiredSignalIds": [
+        "clear_language",
+        "booked_logistics"
+      ],
+      "scoreCeiling": 5,
+      "explanationTemplates": [
+        "She explicitly asked you out and handled logistics. The only delusion here is opening this app to overthink a date with a reservation.",
+        "This is not a clue hunt; it is a plan. She said dinner, picked Friday, and booked the table."
+      ],
+      "nextMoveTemplates": [
+        "Go to dinner. Leave the conspiracy board at home.",
+        "Respond normally and show up on Friday."
+      ]
+    },
+    {
+      "id": "digital_crumbs_no_followup",
+      "category": "romance",
+      "requiredSignalIds": [
+        "single_low_signal",
+        "stale_social_media_signal",
+        "no_response_after_match"
+      ],
+      "scoreFloor": 95,
+      "explanationTemplates": [
+        "You are surviving on digital crumbs. A story like from three weeks ago with zero texts is a thumb slip, not romance.",
+        "This is not a slow burn; it is an Instagram fossil. No texts after matching means digital crumbs, not romance."
+      ],
+      "nextMoveTemplates": [
+        "Stop feeding the narrative until they use actual words.",
+        "Do not escalate a thumb movement into a relationship plot."
+      ]
+    },
+    {
+      "id": "soft_decline_no_followup",
+      "category": "friendship",
+      "requiredSignalIds": [
+        "soft_decline",
+        "no_concrete_followup"
+      ],
+      "scoreFloor": 84,
+      "scoreCeiling": 85,
+      "explanationTemplates": [
+        "\"Maybe sometime haha\" is the universal translation for \"Please let this conversation die peacefully.\"",
+        "That \"maybe sometime\" was not a plan; it was a polite smoke bomb asking you to let this die peacefully."
+      ],
+      "nextMoveTemplates": [
+        "Let it sit. If they want to hang out, they can produce a date like an adult.",
+        "Do not chase a maybe that already left the room."
+      ]
+    },
+    {
+      "id": "main_character_party",
+      "category": "social",
+      "requiredSignalIds": [
+        "main_character_syndrome",
+        "assumption_without_action"
+      ],
+      "scoreFloor": 90,
+      "scoreCeiling": 92,
+      "explanationTemplates": [
+        "Terminal Main Character Syndrome. Unless you were on fire, a room full of people was not secretly plotting to be your best friend.",
+        "Main Character math is undefeated and unwell. People looking around at a party does not mean they all want to be your best friend."
+      ],
+      "nextMoveTemplates": [
+        "Talk to one actual person before assigning the room a group motive.",
+        "Retire the audience theory and look for a real invitation."
+      ]
+    },
+    {
+      "id": "professional_project_checkin",
+      "category": "general",
+      "requiredSignalIds": [
+        "professional_routine_context",
+        "work_context"
+      ],
+      "scoreFloor": 45,
+      "scoreCeiling": 45,
+      "explanationTemplates": [
+        "They check in because their bonus depends on your work. It is called project management, not a meet-cute.",
+        "Morning project check-ins are office plumbing. Useful, repetitive, and not secretly romantic."
+      ],
+      "nextMoveTemplates": [
+        "Answer the project question and keep the subplot out of the status meeting.",
+        "Treat this as work rhythm unless they show interest outside the job."
+      ]
+    },
+    {
+      "id": "daily_texting_no_in_person",
+      "category": "romance",
+      "requiredSignalIds": [
+        "consistent_effort",
+        "unavailable_in_person"
+      ],
+      "scoreFloor": 85,
+      "scoreCeiling": 85,
+      "explanationTemplates": [
+        "You are their free emotional support chatbot. If they have time to text daily, they have time for coffee. They just don't want to.",
+        "Daily texting sounds cute until every real-life plan hits the work excuse wall."
+      ],
+      "nextMoveTemplates": [
+        "Ask once for a concrete plan. If they dodge again, close the help desk.",
+        "Stop rewarding unlimited texting with unlimited patience."
+      ]
+    },
+    {
+      "id": "manager_coffee_hr",
+      "category": "romance",
+      "requiredSignalIds": [
+        "authority_work_context",
+        "workplace_perk"
+      ],
+      "scoreFloor": 95,
+      "scoreCeiling": 95,
+      "explanationTemplates": [
+        "That is the company's corporate card, not a courtship. Drink the free iced latte and immediately stop flirting with your boss.",
+        "A manager buying coffee in a 1-on-1 is workplace theater, not forbidden romance. HR can smell this from the hallway."
+      ],
+      "nextMoveTemplates": [
+        "Enjoy the coffee and keep the boundary aggressively normal.",
+        "Do not turn a 1-on-1 into an HR training module."
+      ]
+    },
+    {
+      "id": "best_friend_tiktok_delay",
+      "category": "friendship",
+      "requiredSignalIds": [
+        "best_friend_context",
+        "casual_content",
+        "delayed_reply"
+      ],
+      "scoreFloor": 80,
+      "scoreCeiling": 80,
+      "explanationTemplates": [
+        "It is a TikTok, not a court summons. Your best friend has the right to ignore your reels for 48 hours. Touch grass.",
+        "A best friend can leave a TikTok unread without resigning from the friendship. The reel is not legally binding."
+      ],
+      "nextMoveTemplates": [
+        "Send one normal message later if needed. Do not hold a friendship trial over a video.",
+        "Let the TikTok remain unserious."
+      ]
+    },
+    {
+      "id": "dog_birthday_middleman",
+      "category": "romance",
+      "requiredSignalIds": [
+        "pet_specific_interest",
+        "delayed_reply"
+      ],
+      "scoreFloor": 65,
+      "scoreCeiling": 65,
+      "explanationTemplates": [
+        "She doesn't have a crush on you; she has a crush on your Golden Retriever. You are strictly the middleman to the animal.",
+        "Remembering the dog's birthday is adorable, but the 14-hour reply says you may be the dog's assistant, not the lead."
+      ],
+      "nextMoveTemplates": [
+        "Let the dog enjoy the attention. You still need human-level follow-through.",
+        "Do not confuse pet diplomacy with a confirmed crush."
+      ]
+    },
+    {
+      "id": "office_crowd_control",
+      "category": "social",
+      "requiredSignalIds": [
+        "group_invite_context",
+        "direct_action"
+      ],
+      "scoreFloor": 88,
+      "scoreCeiling": 88,
+      "explanationTemplates": [
+        "You were not exclusively chosen; you are a warm body required to make the room look full. Go for the free cake, but this was not a targeted strike.",
+        "An invite to the entire office is crowd control with frosting. You are a warm body with access to free cake, not a targeted strike."
+      ],
+      "nextMoveTemplates": [
+        "Go if it sounds fun, but do not treat a mass invite like a secret message.",
+        "Eat the cake. Retire the exclusivity theory."
+      ]
+    }
+  ],
   "nextMoveTemplates": {
-    "81-100": [
+    "86-100": [
       "Wait for real action before taking this seriously.",
       "Do not escalate based on crumbs alone.",
-      "Let them show consistency instead of building a theory now.",
       "Pause the narrative and look for something concrete.",
-      "Treat this as weak evidence until they do something clearer.",
-      "Do not reward ambiguity with certainty.",
-      "Take one step back and wait for follow-through.",
-      "Assume less, observe more.",
-      "Stop filling in blanks they have not filled in themselves.",
-      "Let the next move come from them before you decide this is real."
+      "Stop filling in blanks they have not filled in themselves."
     ],
-    "61-80": [
+    "71-85": [
       "Look for follow-through, not just vibes.",
-      "Get a little more evidence before deciding what this means.",
-      "Do not over-interpret one signal by itself.",
-      "Stay curious, but do not lock in a conclusion yet.",
-      "Watch whether the behavior repeats in a clear way.",
-      "Keep expectations moderate until there is actual effort.",
-      "Respond normally, but do not build a big story around this yet.",
-      "Give the pattern a little more time before judging it.",
-      "See whether words turn into action.",
-      "Let consistency decide this, not one interesting moment."
+      "Get clearer evidence before deciding what this means.",
+      "Do not judge this from the best moment. Watch the full pattern.",
+      "Keep the read provisional until action catches up."
     ],
-    "41-60": [
+    "41-70": [
       "Stay neutral and watch the pattern.",
       "Give it a little time and see what repeats.",
-      "Look for consistency before making a call.",
-      "Keep things light and let the situation reveal itself.",
-      "Respond naturally and see if the energy is matched.",
-      "Do not force a meaning yet, but do not dismiss it either.",
-      "Pay attention to whether the next signal is clearer.",
-      "Let the situation develop before choosing a side.",
-      "Keep expectations balanced and stay observant.",
-      "Notice whether effort increases, decreases, or stays vague."
+      "Keep things light until the situation becomes less weird.",
+      "Pay attention to whether effort increases, decreases, or stays vague."
     ],
     "21-40": [
       "Proceed naturally, but keep expectations realistic.",
       "Respond and see whether they match your energy.",
-      "This has some basis, but consistency still matters.",
-      "You can treat this as reasonably promising without overcommitting.",
-      "Stay normal and let the direct signals speak for themselves.",
-      "Engage, but keep reading the full pattern.",
-      "The evidence is decent, so there is no need to overthink every detail.",
       "Keep it simple and see whether the effort continues.",
-      "This is one of the better signs, but follow-through still matters.",
-      "You can move forward without turning it into a fantasy."
+      "The evidence is decent, so do not overwork it."
     ],
     "0-20": [
-      "This looks reasonably supported, so respond normally.",
+      "This is clear enough. Act normal.",
       "The evidence is stronger than usual here.",
-      "You do not need to over-analyze this one as much.",
-      "Treat this like a real signal unless the pattern changes.",
-      "This is grounded enough that you can relax a bit.",
-      "The situation appears clear enough to drop the detective work.",
-      "Respond in a straightforward way and keep it moving.",
-      "This has enough clarity that overthinking would add more noise than value.",
-      "The signal looks concrete, so normal behavior is the best move.",
-      "You can take this more at face value than most cases."
+      "Drop the detective work and respond like a person.",
+      "Treat this like a real signal unless the pattern changes."
     ]
   },
   "dominantSignalOverrides": {
     "no_concrete_followup": [
       "Wait for an actual plan, not a vague maybe.",
-      "Without follow-up, the case stays weaker than it sounds.",
-      "If nothing concrete happens next, do not upgrade the meaning."
+      "Without follow-up, the case stays weaker than it sounds."
     ],
     "mixed_signals": [
       "Do not judge this from the highs only. Watch the full pattern.",
-      "Mixed signals mean the average matters more than the best moments.",
-      "If the pattern is unstable, your conclusion should stay unstable too."
+      "Mixed signals mean the average matters more than the best moments."
     ],
     "direct_action": [
-      "The signal is clear enough to respond normally instead of guessing.",
       "Concrete action matters more than hints, and this counts as action.",
       "When someone makes a real move, you do not need to over-interpret."
     ],
+    "booked_logistics": [
+      "The logistics are handled. Stop trying to find a trapdoor under the reservation.",
+      "A booked plan is actual evidence. Behave accordingly."
+    ],
     "single_low_signal": [
       "One tiny social signal is not enough to carry a full theory.",
-      "Treat this as a breadcrumb, not a conclusion.",
-      "A small interaction can be interesting without meaning much."
+      "Treat this as a breadcrumb, not a conclusion."
     ],
     "vague_language": [
       "Vague wording is not the same as clear intent.",
-      "If the language stays soft and noncommittal, keep your read soft too.",
       "Do not convert a maybe into a promise."
     ],
     "social_media_overread": [
-      "Social media activity is easy to overvalue, so keep this grounded.",
       "Online signals can look louder than they really are.",
       "Do not let app behavior outweigh real-world effort."
     ],
     "consistent_effort": [
-      "Consistency is one of the strongest signals in the app, and that helps this case.",
-      "Repeated effort carries more weight than one exciting moment.",
-      "Consistency makes this easier to treat as real."
+      "Repeated effort matters, but only if it points somewhere real.",
+      "Consistency helps, but it still needs context."
     ],
     "delayed_reply": [
-      "A delayed reply by itself does not justify a big emotional reading.",
-      "Slow replies weaken the case unless stronger signals offset them.",
-      "Timing matters, and delay usually lowers confidence."
+      "A delayed reply by itself does not justify a courtroom drama.",
+      "Timing matters, but do not build the whole case on it."
     ]
   },
   "explanationTemplates": {
     "high": [
-      "This is leaning delusional because the evidence is thin and the follow-through is weak.",
-      "Most of the case is built on crumbs rather than clear effort.",
-      "There is not enough solid action here to support the conclusion yet.",
-      "The interpretation is doing more work than the actual evidence.",
-      "This looks like over-reading small signals without enough concrete follow-up.",
-      "The clues are weak, vague, or one-sided, which makes this a stretch right now.",
-      "Right now the theory is stronger than the facts.",
-      "There are hints, but not enough substance to justify the confidence level.",
-      "This feels more like pattern-inventing than pattern-recognition.",
-      "The signal is too small and too isolated to carry this conclusion.",
-      "Too much of this rests on vibes and not enough on direct effort.",
-      "The evidence here is flimsy, and the gap is being filled with hope.",
-      "This is mostly suggestive, not persuasive.",
-      "The case is being propped up by ambiguity instead of clarity.",
-      "Nothing here clearly supports the leap being made."
+      "The evidence is thin and the confidence is doing push-ups.",
+      "This is mostly vibes wearing a fake mustache as evidence.",
+      "The theory is louder than the behavior supporting it.",
+      "There are crumbs here, but you are trying to bake a wedding cake."
     ],
     "mid": [
-      "There is something here, but not enough to call it solid yet.",
-      "The situation has a little substance, but the pattern is still mixed.",
-      "This is not baseless, but it is also not strong enough to feel settled.",
-      "There are a few real signals here, but they are not decisive yet.",
-      "This could go either way, so it is better to stay neutral for now.",
-      "There is some basis for the read, but not enough to be fully confident.",
-      "The evidence is neither empty nor strong, which keeps this in the gray zone.",
-      "There is a little momentum here, but it still needs clearer follow-through.",
-      "The read is understandable, but the overall pattern is still incomplete.",
-      "This is plausible, just not proven.",
-      "There are enough signals to pay attention, but not enough to call it clear.",
-      "The case has some foundation, but the ambiguity has not gone away.",
-      "This is not pure delusion, but it still needs more evidence to feel real.",
-      "There is just enough here to keep watching, not enough to conclude.",
-      "The situation has potential, but the proof is still developing."
+      "There is something here, but not enough to declare a whole narrative.",
+      "This is not baseless, but it is also not sturdy enough to lean on.",
+      "The case has a pulse, just not a birth certificate.",
+      "A few signals exist, but the pattern is still wearing a disguise."
     ],
     "low": [
       "This looks more grounded than delusional.",
-      "There is actual effort or direct action here, which makes this stronger than a random signal.",
-      "This has more substance than the average overthinking case.",
-      "The read seems reasonably supported by real behavior.",
-      "There is enough directness here that you do not need to invent extra meaning.",
-      "This is one of the clearer cases, not one built on scraps.",
-      "The evidence is concrete enough to treat this as plausible.",
-      "This looks supported by follow-through, not just surface-level hints.",
-      "There is a real pattern here, and it is doing most of the work.",
-      "The conclusion looks proportionate to the evidence.",
-      "This is more reality-based than imagination-based.",
-      "There is enough mutuality or directness here to lower the clown risk.",
-      "The behavior described gives this a stronger footing than usual.",
-      "This looks like an actual signal, not just a hopeful read.",
-      "The evidence is solid enough that you can respond normally without over-analyzing it."
+      "There is actual effort here, so the panic can take a chair.",
+      "The evidence is concrete enough that you can stop interrogating it.",
+      "This is one of the clearer cases. Please do not make it weird."
     ]
   }
 }
