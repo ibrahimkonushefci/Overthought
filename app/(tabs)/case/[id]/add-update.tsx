@@ -20,6 +20,10 @@ export default function AddUpdateRoute() {
   const [text, setText] = useState(draft);
   const [loading, setLoading] = useState(false);
 
+  const returnToCase = () => {
+    router.replace(`/case/${id}`);
+  };
+
   useEffect(() => {
     void caseRepository
       .getCase(id)
@@ -54,7 +58,7 @@ export default function AddUpdateRoute() {
   return (
     <Screen>
       <View style={styles.topRow}>
-        <Pressable accessibilityRole="button" onPress={() => router.back()} style={styles.backButton}>
+        <Pressable accessibilityRole="button" onPress={returnToCase} style={styles.backButton}>
           <ArrowLeft color={colors.text.primary} size={20} />
         </Pressable>
         <AppText variant="eyebrow">Add update</AppText>

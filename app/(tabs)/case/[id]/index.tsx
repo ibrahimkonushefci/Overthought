@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Animated, Pressable, Share, StyleSheet, View } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, Check, CircleHelp, Plus, Share2, Trash2, X } from 'lucide-react-native';
+import { ArrowLeft, Check, CircleHelp, Plus, Share2, Sparkles, Trash2, X } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
 import type { OutcomeStatus } from '../../../../src/types/shared';
 import { caseRepository } from '../../../../src/features/cases/repositories/caseRepository';
@@ -12,7 +12,6 @@ import { ScorePanel } from '../../../../src/features/cases/components/ScorePanel
 import { Screen } from '../../../../src/shared/ui/Screen';
 import { AppText } from '../../../../src/shared/ui/Text';
 import { Card } from '../../../../src/shared/ui/Card';
-import { Button } from '../../../../src/shared/ui/Button';
 import { EmptyState } from '../../../../src/shared/ui/EmptyState';
 import { colors, radii, spacing, typography } from '../../../../src/shared/theme/tokens';
 import {
@@ -159,6 +158,7 @@ export default function CaseDetailRoute() {
 
   return (
     <Screen
+      bottomInset={92}
       initialScrollY={restoredScrollY}
       onScrollYChange={(scrollY) => {
         if (!shouldRunResultIntro) {
@@ -167,98 +167,127 @@ export default function CaseDetailRoute() {
       }}
       scrollResetKey={resultPresentationKey}
     >
-      <Animated.View style={{ opacity: fadeAnim }}>
-      <View style={styles.topRow}>
-        <Pressable accessibilityRole="button" onPress={() => router.back()} style={styles.iconButton}>
-          <ArrowLeft color={colors.text.primary} size={20} />
-        </Pressable>
-        <View style={styles.categoryPill}>
-          <AppText variant="body" color={colors.text.secondary} style={styles.categoryText}>
-            {categoryIcons[record.category]} {categoryLabels[record.category]}
+      <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
+        <View style={styles.topRow}>
+          <Pressable accessibilityRole="button" onPress={() => router.back()} style={styles.iconButton}>
+            <ArrowLeft color={colors.text.primary} size={21} strokeWidth={2.4} />
+          </Pressable>
+          <View style={styles.categoryPill}>
+            <AppText variant="body" color={colors.text.secondary} style={styles.categoryText}>
+              {categoryIcons[record.category]} {categoryLabels[record.category]}
+            </AppText>
+          </View>
+          <Pressable accessibilityRole="button" onPress={() => void share()} style={styles.iconButton}>
+            <Share2 color={colors.text.primary} size={21} strokeWidth={2.4} />
+          </Pressable>
+        </View>
+
+        <ScorePanel
+          score={record.delusionScore}
+          verdictLabel={record.verdictLabel}
+          displayLabel={heroDisplayLabel}
+        />
+
+        <SectionLabel title="The Read" />
+        <View style={styles.readCard}>
+          <AppText variant="body" style={styles.readText}>
+            {record.explanationText}
           </AppText>
         </View>
-        <Pressable accessibilityRole="button" onPress={() => void share()} style={styles.iconButton}>
-          <Share2 color={colors.text.primary} size={20} />
-        </Pressable>
-      </View>
 
-      <ScorePanel
-        score={record.delusionScore}
-        verdictLabel={record.verdictLabel}
-        displayLabel={heroDisplayLabel}
-      />
-
-      <Card style={styles.readCard}>
-        <AppText variant="eyebrow" style={styles.sectionLabel}>The read</AppText>
-        <AppText variant="body" style={styles.bigBody}>
-          {record.explanationText}
-        </AppText>
-      </Card>
-
-      <View style={styles.nextMove}>
-        <AppText variant="eyebrow" color="rgba(246, 240, 226, 0.56)" style={styles.sectionLabel}>
-          Next move
-        </AppText>
-        <AppText variant="title" color={colors.text.onBrand} style={styles.nextMoveText}>
-          {record.nextMoveText}
-        </AppText>
-      </View>
-
-      <View style={styles.sectionHeader}>
-        <AppText variant="eyebrow" style={styles.sectionLabel}>Original situation</AppText>
-      </View>
-      <View style={styles.quote}>
-        <AppText variant="subtitle" style={styles.italic}>
-          "{record.inputText}"
-        </AppText>
-      </View>
-
-      <View style={styles.sectionHeaderRow}>
-        <AppText variant="eyebrow" style={styles.sectionLabel}>Updates · {updates.length}</AppText>
-        <Pressable accessibilityRole="button" onPress={() => router.push(`/case/${id}/add-update`)} style={styles.addUpdate}>
-          <Plus color={colors.brand.pink} size={20} />
-          <AppText variant="body" color={colors.brand.pink} style={styles.addUpdateText}>
-            Add update
+        <SectionLabel title="Next Move" />
+        <View style={styles.nextMove}>
+          <AppText variant="title" style={styles.nextMoveText}>
+            {record.nextMoveText}
           </AppText>
-        </Pressable>
-      </View>
+        </View>
 
-      {updates.length > 0 ? (
-        <View style={styles.updateList}>
-          {updates.map((item) => (
-            <Card key={'localId' in item ? item.localId : item.id}>
-              <AppText variant="meta">{relativeTime(item.createdAt)}</AppText>
-              <AppText variant="body" style={styles.updateText}>
-                {item.updateText}
+        <View style={styles.deepRead}>
+          <View style={styles.deepHeader}>
+            <AppText variant="title" color={colors.text.onBrand} style={styles.deepTitle}>
+              Deep Read
+            </AppText>
+            <View style={styles.aiBadge}>
+              <Sparkles color={colors.text.onAccent} size={14} strokeWidth={2.8} />
+              <AppText variant="eyebrow" color={colors.text.onAccent} style={styles.aiBadgeText}>
+                AI
               </AppText>
-              {item.verdictLabel ? (
-                <AppText variant="meta">
-                  {verdictLabels[item.verdictLabel]} · {item.delusionScore}/100
-                </AppText>
-              ) : null}
-            </Card>
-          ))}
+            </View>
+          </View>
+          <AppText variant="subtitle" color="rgba(255, 255, 255, 0.72)" style={styles.deepSubtitle}>
+            The version your group chat would actually send.
+          </AppText>
+          <Pressable accessibilityRole="button" accessibilityState={{ disabled: true }} disabled style={styles.deepButton}>
+            <AppText variant="title" center color={colors.text.onAccent} style={styles.deepButtonText}>
+              Get Deep Read
+            </AppText>
+          </Pressable>
         </View>
-      ) : (
-        <View style={styles.noUpdates}>
-          <AppText variant="subtitle" center>
-            No updates yet. Plot still developing.
+
+        <SectionLabel title="Original Situation" />
+        <View style={styles.quote}>
+          <AppText variant="subtitle" style={styles.quoteText}>
+            {record.inputText}
           </AppText>
         </View>
-      )}
 
-      <AppText variant="eyebrow" style={[styles.sectionLabel, styles.outcomeTitle]}>
-        How did it end?
-      </AppText>
-      <View style={styles.outcomes}>
-        <OutcomeButton icon={Check} label="I was right" selected={record.outcomeStatus === 'right'} onPress={() => void setOutcome('right')} />
-        <OutcomeButton icon={X} label="I was wrong" selected={record.outcomeStatus === 'wrong'} onPress={() => void setOutcome('wrong')} />
-        <OutcomeButton icon={CircleHelp} label="Still unclear" selected={record.outcomeStatus === 'unclear'} onPress={() => void setOutcome('unclear')} />
-      </View>
+        <View style={styles.sectionHeaderRow}>
+          <SectionLabel title={`Updates · ${updates.length}`} noMargin />
+          <Pressable accessibilityRole="button" onPress={() => router.push(`/case/${id}/add-update`)} style={styles.addUpdate}>
+            <Plus color={colors.brand.pink} size={20} strokeWidth={2.6} />
+            <AppText variant="body" color={colors.brand.pink} style={styles.addUpdateText}>
+              Add update
+            </AppText>
+          </Pressable>
+        </View>
 
-      <Button title="Delete this case" variant="ghost" icon={Trash2} onPress={archive} />
+        {updates.length > 0 ? (
+          <View style={styles.updateList}>
+            {updates.map((item) => (
+              <Card key={'localId' in item ? item.localId : item.id} style={styles.updateCard}>
+                <AppText variant="meta">{relativeTime(item.createdAt)}</AppText>
+                <AppText variant="body" style={styles.updateText}>
+                  {item.updateText}
+                </AppText>
+                {item.verdictLabel ? (
+                  <AppText variant="meta">
+                    {verdictLabels[item.verdictLabel]} · {item.delusionScore}/100
+                  </AppText>
+                ) : null}
+              </Card>
+            ))}
+          </View>
+        ) : (
+          <View style={styles.noUpdates}>
+            <AppText variant="subtitle" center style={styles.noUpdatesText}>
+              No updates yet. Plot still developing.
+            </AppText>
+          </View>
+        )}
+
+        <SectionLabel title="How Did It End?" />
+        <View style={styles.outcomes}>
+          <OutcomeButton icon={Check} label="I was right" selected={record.outcomeStatus === 'right'} onPress={() => void setOutcome('right')} />
+          <OutcomeButton icon={X} label="I was wrong" selected={record.outcomeStatus === 'wrong'} onPress={() => void setOutcome('wrong')} />
+          <OutcomeButton icon={CircleHelp} label="Still unclear" selected={record.outcomeStatus === 'unclear'} onPress={() => void setOutcome('unclear')} />
+        </View>
+
+        <Pressable accessibilityRole="button" onPress={archive} style={styles.deleteAction}>
+          <Trash2 color={colors.text.secondary} size={18} strokeWidth={2.2} />
+          <AppText variant="body" color={colors.text.secondary} style={styles.deleteText}>
+            Delete this case
+          </AppText>
+        </Pressable>
       </Animated.View>
     </Screen>
+  );
+}
+
+function SectionLabel({ title, noMargin = false }: { title: string; noMargin?: boolean }) {
+  return (
+    <AppText variant="eyebrow" style={[styles.sectionLabel, !noMargin && styles.sectionLabelSpaced]}>
+      {title}
+    </AppText>
   );
 }
 
@@ -286,84 +315,151 @@ function OutcomeButton({
 }
 
 const styles = StyleSheet.create({
+  content: {
+    paddingBottom: 0,
+  },
   topRow: {
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: spacing.xxl,
+    marginBottom: spacing.xl,
   },
   iconButton: {
     alignItems: 'center',
     backgroundColor: colors.bg.surface,
     borderColor: colors.ui.border,
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
-    height: 40,
+    height: 48,
     justifyContent: 'center',
-    width: 40,
+    width: 48,
   },
   categoryPill: {
     backgroundColor: colors.bg.muted,
     borderRadius: radii.pill,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
   },
   categoryText: {
     fontFamily: typography.family.bodyMedium,
-    fontSize: 13,
-    lineHeight: 17,
+    fontSize: 14,
+    lineHeight: 18,
   },
   readCard: {
-    padding: spacing.xl,
+    backgroundColor: colors.bg.surface,
+    borderColor: colors.ui.border,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.xl,
   },
   sectionLabel: {
     fontFamily: typography.family.displayMedium,
     fontSize: 10,
-    letterSpacing: 1.6,
+    letterSpacing: 0.8,
     lineHeight: 13,
   },
-  bigBody: {
+  sectionLabelSpaced: {
+    marginBottom: spacing.md,
+    marginTop: spacing.xxl,
+  },
+  readText: {
     fontFamily: typography.family.body,
     fontSize: 15,
-    lineHeight: 24,
-    marginTop: spacing.lg,
+    lineHeight: 22,
   },
   nextMove: {
-    backgroundColor: colors.brand.ink,
+    backgroundColor: colors.bg.surface,
+    borderColor: colors.brand.ink,
     borderRadius: radii.lg,
-    gap: spacing.sm,
-    marginTop: spacing.xl,
-    padding: spacing.xl,
+    borderWidth: 2,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.xl,
     shadowColor: colors.brand.ink,
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: 5 },
     shadowOpacity: 1,
     shadowRadius: 0,
     elevation: 4,
   },
   nextMoveText: {
-    fontFamily: typography.family.displayMedium,
-    fontSize: 18,
+    color: colors.text.primary,
+    fontFamily: typography.family.displayBold,
+    fontSize: 16,
+    lineHeight: 22,
+  },
+  deepRead: {
+    backgroundColor: colors.brand.ink,
+    borderColor: colors.brand.ink,
+    borderRadius: radii.xl,
+    borderWidth: 2,
+    gap: spacing.sm,
+    marginTop: spacing.xxl,
+    padding: spacing.lg,
+    shadowColor: colors.brand.ink,
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 1,
+    shadowRadius: 0,
+    elevation: 4,
+  },
+  deepHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  deepTitle: {
+    fontFamily: typography.family.displayBold,
+    fontSize: 19,
     lineHeight: 24,
   },
-  sectionHeader: {
-    marginTop: spacing.xxl,
+  aiBadge: {
+    alignItems: 'center',
+    backgroundColor: colors.accent.lime,
+    borderRadius: radii.pill,
+    flexDirection: 'row',
+    gap: 3,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+  },
+  aiBadgeText: {
+    fontFamily: typography.family.displayBold,
+    fontSize: 10,
+    letterSpacing: 0,
+    lineHeight: 12,
+  },
+  deepSubtitle: {
+    fontFamily: typography.family.body,
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  deepButton: {
+    alignItems: 'center',
+    backgroundColor: colors.accent.lime,
+    borderRadius: radii.md,
+    justifyContent: 'center',
+    minHeight: 52,
+  },
+  deepButtonText: {
+    fontFamily: typography.family.displayBold,
+    fontSize: 15,
+    lineHeight: 20,
   },
   sectionHeaderRow: {
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: spacing.lg,
+    marginTop: spacing.xxl,
   },
   quote: {
     backgroundColor: colors.bg.muted,
     borderRadius: radii.lg,
-    marginTop: spacing.lg,
-    padding: spacing.xl,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.xl,
   },
-  italic: {
-    fontFamily: typography.family.editorial,
-    fontSize: 16,
-    lineHeight: 20,
+  quoteText: {
+    color: colors.text.primary,
+    fontFamily: typography.family.body,
+    fontSize: 14,
+    lineHeight: 21,
   },
   addUpdate: {
     alignItems: 'center',
@@ -378,7 +474,13 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     marginTop: spacing.md,
   },
+  updateCard: {
+    padding: spacing.lg,
+  },
   updateText: {
+    fontFamily: typography.family.body,
+    fontSize: 16,
+    lineHeight: 23,
     marginVertical: spacing.sm,
   },
   noUpdates: {
@@ -387,11 +489,13 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
     borderWidth: 1,
     marginTop: spacing.md,
-    padding: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xxl,
   },
-  outcomeTitle: {
-    marginTop: spacing.xl,
-    marginBottom: spacing.md,
+  noUpdatesText: {
+    fontFamily: typography.family.bodyMedium,
+    fontSize: 15,
+    lineHeight: 20,
   },
   outcomes: {
     flexDirection: 'row',
@@ -405,20 +509,35 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     borderWidth: 1,
     flex: 1,
-    minHeight: 62,
+    minHeight: 98,
     justifyContent: 'center',
     gap: spacing.xs,
     paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.md,
   },
   outcomeLabel: {
     fontFamily: typography.family.displayMedium,
-    fontSize: 12,
-    lineHeight: 15,
+    fontSize: 13,
+    lineHeight: 17,
   },
   outcomeSelected: {
     backgroundColor: colors.accent.lime,
     borderColor: colors.brand.ink,
     borderWidth: 2,
+  },
+  deleteAction: {
+    alignItems: 'center',
+    alignSelf: 'center',
+    flexDirection: 'row',
+    gap: spacing.sm,
+    justifyContent: 'center',
+    minHeight: 40,
+    paddingHorizontal: spacing.lg,
+  },
+  deleteText: {
+    fontFamily: typography.family.bodyMedium,
+    fontSize: 15,
+    lineHeight: 20,
   },
   initialLoadState: {
     alignItems: 'center',

@@ -26,6 +26,7 @@ interface GuestState {
   addUpdate: (caseId: string, update: GuestCaseUpdateLocal) => void;
   updateOutcome: (caseId: string, outcomeStatus: OutcomeStatus) => void;
   archiveCase: (caseId: string) => void;
+  clearCases: () => void;
   markCaseMigrated: (localCaseId: string, remoteCaseId: string) => void;
   markMigrationPromptSkipped: (userId: string) => void;
   markMigrationPromptCompleted: (userId: string) => void;
@@ -128,6 +129,16 @@ export const useGuestStore = create<GuestState>()(
           cases: state.cases.map((item) =>
             item.localId === caseId ? { ...item, archivedAt: timestamp, updatedAt: timestamp } : item,
           ),
+        }));
+      },
+      clearCases: () => {
+        set((state) => ({
+          cases: [],
+          migratedCaseMap: {},
+          drafts: {
+            ...state.drafts,
+            updateTextByCaseId: {},
+          },
         }));
       },
       markCaseMigrated: (localCaseId, remoteCaseId) => {

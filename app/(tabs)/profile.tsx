@@ -4,7 +4,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { Bell, ChevronRight, LogIn, Shield, Trash2, Crown, FileText, Sparkles } from 'lucide-react-native';
 import type { LucideProps } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { authService } from '../../src/features/auth/authService';
 import { premiumService } from '../../src/features/premium/premiumService';
 import { isPremiumStateActive, usePremiumStore } from '../../src/store/premiumStore';
@@ -14,6 +14,7 @@ import { Button } from '../../src/shared/ui/Button';
 import { Card } from '../../src/shared/ui/Card';
 import { useAuthStore } from '../../src/store/authStore';
 import { useCases } from '../../src/features/cases/services/useCases';
+import { caseRepository } from '../../src/features/cases/repositories/caseRepository';
 import { colors, gradients, radii, shadows, spacing, typography } from '../../src/shared/theme/tokens';
 
 export default function ProfileRoute() {
@@ -21,7 +22,8 @@ export default function ProfileRoute() {
   const auth = useAuthStore();
   const premiumState = usePremiumStore((state) => state.premiumState);
   const premiumLoading = usePremiumStore((state) => state.loading);
-  const { cases } = useCases();
+  const { cases, refresh } = useCases();
+  const [deletingCases, setDeletingCases] = useState(false);
   const isGuest = auth.sessionMode !== 'authenticated';
   const hasPremium = isPremiumStateActive(premiumState);
 
@@ -45,6 +47,39 @@ export default function ProfileRoute() {
             : 'Could not restore';
 
     Alert.alert(title, result.message);
+  };
+
+  const deleteAllCases = () => {
+    if (cases.length === 0) {
+      Alert.alert('No cases to delete', 'Your case file is already empty.');
+      return;
+    }
+
+    Alert.alert(
+      'Delete all cases?',
+      isGuest
+        ? 'This removes all saved guest cases and updates from this device. Your guest session stays active.'
+        : 'This removes all synced cases and updates from your case file. Your account stays active.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete all',
+          style: 'destructive',
+          onPress: () => {
+            setDeletingCases(true);
+            void caseRepository
+              .archiveAllCases()
+              .then(() => refresh())
+              .catch((error) => {
+                Alert.alert('Could not delete cases', error instanceof Error ? error.message : 'Try again.');
+              })
+              .finally(() => {
+                setDeletingCases(false);
+              });
+          },
+        },
+      ],
+    );
   };
 
   return (
@@ -127,12 +162,22 @@ export default function ProfileRoute() {
         </Pressable>
       </View>
 
-      <Button
-        title={isGuest ? 'Delete all data' : 'Delete account'}
-        variant="ghost"
-        icon={Trash2}
-        onPress={() => router.push('/account/profile/delete-account')}
-      />
+      <View style={styles.destructiveActions}>
+        <Button
+          title="Delete all cases"
+          variant="ghost"
+          icon={Trash2}
+          loading={deletingCases}
+          disabled={deletingCases}
+          onPress={deleteAllCases}
+        />
+        <Button
+          title={isGuest ? 'Delete all data' : 'Delete account'}
+          variant="ghost"
+          icon={Trash2}
+          onPress={() => router.push('/account/profile/delete-account')}
+        />
+      </View>
 
       <AppText variant="meta" center style={styles.footer}>
         Overthought · v0.1 · Made with ❤️ and concerning questions
@@ -285,6 +330,10 @@ const styles = StyleSheet.create({
     fontFamily: typography.family.bodyMedium,
     fontSize: 15,
     lineHeight: 20,
+  },
+  destructiveActions: {
+    gap: spacing.sm,
+    marginTop: spacing.lg,
   },
   footer: {
     marginTop: spacing.xl,

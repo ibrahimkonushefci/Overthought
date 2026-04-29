@@ -219,4 +219,31 @@ export const caseRepository = {
       throw error;
     }
   },
+  async archiveAllCases(): Promise<void> {
+    const auth = useAuthStore.getState();
+
+    if (auth.sessionMode !== 'authenticated') {
+      useGuestStore.getState().clearCases();
+      return;
+    }
+
+    if (!supabase) {
+      throw new Error('Supabase is not configured.');
+    }
+
+    if (!auth.user) {
+      throw new Error('Sign in again before deleting cases.');
+    }
+
+    const { error } = await supabase
+      .from('cases')
+      .update({ archived_at: nowIso() })
+      .eq('user_id', auth.user.id)
+      .is('archived_at', null)
+      .is('deleted_at', null);
+
+    if (error) {
+      throw error;
+    }
+  },
 };

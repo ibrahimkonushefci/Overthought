@@ -113,6 +113,20 @@ function updateBuilder() {
   return builder;
 }
 
+function bulkArchiveBuilder() {
+  const builder = {
+    update: jest.fn(),
+    eq: jest.fn(),
+    is: jest.fn(),
+  };
+
+  builder.update.mockReturnValue(builder);
+  builder.eq.mockReturnValue(builder);
+  builder.is.mockReturnValueOnce(builder).mockResolvedValueOnce({ error: null });
+
+  return builder;
+}
+
 describe('caseRepository authenticated sync behavior', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -183,5 +197,33 @@ describe('caseRepository authenticated sync behavior', () => {
     expect(useGuestStore.getState().cases[0].archivedAt).toBeNull();
     expect(builder.update).toHaveBeenCalledWith({ archived_at: expect.any(String) });
     expect(builder.eq).toHaveBeenCalledWith('id', 'remote-case-1');
+  });
+
+  it('clears local guest cases without resetting the guest session', async () => {
+    useAuthStore.getState().setGuest();
+    const localGuestId = useGuestStore.getState().ensureGuestSession();
+    useGuestStore.getState().addCase(guestCase('local-case-1'));
+    useGuestStore.getState().addCase(guestCase('local-case-2'));
+    useGuestStore.getState().setUpdateDraft('local-case-1', 'draft update');
+
+    await caseRepository.archiveAllCases();
+
+    expect(useGuestStore.getState().localGuestId).toBe(localGuestId);
+    expect(useGuestStore.getState().cases).toHaveLength(0);
+    expect(useGuestStore.getState().drafts.updateTextByCaseId).toEqual({});
+    expect(mockSupabase.from).not.toHaveBeenCalled();
+  });
+
+  it('bulk archives authenticated cases using the existing soft-delete model', async () => {
+    const builder = bulkArchiveBuilder();
+    mockSupabase.from.mockReturnValue(builder);
+
+    await caseRepository.archiveAllCases();
+
+    expect(mockSupabase.from).toHaveBeenCalledWith('cases');
+    expect(builder.update).toHaveBeenCalledWith({ archived_at: expect.any(String) });
+    expect(builder.eq).toHaveBeenCalledWith('user_id', 'user-1');
+    expect(builder.is).toHaveBeenCalledWith('archived_at', null);
+    expect(builder.is).toHaveBeenCalledWith('deleted_at', null);
   });
 });

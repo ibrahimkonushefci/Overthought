@@ -14,43 +14,43 @@ interface ScorePanelProps {
 
 export function ScorePanel({ score, verdictLabel, displayLabel }: ScorePanelProps) {
   const stroke = scoreColor(score);
-  const circumference = 2 * Math.PI * 91;
+  const circumference = 2 * Math.PI * 50;
   const offset = circumference - (score / 100) * circumference;
 
   return (
     <LinearGradient colors={gradients.result} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.panel}>
-      <AppText variant="title" center style={styles.icon}>
-        {verdictIcons[verdictLabel]}
-      </AppText>
-      <AppText variant="display" center style={styles.verdict}>
-        {displayLabel ?? verdictLabels[verdictLabel]}
-      </AppText>
       <View style={styles.ringWrap}>
-        <Svg width={200} height={200} viewBox="0 0 200 200">
-          <Circle cx="100" cy="100" r="91" stroke={colors.bg.muted} strokeWidth="18" fill="none" />
+        <Svg width={124} height={124} viewBox="0 0 124 124">
+          <Circle cx="62" cy="62" r="50" stroke={colors.bg.muted} strokeWidth="11" fill="none" />
           <Circle
-            cx="100"
-            cy="100"
-            r="91"
+            cx="62"
+            cy="62"
+            r="50"
             stroke={stroke}
-            strokeWidth="18"
+            strokeWidth="11"
             fill="none"
             strokeLinecap="round"
             strokeDasharray={`${circumference} ${circumference}`}
             strokeDashoffset={offset}
             rotation="-90"
-            origin="100, 100"
+            origin="62, 62"
           />
         </Svg>
         <View style={styles.center}>
           <AppText variant="display" color={stroke} center style={styles.score}>
             {score}
           </AppText>
-          <AppText variant="eyebrow" center>
+          <AppText variant="eyebrow" center style={styles.scoreLabel}>
             Delusion
           </AppText>
         </View>
       </View>
+      <AppText variant="title" center style={styles.icon}>
+        {verdictIcons[verdictLabel]}
+      </AppText>
+      <AppText variant="display" center style={styles.verdict} numberOfLines={2}>
+        {displayLabel ?? verdictLabels[verdictLabel]}
+      </AppText>
     </LinearGradient>
   );
 }
@@ -59,35 +59,42 @@ const styles = StyleSheet.create({
   panel: {
     alignItems: 'center',
     backgroundColor: colors.bg.surface,
-    borderColor: colors.brand.ink,
+    borderColor: 'rgba(255, 255, 255, 0.8)',
     borderRadius: radii.signature,
-    borderWidth: 2,
-    gap: spacing.lg,
-    marginBottom: spacing.xl,
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.xxl,
+    borderWidth: 1,
+    gap: spacing.xs,
+    marginBottom: 0,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.xl,
     paddingBottom: spacing.xl,
-    ...shadows.hard,
+    ...shadows.soft,
   },
   icon: {
-    fontSize: 26,
-    lineHeight: 30,
+    fontSize: 20,
+    lineHeight: 24,
   },
   verdict: {
-    fontFamily: typography.family.displaySemiBold,
-    fontSize: 31,
-    lineHeight: 35,
+    fontFamily: typography.family.displayBold,
+    fontSize: 22,
+    lineHeight: 27,
+    maxWidth: 260,
   },
   ringWrap: {
     alignItems: 'center',
-    height: 200,
+    height: 124,
     justifyContent: 'center',
-    width: 200,
+    width: 124,
   },
   score: {
     fontFamily: typography.family.displayBold,
-    fontSize: 56,
-    lineHeight: 60,
+    fontSize: 38,
+    lineHeight: 41,
+  },
+  scoreLabel: {
+    fontFamily: typography.family.displaySemiBold,
+    fontSize: 9,
+    letterSpacing: 1,
+    lineHeight: 11,
   },
   center: {
     alignItems: 'center',
