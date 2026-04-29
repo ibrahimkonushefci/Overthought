@@ -30,7 +30,8 @@ function applySignalNeutralizers(
 ): TriggeredSignal[] {
   const signalIds = new Set(matchedSignals.map((signal) => signal.id));
   const activeNeutralizers = neutralizers.filter((neutralizer) =>
-    hasEverySignal(neutralizer.requiredSignalIds, signalIds),
+    hasEverySignal(neutralizer.requiredSignalIds, signalIds) &&
+    !(neutralizer.excludedSignalIds ?? []).some((signalId) => signalIds.has(signalId)),
   );
 
   if (activeNeutralizers.length === 0) {
@@ -62,11 +63,13 @@ function findScenarioOverride(
 ): ScenarioOverride | undefined {
   const signalIds = new Set(matchedSignals.map((signal) => signal.id));
 
-  return scenarios.find(
-    (scenario) =>
+  return scenarios
+    .filter(
+      (scenario) =>
       (!scenario.category || scenario.category === category) &&
       hasEverySignal(scenario.requiredSignalIds, signalIds),
-  );
+    )
+    .sort((left, right) => (right.priority ?? 0) - (left.priority ?? 0))[0];
 }
 
 function applyScenarioBounds(score: number, scenario?: ScenarioOverride): number {
@@ -85,6 +88,67 @@ function applyScenarioBounds(score: number, scenario?: ScenarioOverride): number
   }
 
   return adjustedScore;
+}
+
+function buildSyntheticSignal(
+  signalId: string,
+  config: VerdictEngineConfig,
+  category: Category,
+  matchedPattern: string,
+): TriggeredSignal | null {
+  const definition = config.signals.find((signal) => signal.id === signalId);
+
+  if (!definition) {
+    return null;
+  }
+
+  return {
+    id: definition.id,
+    type: definition.type,
+    weightApplied: getAppliedWeight(definition, category),
+    matchedPatterns: [matchedPattern],
+    source: 'input',
+  };
+}
+
+function applyBlankSlateRule(
+  matchedSignals: TriggeredSignal[],
+  config: VerdictEngineConfig,
+  category: Category,
+  normalizedInput: string,
+): TriggeredSignal[] {
+  const wordCount = normalizedInput.split(' ').filter(Boolean).length;
+  const hasDirectAction = matchedSignals.some((signal) => signal.id === 'direct_action');
+
+  if (wordCount === 0 || wordCount >= 15 || hasDirectAction) {
+    return matchedSignals;
+  }
+
+  const signalIds = new Set(matchedSignals.map((signal) => signal.id));
+  const syntheticSignals = [
+    signalIds.has('assumption_without_action')
+      ? null
+      : buildSyntheticSignal(
+          'assumption_without_action',
+          config,
+          category,
+          'short_prompt_without_action',
+        ),
+    signalIds.has('blank_slate_short_prompt')
+      ? null
+      : buildSyntheticSignal(
+          'blank_slate_short_prompt',
+          config,
+          category,
+          'short_prompt_without_action',
+        ),
+  ].filter((signal): signal is TriggeredSignal => Boolean(signal));
+
+  if (syntheticSignals.length === 0) {
+    return matchedSignals;
+  }
+
+  return [...matchedSignals, ...syntheticSignals];
 }
 
 export function analyzeCase(
@@ -113,7 +177,17 @@ export function analyzeCase(
     })
     .filter((value): value is TriggeredSignal => Boolean(value));
 
-  const weightedSignals = applySignalNeutralizers(matchedSignals, config.signalNeutralizers);
+  const signalsWithSyntheticRules = applyBlankSlateRule(
+    matchedSignals,
+    config,
+    input.category,
+    normalizedInput,
+  );
+
+  const weightedSignals = applySignalNeutralizers(
+    signalsWithSyntheticRules,
+    config.signalNeutralizers,
+  );
 
   const weakEvidenceRaw = weightedSignals
     .filter((signal) => signal.type === 'weak_evidence')
@@ -209,7 +283,7 @@ export function analyzeCase(
     explanationText,
     nextMoveText,
     verdictVersion: config.version,
-    triggeredSignals: matchedSignals.map((signal) => signal.id),
+    triggeredSignals: signalsWithSyntheticRules.map((signal) => signal.id),
     confidenceLevel,
   };
 

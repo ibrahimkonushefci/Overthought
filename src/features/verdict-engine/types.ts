@@ -53,6 +53,7 @@ export interface SignalDefinition {
 export interface SignalNeutralizer {
   id: string;
   requiredSignalIds: string[];
+  excludedSignalIds?: string[];
   affectedSignalIds: string[];
 }
 
@@ -60,6 +61,7 @@ export interface ScenarioOverride {
   id: string;
   category?: Category;
   requiredSignalIds: string[];
+  priority?: number;
   scoreFloor?: number;
   scoreCeiling?: number;
   explanationTemplates: string[];

@@ -15,7 +15,12 @@ import { Card } from '../../../../src/shared/ui/Card';
 import { Button } from '../../../../src/shared/ui/Button';
 import { EmptyState } from '../../../../src/shared/ui/EmptyState';
 import { colors, radii, spacing, typography } from '../../../../src/shared/theme/tokens';
-import { categoryIcons, categoryLabels, verdictLabels } from '../../../../src/shared/utils/verdict';
+import {
+  categoryIcons,
+  categoryLabels,
+  getVerdictDisplayLabel,
+  verdictLabels,
+} from '../../../../src/shared/utils/verdict';
 import { relativeTime } from '../../../../src/shared/utils/date';
 
 const detailScrollByCaseId = new Map<string, number>();
@@ -111,6 +116,11 @@ export default function CaseDetailRoute() {
     );
   }
 
+  const heroDisplayLabel = getVerdictDisplayLabel(
+    record.verdictLabel,
+    `${getCaseId(record)}|${record.inputText}|${record.delusionScore}`,
+  );
+
   const share = async () => {
     await Share.share({
       message: `Overthought verdict: ${verdictLabels[record.verdictLabel]} (${record.delusionScore}/100). ${record.nextMoveText}`,
@@ -172,7 +182,11 @@ export default function CaseDetailRoute() {
         </Pressable>
       </View>
 
-      <ScorePanel score={record.delusionScore} verdictLabel={record.verdictLabel} />
+      <ScorePanel
+        score={record.delusionScore}
+        verdictLabel={record.verdictLabel}
+        displayLabel={heroDisplayLabel}
+      />
 
       <Card style={styles.readCard}>
         <AppText variant="eyebrow" style={styles.sectionLabel}>The read</AppText>

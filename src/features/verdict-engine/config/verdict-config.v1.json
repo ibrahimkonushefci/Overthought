@@ -50,12 +50,27 @@
         "liked my story",
         "liked my instagram story",
         "viewed my story",
+        "viewed my instagram",
+        "viewed my ig",
         "liked my post",
+        "liked my instagram post",
+        "liked my newest instagram post",
         "liked a post",
         "watched my story",
         "watched my highlights",
+        "liked my selfie",
+        "reacted to my selfie",
         "reacted with an emoji",
-        "sent an emoji"
+        "sent an emoji",
+        "ig story",
+        "instagram post",
+        "sent a fire emoji",
+        "sent the fire emoji",
+        "heart emoji",
+        "sent a heart emoji",
+        "/\\bsnap\\b/",
+        "liked my bereal",
+        "/liked my \\b(be\\s?real|bereal)\\b/"
       ]
     },
     {
@@ -68,7 +83,18 @@
         "old story",
         "old photo",
         "liked old photo",
-        "liked an old story"
+        "liked an old story",
+        "liked a pic",
+        "liked a photo",
+        "liked an old pic",
+        "liked an old photo",
+        "liked a pic from",
+        "liked a photo from",
+        "weeks ago",
+        "months ago",
+        "from 47 weeks ago",
+        "/\\b\\d+\\s+weeks?\\s+ago\\b/",
+        "old pic"
       ]
     },
     {
@@ -80,6 +106,14 @@
         "has not texted me back",
         "hasn't replied",
         "has not replied",
+        "hasnt responded",
+        "hasn't responded",
+        "has not responded",
+        "didn't respond",
+        "did not respond",
+        "no response",
+        "9 hours",
+        "hasn't replied back",
         "since we matched",
         "after we matched"
       ]
@@ -96,9 +130,98 @@
         "took her 14 hours",
         "took him 14 hours",
         "took 14 hours",
+        "took 6 hours",
+        "took 6 hours to reply",
+        "6 hours to reply",
+        "replied late today",
         "left me on read for two days",
+        "didnt reply for 2 days",
+        "didn't reply for 2 days",
+        "did not reply for 2 days",
+        "2 days",
+        "left me on read",
+        "on read for a whole week",
+        "left on read",
         "on read for two days",
-        "for two days"
+        "on read",
+        "for two days",
+        "for a whole week",
+        "left me on delivered",
+        "left on delivered",
+        "on delivered for 3 days",
+        "delivered for 3 days",
+        "72 hours",
+        "complete silence",
+        "ignored me",
+        "ignored"
+      ]
+    },
+    {
+      "id": "message_avoidance",
+      "type": "weak_evidence",
+      "defaultWeight": 16,
+      "patterns": [
+        "doesn't open my message",
+        "doesnt open my message",
+        "does not open my message",
+        "didn't open my message",
+        "didnt open my message",
+        "not open my message",
+        "open my message for hours",
+        "message for hours"
+      ]
+    },
+    {
+      "id": "situationship_context",
+      "type": "context_modifier",
+      "defaultWeight": 0,
+      "patterns": [
+        "situationship",
+        "talking stage",
+        "casual thing"
+      ]
+    },
+    {
+      "id": "late_night_text",
+      "type": "weak_evidence",
+      "defaultWeight": 18,
+      "patterns": [
+        "2am",
+        "3am",
+        "at 2am",
+        "at 3am",
+        "late night",
+        "drunk text",
+        "texted at 2",
+        "texted me at 2"
+      ]
+    },
+    {
+      "id": "late_night_intimacy",
+      "type": "weak_evidence",
+      "defaultWeight": 16,
+      "patterns": [
+        "i miss u",
+        "i miss you",
+        "miss u",
+        "miss you"
+      ]
+    },
+    {
+      "id": "dry_text_anxiety",
+      "type": "weak_evidence",
+      "defaultWeight": 10,
+      "patterns": [
+        "replied kinda dry",
+        "replied kind of dry",
+        "kinda dry today",
+        "kind of dry today",
+        "dry today",
+        "dry reply",
+        "spiraling",
+        "spiralling",
+        "spiraling lol",
+        "spiralling lol"
       ]
     },
     {
@@ -113,6 +236,10 @@
         "sometime",
         "maybe sometime",
         "maybe sometime next week",
+        "maybe sometimee",
+        "maybe some time",
+        "some time",
+        "sometimee",
         "we should hang out",
         "haha",
         "lol",
@@ -128,8 +255,14 @@
         "maybe sometime next week",
         "maybe sometime haha",
         "sometime next week haha",
+        "maybe sometimee",
+        "maybe some time",
+        "some time",
+        "sometimee",
         "just replied maybe sometime",
-        "replied maybe sometime"
+        "replied maybe sometime",
+        "wana hang",
+        "wanna hang"
       ]
     },
     {
@@ -145,8 +278,27 @@
         "didn't text again",
         "did not text again",
         "never texted again",
+        "then nothing",
         "zero texts",
-        "no texts"
+        "no texts",
+        "zero messages",
+        "no messages",
+        "no message",
+        "hasnt dmed",
+        "hasn't dmed",
+        "has not dmed",
+        "hasnt dm'd",
+        "hasn't dm'd",
+        "no dm",
+        "no direct message",
+        "hasn't texted",
+        "has not texted",
+        "ignored me",
+        "ignored",
+        "complete silence",
+        "left me on delivered",
+        "left me on read",
+        "left on read"
       ]
     },
     {
@@ -170,8 +322,23 @@
         "ask to hang out in person",
         "hang out in person",
         "really busy with work right now",
+        "really busy with work",
         "busy with work right now",
+        "busy with work",
         "too busy to hang out",
+        "whenever i ask to meet up",
+        "every time i ask to meet up",
+        "ask to meet up",
+        "meet up",
+        "mention getting drinks",
+        "getting drinks",
+        "schedule is crazy",
+        "his schedule is crazy",
+        "her schedule is crazy",
+        "their schedule is crazy",
+        "never suggests another day",
+        "never suggested another day",
+        "never suggests a day",
         "won't hang out",
         "will not hang out"
       ]
@@ -188,7 +355,17 @@
         "surely interested",
         "maybe this is a sign",
         "really wants me there",
-        "does this mean"
+        "we so back",
+        "is there a spark",
+        "probably reading into this",
+        "reading into this",
+        "i think he's doing the same",
+        "i think hes doing the same",
+        "am i insane",
+        "am i delulu",
+        "am i being dramatic",
+        "is that a sign",
+        "be honest"
       ]
     },
     {
@@ -200,7 +377,21 @@
         "everyone was looking at me",
         "they all want to be my best friend",
         "all want to be my best friend",
-        "want to be my best friend"
+        "want to be my best friend",
+        "main charactering",
+        "main charactering rn"
+      ]
+    },
+    {
+      "id": "party_silence_anxiety",
+      "type": "weak_evidence",
+      "defaultWeight": 22,
+      "patterns": [
+        "everyone went quiet",
+        "room went quiet",
+        "party went quiet",
+        "went quiet for a sec",
+        "hate my vibe"
       ]
     },
     {
@@ -233,7 +424,164 @@
         "watched story twice",
         "followed back quickly",
         "close friends view",
-        "instagram story"
+        "instagram story",
+        "ig story",
+        "instagram post",
+        "newest instagram post",
+        "/\\big\\b/",
+        "liked my bereal",
+        "replied to my ig story",
+        "liked my story",
+        "liked my instagram stories",
+        "likes my instagram stories",
+        "instagram stories",
+        "viewed my story",
+        "watched my story",
+        "watched all my stories",
+        "watched my stories",
+        "all my stories",
+        "liked my selfie",
+        "reacted to my selfie",
+        "/\\bsnap\\b/",
+        "sent a heart emoji",
+        "heart emoji",
+        "sent a fire emoji",
+        "fire emoji"
+      ]
+    },
+    {
+      "id": "ghosted_history",
+      "type": "weak_evidence",
+      "defaultWeight": 34,
+      "patterns": [
+        "ghosted me",
+        "ghosted",
+        "went silent",
+        "disappeared",
+        "stopped talking to me",
+        "left on read",
+        "left me on read",
+        "left on delivered",
+        "left me on delivered"
+      ]
+    },
+    {
+      "id": "low_effort_reengagement",
+      "type": "weak_evidence",
+      "defaultWeight": 24,
+      "patterns": [
+        "long time no see",
+        "replied to my ig story",
+        "replied to my story",
+        "liked my story",
+        "sent to my selfie",
+        "to my selfie",
+        "selfie",
+        "crying emoji",
+        "sent crying emoji",
+        "fire emoji",
+        "sent a fire emoji",
+        "sent the fire emoji"
+      ]
+    },
+    {
+      "id": "gen_z_overread",
+      "type": "context_modifier",
+      "defaultWeight": 0,
+      "patterns": [
+        "spinning the block",
+        "/\\bbro\\b/",
+        "am i insane",
+        "am i delulu",
+        "be fr",
+        "lowkey"
+      ]
+    },
+    {
+      "id": "no_questions_about_user",
+      "type": "weak_evidence",
+      "defaultWeight": 28,
+      "patterns": [
+        "didn't ask me a single question",
+        "did not ask me a single question",
+        "didn't ask a single question",
+        "did not ask a single question",
+        "single question about myself",
+        "didn't ask about myself",
+        "did not ask about myself"
+      ]
+    },
+    {
+      "id": "finance_monologue",
+      "type": "weak_evidence",
+      "defaultWeight": 26,
+      "patterns": [
+        "crypto portfolio",
+        "crypto",
+        "talked about his crypto",
+        "talked about their crypto",
+        "portfolio all night",
+        "financial podcast"
+      ]
+    },
+    {
+      "id": "explicit_rejection",
+      "type": "weak_evidence",
+      "defaultWeight": 45,
+      "patterns": [
+        "not looking for anything serious",
+        "not looking for something serious",
+        "not looking for a relationship",
+        "just wants to be friends",
+        "just want to be friends",
+        "isn't ready for a relationship",
+        "isn't ready for a relationship right now",
+        "isn t ready for a relationship",
+        "isn t ready for a relationship right now",
+        "not ready",
+        "not ready for a relationship",
+        "not ready to be in a relationship",
+        "doesn't want a relationship",
+        "does not want a relationship",
+        "doesn't want anything serious",
+        "does not want anything serious",
+        "only wants something casual",
+        "wants to keep it casual",
+        "/\\b(isn'?t|isn t|not) ready (for|to be in) (a )?relationship/",
+        "/\\b(doesn'?t|doesn t|does not) want (anything serious|a relationship)/"
+      ]
+    },
+    {
+      "id": "coincidence_marker",
+      "type": "weak_evidence",
+      "defaultWeight": 28,
+      "patterns": [
+        "eye contact",
+        "made eye contact",
+        "staring",
+        "stared at me",
+        "happened to be",
+        "happen to be",
+        "stood next to me",
+        "standing next to me",
+        "across the bar",
+        "in the elevator",
+        "in a meeting"
+      ]
+    },
+    {
+      "id": "blank_slate_short_prompt",
+      "type": "weak_evidence",
+      "defaultWeight": 28,
+      "patterns": [
+        "eye contact across the bar",
+        "eye contact",
+        "made eye contact",
+        "stood next to me",
+        "happened to be",
+        "happen to be",
+        "staring",
+        "stared at me"
       ]
     },
     {
@@ -273,6 +621,248 @@
       ]
     },
     {
+      "id": "work_smiley_overread",
+      "type": "weak_evidence",
+      "defaultWeight": 10,
+      "patterns": [
+        "smiley faces",
+        "smiley face",
+        "uses smiley faces",
+        "use smiley faces",
+        "smilies",
+        "smiley"
+      ]
+    },
+    {
+      "id": "friendship_birthday_signal",
+      "type": "positive_evidence",
+      "defaultWeight": -16,
+      "categoryWeightOverrides": {
+        "friendship": -24
+      },
+      "patterns": [
+        "happy birthday",
+        "texted me happy birthday",
+        "cake emoji",
+        "we should celebrate",
+        "celebrate together",
+        "celebrate together this weekend",
+        "celebrate this weekend"
+      ]
+    },
+    {
+      "id": "deep_scroll_signal",
+      "type": "weak_evidence",
+      "defaultWeight": 22,
+      "patterns": [
+        "liked a pic",
+        "liked a photo",
+        "liked an old pic",
+        "liked an old photo",
+        "liked a pic from",
+        "liked a photo from",
+        "from 47 weeks ago",
+        "weeks ago",
+        "months ago",
+        "/\\b\\d+\\s+weeks?\\s+ago\\b/",
+        "watched all my stories",
+        "all my stories",
+        "watched my stories"
+      ]
+    },
+    {
+      "id": "no_dm_signal",
+      "type": "weak_evidence",
+      "defaultWeight": 24,
+      "patterns": [
+        "hasnt dmed",
+        "hasn't dmed",
+        "has not dmed",
+        "hasnt dm'd",
+        "hasn't dm'd",
+        "no dm",
+        "no direct message",
+        "no message",
+        "hasnt messaged",
+        "hasn't messaged",
+        "has not messaged"
+      ]
+    },
+    {
+      "id": "proximity_without_interaction",
+      "type": "weak_evidence",
+      "defaultWeight": 28,
+      "patterns": [
+        "keeps ending up near me",
+        "ending up near me",
+        "used the machine next to mine",
+        "machine next to mine",
+        "next to mine",
+        "near me"
+      ]
+    },
+    {
+      "id": "no_direct_interaction",
+      "type": "weak_evidence",
+      "defaultWeight": 24,
+      "patterns": [
+        "we've never talked",
+        "we ve never talked",
+        "never talked",
+        "we have never talked",
+        "never spoken",
+        "haven't talked",
+        "have not talked"
+      ]
+    },
+    {
+      "id": "friendship_one_sided_initiation",
+      "type": "weak_evidence",
+      "defaultWeight": 30,
+      "patterns": [
+        "always text first",
+        "i always text first",
+        "always texting first",
+        "i always initiate",
+        "always initiate"
+      ]
+    },
+    {
+      "id": "low_reciprocity_friendship",
+      "type": "weak_evidence",
+      "defaultWeight": 25,
+      "patterns": [
+        "reply nice",
+        "they reply nice",
+        "replies nice",
+        "never ask me anything back",
+        "never ask anything back",
+        "never ask me anything",
+        "doesn't ask me anything back",
+        "does not ask me anything back"
+      ]
+    },
+    {
+      "id": "friendship_forcing_it_anxiety",
+      "type": "context_modifier",
+      "defaultWeight": 0,
+      "patterns": [
+        "forcing it",
+        "am i forcing it",
+        "are we even friends"
+      ]
+    },
+    {
+      "id": "long_term_duration",
+      "type": "weak_evidence",
+      "defaultWeight": 15,
+      "patterns": [
+        "months",
+        "years",
+        "a year",
+        "6 months",
+        "8 months",
+        "eight months",
+        "six months",
+        "almost a year",
+        "for so long",
+        "/\\b\\d+\\s+months?\\b/"
+      ]
+    },
+    {
+      "id": "high_physical_financial_effort",
+      "type": "weak_evidence",
+      "defaultWeight": 20,
+      "patterns": [
+        "drive",
+        "drove",
+        "drive 45 minutes",
+        "driving",
+        "driving out",
+        "driving out to his place",
+        "driving out to her place",
+        "driving out to their place",
+        "flying",
+        "flying out",
+        "pay for",
+        "paid for",
+        "paying",
+        "paying for",
+        "paying for our takeout",
+        "always pay",
+        "buying",
+        "buying groceries",
+        "buying all our groceries",
+        "groceries",
+        "bought groceries",
+        "bought all the groceries",
+        "bought all our groceries",
+        "bought all of our groceries",
+        "bought everything",
+        "flew out"
+      ]
+    },
+    {
+      "id": "relationship_commitment_absent",
+      "type": "weak_evidence",
+      "defaultWeight": 30,
+      "patterns": [
+        "hasn't asked me",
+        "has not asked me",
+        "hasn't asked me to be his girlfriend",
+        "has not asked me to be his girlfriend",
+        "hasn't asked me to be her girlfriend",
+        "has not asked me to be her girlfriend",
+        "not his girlfriend",
+        "not her girlfriend",
+        "won't call me his girlfriend",
+        "won't call me her girlfriend",
+        "won't call me their girlfriend",
+        "will not call me his girlfriend",
+        "will not call me her girlfriend",
+        "will not call me their girlfriend",
+        "introduces me as her friend",
+        "introduced me as her friend",
+        "introduces me as his friend",
+        "introduced me as his friend",
+        "no commitment",
+        "won't commit",
+        "will not commit"
+      ]
+    },
+    {
+      "id": "soft_invite_disclaimer",
+      "type": "weak_evidence",
+      "defaultWeight": 25,
+      "patterns": [
+        "if you want",
+        "i guess",
+        "feel free",
+        "feel free to drop by",
+        "up to you",
+        "no pressure",
+        "you can come",
+        "drop by"
+      ]
+    },
+    {
+      "id": "user_playing_it_cool",
+      "type": "context_modifier",
+      "defaultWeight": 0,
+      "patterns": [
+        "i replied sure",
+        "i just replied i guess",
+        "i replied i guess",
+        "i said maybe",
+        "i just replied sure",
+        "sure i guess",
+        "i just replied sure maybe",
+        "sure maybe i can make that work",
+        "maybe i can make that work",
+        "i guess i can make that work"
+      ]
+    },
+    {
       "id": "direct_action",
       "type": "positive_evidence",
       "defaultWeight": -32,
@@ -282,12 +872,75 @@
       },
       "patterns": [
         "asked me out",
+        "asked me on a proper dinner date",
+        "planned the date",
+        "picked the place",
+        "asked if i'm free next saturday",
+        "asked if im free next saturday",
+        "asked if i'm free",
+        "asked if im free",
+        "asked if i wanted to grab dinner",
+        "grab dinner after work",
+        "asked me to be his girlfriend",
+        "asked me to be her girlfriend",
+        "asked me to be their girlfriend",
+        "asked me to be his boyfriend",
+        "asked me to be her boyfriend",
+        "be my girlfriend",
+        "be my boyfriend",
+        "asked me out officially",
+        "made it official",
+        "we made it official",
+        "we're official",
+        "we re official",
+        "official now",
+        "picked saturday",
+        "picked saturday for dinner",
+        "picked a day",
+        "picked the day",
+        "dinner saturday",
+        "asked for my number",
+        "texted me the next morning",
+        "suggested coffee",
+        "suggested coffee this friday",
+        "coffee this friday",
+        "asked if we can hang out this weekend",
+        "asked if we can hang this weekend",
+        "can hang this weekend",
+        "celebrate together this weekend",
+        "celebrate this weekend",
+        "hang out this weekend",
+        "hang this weekend",
+        "n asked if we can hang",
+        "proper dinner date",
         "made plans",
         "picked a date",
         "called me",
         "invited me",
         "followed up",
-        "asked if i wanted to hang out"
+        "asked if i wanted to hang out",
+        "you can come"
+      ]
+    },
+    {
+      "id": "relationship_confirmed_signal",
+      "type": "positive_evidence",
+      "defaultWeight": -45,
+      "patterns": [
+        "/(?<!hasn't\\s)(?<!hasnt\\s)(?<!has not\\s)asked me to be his girlfriend\\b/",
+        "/(?<!hasn't\\s)(?<!hasnt\\s)(?<!has not\\s)asked me to be her girlfriend\\b/",
+        "/(?<!hasn't\\s)(?<!hasnt\\s)(?<!has not\\s)asked me to be their girlfriend\\b/",
+        "/(?<!hasn't\\s)(?<!hasnt\\s)(?<!has not\\s)asked me to be his boyfriend\\b/",
+        "/(?<!hasn't\\s)(?<!hasnt\\s)(?<!has not\\s)asked me to be her boyfriend\\b/",
+        "be my girlfriend",
+        "be my boyfriend",
+        "asked me out officially",
+        "made it official",
+        "we made it official",
+        "we're official",
+        "we re official",
+        "were official",
+        "official now"
       ]
     },
     {
@@ -299,8 +952,26 @@
         "booked a reservation",
         "booked the dinner",
         "booked dinner",
+        "booked a table",
+        "booked the table",
+        "booked us a table",
+        "booked us a table for 8pm",
+        "table for 8pm",
         "handled the logistics",
         "made the reservation"
+      ]
+    },
+    {
+      "id": "expensive_date",
+      "type": "positive_evidence",
+      "defaultWeight": -20,
+      "patterns": [
+        "paid for a 300 dinner",
+        "paid for 300 dinner",
+        "/paid for (a )?300 dinner/",
+        "300 dinner",
+        "paid for dinner",
+        "paid for a dinner"
       ]
     },
     {
@@ -315,11 +986,71 @@
         "texts every day",
         "texts me every single day",
         "every single day without fail",
+        "good morning every single day",
+        "texts me good morning",
+        "snapchat every day",
+        "snapchat stories immediately",
+        "replies to my snapchat stories immediately",
         "checks in often",
         "checks in every morning",
         "keeps conversation going",
         "followed up again",
         "multiple times this week"
+      ]
+    },
+    {
+      "id": "apology_repair",
+      "type": "positive_evidence",
+      "defaultWeight": -18,
+      "categoryWeightOverrides": {
+        "friendship": -24
+      },
+      "patterns": [
+        "apologized",
+        "later apologized",
+        "said sorry",
+        "sorry for not replying",
+        "sorry for the delay"
+      ]
+    },
+    {
+      "id": "external_reason_context",
+      "type": "positive_evidence",
+      "defaultWeight": -10,
+      "categoryWeightOverrides": {
+        "friendship": -14
+      },
+      "patterns": [
+        "work has been overwhelming",
+        "work was overwhelming",
+        "has been overwhelming",
+        "overwhelming",
+        "work was crazy",
+        "work crazy",
+        "busy with work",
+        "swamped with work"
+      ]
+    },
+    {
+      "id": "outside_work_one_on_one",
+      "type": "positive_evidence",
+      "defaultWeight": -24,
+      "patterns": [
+        "grab dinner after work",
+        "dinner after work",
+        "after work just the two of us",
+        "just the two of us",
+        "asked if i wanted to grab dinner",
+        "wanted to grab dinner after work"
+      ]
+    },
+    {
+      "id": "peer_work_context",
+      "type": "context_modifier",
+      "defaultWeight": 0,
+      "patterns": [
+        "coworker",
+        "colleague"
       ]
     },
     {
@@ -330,6 +1061,10 @@
         "remembered details",
         "remembered my dog",
         "remembered my dog's birthday",
+        "remembered my coffee order",
+        "introduced me to his sister",
+        "introduced me to her sister",
+        "introduced me to their sister",
         "asked personal questions",
         "brought up future plans",
         "made individual effort"
@@ -342,9 +1077,34 @@
       "patterns": [
         "i like you",
         "i had a great time",
+        "i had a really good time",
+        "had a really good time",
+        "i wanna see you again",
+        "wanna see you again",
+        "i want to see you again",
+        "want to see you again",
+        "wants to see you again",
         "let's meet friday",
         "let's get dinner",
         "let's get dinner on friday",
+        "next saturday",
+        "free next saturday",
+        "picked saturday",
+        "picked saturday for dinner",
+        "picked a day",
+        "picked the day",
+        "dinner saturday",
+        "suggested coffee",
+        "suggested coffee this friday",
+        "coffee this friday",
+        "this friday",
+        "dinner date for friday",
+        "proper dinner date",
+        "for friday",
+        "booked us a table",
+        "booked us a table for 8pm",
+        "table for 8pm",
+        "for 8pm",
         "i want to see you",
         "are you free this weekend"
       ]
@@ -358,7 +1118,15 @@
         "bought me coffee",
         "always buys me coffee",
         "gets me coffee",
-        "free coffee"
+        "free coffee",
+        "pays for my lunch",
+        "paid for my lunch",
+        "bought me lunch",
+        "bought lunch",
+        "buys me lunch",
+        "always pays for my lunch",
+        "promotion",
+        "my promotion"
       ]
     },
     {
@@ -388,9 +1156,17 @@
         "current project",
         "work meeting",
         "work right now",
+        "work",
         "office",
+        "meeting",
+        "kitchen",
+        "breakroom",
+        "break room",
+        "promotion",
         "1-on-1",
-        "1 on 1"
+        "1 on 1",
+        "kpis",
+        "kpi"
       ]
     },
     {
@@ -400,8 +1176,11 @@
       "patterns": [
         "manager",
         "boss",
+        "promotion",
         "1-on-1",
-        "1 on 1"
+        "1 on 1",
+        "kpis",
+        "kpi"
       ]
     },
     {
@@ -411,8 +1190,34 @@
       "patterns": [
         "coworker checks in every morning",
         "checks in every morning",
+        "coworker messages me every morning",
+        "messages me every morning",
+        "asking if i finished",
+        "finished my part of the project",
+        "part of the project",
+        "project check-in",
+        "project check in",
         "current project",
         "project is going"
+      ]
+    },
+    {
+      "id": "event_context",
+      "type": "context_modifier",
+      "defaultWeight": 0,
+      "patterns": [
+        "met at an event",
+        "at an event",
+        "event"
+      ]
+    },
+    {
+      "id": "gym_context",
+      "type": "context_modifier",
+      "defaultWeight": 0,
+      "patterns": [
+        "at the gym",
+        "gym"
       ]
     },
     {
@@ -424,7 +1229,12 @@
         "whole office",
         "invited the entire office",
         "invited the whole office",
-        "everyone at the office"
+        "everyone at the office",
+        "some of us",
+        "a few people",
+        "getting a group together",
+        "few people over",
+        "people over for drinks"
       ]
     },
     {
@@ -436,7 +1246,15 @@
         "same friend group",
         "everyone was there",
         "party group",
-        "party"
+        "party",
+        "some of us",
+        "a few people",
+        "getting a group together",
+        "hitting the bars",
+        "bars later",
+        "few people over",
+        "people over for drinks",
+        "drinks"
       ]
     },
     {
@@ -445,6 +1263,10 @@
       "defaultWeight": 12,
       "patterns": [
         "best friend",
+        "best frend",
+        "best freind",
+        "frend",
+        "freind",
         "no longer friends",
         "are we no longer friends"
       ]
@@ -530,6 +1352,43 @@
       "affectedSignalIds": [
         "specific_interest"
       ]
+    },
+    {
+      "id": "explicit_rejection_neutralizes_positive_actions",
+      "requiredSignalIds": [
+        "explicit_rejection"
+      ],
+      "affectedSignalIds": [
+        "direct_action",
+        "consistent_effort",
+        "specific_interest",
+        "reciprocity"
+      ]
+    },
+    {
+      "id": "disclaimer_ruins_invite",
+      "requiredSignalIds": [
+        "soft_invite_disclaimer",
+        "direct_action"
+      ],
+      "excludedSignalIds": [
+        "user_playing_it_cool"
+      ],
+      "affectedSignalIds": [
+        "direct_action"
+      ]
+    },
+    {
+      "id": "user_playing_it_cool_neutralizes_user_disclaimer",
+      "requiredSignalIds": [
+        "user_playing_it_cool",
+        "soft_invite_disclaimer"
+      ],
+      "affectedSignalIds": [
+        "vague_language",
+        "soft_decline",
+        "soft_invite_disclaimer"
+      ]
     }
   ],
   "scenarioOverrides": [
@@ -542,12 +1401,89 @@
       ],
       "scoreCeiling": 5,
       "explanationTemplates": [
-        "She explicitly asked you out and handled logistics. The only delusion here is opening this app to overthink a date with a reservation.",
-        "This is not a clue hunt; it is a plan. She said dinner, picked Friday, and booked the table."
+        "They explicitly asked you out and handled logistics. The only delusion here is opening this app to overthink a date with a reservation.",
+        "This is not a clue hunt; it is a plan. They said dinner, picked Friday, and booked the table."
       ],
       "nextMoveTemplates": [
         "Go to dinner. Leave the conspiracy board at home.",
         "Respond normally and show up on Friday."
+      ]
+    },
+    {
+      "id": "relationship_confirmed",
+      "category": "romance",
+      "priority": 105,
+      "requiredSignalIds": [
+        "relationship_confirmed_signal"
+      ],
+      "scoreFloor": 8,
+      "scoreCeiling": 12,
+      "explanationTemplates": [
+        "They asked. You answered. This is not a mystery novel; it is a relationship.",
+        "A direct \"be my girlfriend\" question is not a signal to analyze. It is a conclusion."
+      ],
+      "nextMoveTemplates": [
+        "Stop investigating the confirmation and enjoy being official.",
+        "Treat the relationship label like evidence because it is evidence."
+      ]
+    },
+    {
+      "id": "friendship_birthday_invite",
+      "category": "friendship",
+      "priority": 86,
+      "requiredSignalIds": [
+        "friendship_birthday_signal",
+        "direct_action"
+      ],
+      "scoreFloor": 24,
+      "scoreCeiling": 28,
+      "explanationTemplates": [
+        "They remembered your birthday and suggested a weekend plan. That is a real invite, not a secret code.",
+        "Celebrate this weekend is loose, but it is still more than a crumb."
+      ],
+      "nextMoveTemplates": [
+        "Take the birthday invite at face value and make the plan concrete.",
+        "Respond normally and see what time they suggest."
+      ]
+    },
+    {
+      "id": "situationship_late_night_no_response",
+      "category": "romance",
+      "priority": 86,
+      "requiredSignalIds": [
+        "situationship_context",
+        "late_night_text",
+        "late_night_intimacy",
+        "no_response_after_match"
+      ],
+      "scoreFloor": 68,
+      "scoreCeiling": 72,
+      "explanationTemplates": [
+        "A 2am \"I miss u\" is emotional confetti. The missing reply afterward is the part you should actually read.",
+        "Late-night feelings plus daytime silence is not stability; it is a push notification with commitment issues."
+      ],
+      "nextMoveTemplates": [
+        "Wait for consistent daytime effort before treating this like progress.",
+        "Do not let one late-night text outrank the silence after it."
+      ]
+    },
+    {
+      "id": "deep_scroll_no_dm",
+      "priority": 84,
+      "requiredSignalIds": [
+        "deep_scroll_signal",
+        "social_media_overread",
+        "no_dm_signal"
+      ],
+      "scoreFloor": 62,
+      "scoreCeiling": 68,
+      "explanationTemplates": [
+        "A stale like is not romance. It is digital archaeology, especially when they are watching stories without DMing.",
+        "Watching every story without DMing is surveillance-adjacent, not a plan."
+      ],
+      "nextMoveTemplates": [
+        "Wait for an actual message before upgrading this from app noise.",
+        "Do not turn deep scrolling into direct interest without a DM."
       ]
     },
     {
@@ -578,12 +1514,378 @@
       "scoreFloor": 84,
       "scoreCeiling": 85,
       "explanationTemplates": [
-        "\"Maybe sometime haha\" is the universal translation for \"Please let this conversation die peacefully.\"",
+        "\"Maybe sometime\" plus no follow-up is not a scheduling issue. It is a polite disappearing act asking you to let this conversation die peacefully.",
         "That \"maybe sometime\" was not a plan; it was a polite smoke bomb asking you to let this die peacefully."
       ],
       "nextMoveTemplates": [
         "Let it sit. If they want to hang out, they can produce a date like an adult.",
         "Do not chase a maybe that already left the room."
+      ]
+    },
+    {
+      "id": "gen_z_ghosting_breadcrumb",
+      "category": "romance",
+      "priority": 88,
+      "requiredSignalIds": [
+        "ghosted_history",
+        "social_media_overread",
+        "low_effort_reengagement",
+        "gen_z_overread"
+      ],
+      "scoreFloor": 95,
+      "scoreCeiling": 100,
+      "explanationTemplates": [
+        "A crying emoji after ghosting is not a comeback tour. It is a breadcrumb wearing streetwear.",
+        "Ghosting plus a selfie reaction is not them spinning the block; it is low-effort re-entry with better slang."
+      ],
+      "nextMoveTemplates": [
+        "Require actual words and actual plans before reopening the door.",
+        "Do not treat a story reaction like a formal apology tour."
+      ]
+    },
+    {
+      "id": "zombie_breadcrumb_after_ghosting",
+      "category": "romance",
+      "requiredSignalIds": [
+        "ghosted_history",
+        "low_effort_reengagement",
+        "social_media_overread"
+      ],
+      "scoreFloor": 85,
+      "scoreCeiling": 85,
+      "explanationTemplates": [
+        "A fire emoji after ghosting you is not a romantic revival; it is a low-effort check to see if the door is still unlocked.",
+        "Ghosting followed by an IG story reply is not romance rising from the grave. It is a fire emoji checking whether access still works."
+      ],
+      "nextMoveTemplates": [
+        "Do not reopen the door for a reaction emoji.",
+        "If they want a revival, they can use full sentences and actual effort."
+      ]
+    },
+    {
+      "id": "clear_plan_dry_text_anxiety",
+      "category": "romance",
+      "priority": 87,
+      "requiredSignalIds": [
+        "direct_action",
+        "clear_language",
+        "dry_text_anxiety"
+      ],
+      "scoreFloor": 21,
+      "scoreCeiling": 25,
+      "explanationTemplates": [
+        "A dry reply does not erase a dinner plan. They said they want to see you again and picked a day; your panic is doing unpaid overtime.",
+        "This is a plan with one dry-text speed bump, not a rejection. Saturday dinner beats today's texting tone."
+      ],
+      "nextMoveTemplates": [
+        "Keep the plan and stop grading every text for emotional moisture.",
+        "Let the dinner plan matter more than one dry reply."
+      ]
+    },
+    {
+      "id": "party_silence_main_character",
+      "category": "social",
+      "priority": 84,
+      "requiredSignalIds": [
+        "party_silence_anxiety",
+        "main_character_syndrome"
+      ],
+      "scoreFloor": 68,
+      "scoreCeiling": 70,
+      "explanationTemplates": [
+        "A room going quiet for one second is not a congressional hearing about your vibe.",
+        "You got one awkward room beat and turned it into a documentary about yourself."
+      ],
+      "nextMoveTemplates": [
+        "Let one second be one second. Talk to someone before writing the verdict.",
+        "Do not make party silence carry a whole personality review."
+      ]
+    },
+    {
+      "id": "project_checkin_smiley_overread",
+      "category": "general",
+      "priority": 82,
+      "requiredSignalIds": [
+        "professional_routine_context",
+        "work_context",
+        "work_smiley_overread"
+      ],
+      "scoreFloor": 45,
+      "scoreCeiling": 48,
+      "explanationTemplates": [
+        "A smiley face next to a project check-in is office seasoning, not a confession.",
+        "Morning project messages plus smiley faces is workplace rhythm with garnish, not hidden romance."
+      ],
+      "nextMoveTemplates": [
+        "Answer the project question. Save the romance read for behavior outside the task list.",
+        "Look for interest that is not attached to your deliverables."
+      ]
+    },
+    {
+      "id": "clear_event_followup",
+      "category": "general",
+      "priority": 82,
+      "requiredSignalIds": [
+        "event_context",
+        "direct_action",
+        "clear_language"
+      ],
+      "scoreFloor": 10,
+      "scoreCeiling": 15,
+      "explanationTemplates": [
+        "They asked for your number, followed up, and suggested a time. That is not just politeness; that is logistics.",
+        "This is not vague event politeness. They got your number, texted the next morning, and put coffee on the calendar."
+      ],
+      "nextMoveTemplates": [
+        "Say yes or no like a normal person. The follow-up is real.",
+        "Treat the coffee invite as evidence, not a trap."
+      ]
+    },
+    {
+      "id": "gym_proximity_no_words",
+      "category": "general",
+      "priority": 82,
+      "requiredSignalIds": [
+        "gym_context",
+        "proximity_without_interaction",
+        "no_direct_interaction"
+      ],
+      "scoreFloor": 78,
+      "scoreCeiling": 82,
+      "explanationTemplates": [
+        "Sharing air near a leg press is not a signal. Until words happen, this is gym geography.",
+        "Using the machine next to yours is not courtship; it is floor-plan logistics with sweat towels."
+      ],
+      "nextMoveTemplates": [
+        "Wait for words before upgrading proximity into meaning.",
+        "Treat nearby equipment as nearby equipment until there is an actual interaction."
+      ]
+    },
+    {
+      "id": "friendship_one_sided_effort",
+      "category": "friendship",
+      "priority": 82,
+      "requiredSignalIds": [
+        "friendship_one_sided_initiation",
+        "low_reciprocity_friendship"
+      ],
+      "scoreFloor": 72,
+      "scoreCeiling": 76,
+      "explanationTemplates": [
+        "If you always start the conversation and they never ask anything back, that is not a mystery. That is an effort imbalance.",
+        "Nice replies are not the same as mutual friendship labor. Right now you are carrying the conversation couch alone."
+      ],
+      "nextMoveTemplates": [
+        "Pull back once and see if they cross the bridge without you building it.",
+        "Stop initiating for a beat and watch whether they create any momentum."
+      ]
+    },
+    {
+      "id": "explicit_rejection_overrides_actions",
+      "priority": 100,
+      "requiredSignalIds": [
+        "explicit_rejection"
+      ],
+      "scoreFloor": 95,
+      "scoreCeiling": 95,
+      "explanationTemplates": [
+        "They gave you the terms and conditions out loud. Stop trying to find loopholes in the fine print.",
+        "They stated the boundary out loud. Intimacy can be confusing, but it is not a loophole in the fine print."
+      ],
+      "nextMoveTemplates": [
+        "Believe the disclaimer before the cute behavior.",
+        "Do not litigate against a boundary they already stated."
+      ]
+    },
+    {
+      "id": "strong_followup_minor_delay",
+      "category": "romance",
+      "priority": 85,
+      "requiredSignalIds": [
+        "direct_action",
+        "clear_language",
+        "delayed_reply"
+      ],
+      "scoreFloor": 22,
+      "scoreCeiling": 25,
+      "explanationTemplates": [
+        "This is more grounded than anxious. A slow reply does not erase a planned next date.",
+        "They planned, followed up, and gave clear positive language. Six hours is a delay, not a disappearance."
+      ],
+      "nextMoveTemplates": [
+        "Treat the plan like real evidence and stop prosecuting the reply time.",
+        "Let the next date carry more weight than one slow text."
+      ]
+    },
+    {
+      "id": "coworker_outside_work_signal",
+      "category": "romance",
+      "priority": 80,
+      "requiredSignalIds": [
+        "peer_work_context",
+        "outside_work_one_on_one"
+      ],
+      "scoreFloor": 55,
+      "scoreCeiling": 60,
+      "explanationTemplates": [
+        "Work context means do not sprint, but dinner after work one-on-one is more than coffee near the printer.",
+        "Coworker context adds caution, but asking for dinner after work just the two of you is an actual signal."
+      ],
+      "nextMoveTemplates": [
+        "Keep it normal, meet outside work, and watch whether the effort stays direct.",
+        "Treat it as a cautious signal, not an HR emergency."
+      ]
+    },
+    {
+      "id": "friendship_repair_with_followup",
+      "category": "friendship",
+      "priority": 90,
+      "requiredSignalIds": [
+        "best_friend_context",
+        "delayed_reply",
+        "apology_repair",
+        "direct_action"
+      ],
+      "scoreFloor": 22,
+      "scoreCeiling": 25,
+      "explanationTemplates": [
+        "They apologized, explained the delay, and offered a plan. That is repair, not abandonment.",
+        "This is not crumbs. They gave context, apologized, and asked to hang out this weekend."
+      ],
+      "nextMoveTemplates": [
+        "Take the repair at face value and make the plan.",
+        "Respond to the actual follow-up instead of retrying the panic spiral."
+      ]
+    },
+    {
+      "id": "one_sided_effort_trap",
+      "category": "romance",
+      "priority": 95,
+      "requiredSignalIds": [
+        "long_term_duration",
+        "high_physical_financial_effort",
+        "relationship_commitment_absent"
+      ],
+      "scoreFloor": 92,
+      "scoreCeiling": 100,
+      "explanationTemplates": [
+        "You are operating as a free delivery driver and ATM, not a romantic prospect. Do not confuse financial investment with a relationship.",
+        "Months of traveling and paying for things without commitment makes you a free delivery driver and ATM, not a relationship."
+      ],
+      "nextMoveTemplates": [
+        "Stop investing like a partner when they will not define you like one.",
+        "Require commitment before you keep funding the commute and the takeout."
+      ]
+    },
+    {
+      "id": "the_pity_invite",
+      "priority": 90,
+      "requiredSignalIds": [
+        "soft_invite_disclaimer",
+        "friend_group_context"
+      ],
+      "scoreFloor": 85,
+      "scoreCeiling": 95,
+      "explanationTemplates": [
+        "A disclaimer like that is an afterthought, not an invitation. They are holding the door open because you were standing there, not because they sent for you.",
+        "A disclaimer like that is an afterthought, not an invitation. They did not send for you; they shrugged near an open door."
+      ],
+      "nextMoveTemplates": [
+        "Go only if you genuinely want drinks, not because you found a hidden signal.",
+        "Treat the invite as optional because they literally did."
+      ]
+    },
+    {
+      "id": "crypto_hostage_date",
+      "category": "romance",
+      "requiredSignalIds": [
+        "no_questions_about_user",
+        "finance_monologue",
+        "expensive_date"
+      ],
+      "scoreFloor": 76,
+      "scoreCeiling": 76,
+      "explanationTemplates": [
+        "You were not on a date; you were a captive audience for a financial podcast. The $300 dinner was just the cover charge for crypto monologue night.",
+        "A paid dinner helps, but not when they forget you are a person and turn the table into a crypto seminar."
+      ],
+      "nextMoveTemplates": [
+        "Value curiosity more than the bill.",
+        "Do not confuse expensive food with emotional availability."
+      ]
+    },
+    {
+      "id": "brain_rot_bereal_silence",
+      "category": "romance",
+      "requiredSignalIds": [
+        "delayed_reply",
+        "no_concrete_followup",
+        "social_media_overread",
+        "assumption_without_action"
+      ],
+      "scoreFloor": 95,
+      "scoreCeiling": 95,
+      "explanationTemplates": [
+        "A BeReal reaction does not legally cancel out 72 hours of complete silence. We are not back.",
+        "Being left on delivered for 3 days and then getting a BeReal like is not a comeback tour. We are not back."
+      ],
+      "nextMoveTemplates": [
+        "Wait for an actual message, not app confetti.",
+        "Do not let one tap erase three days of silence."
+      ]
+    },
+    {
+      "id": "ignored_social_media_crumb",
+      "category": "romance",
+      "requiredSignalIds": [
+        "delayed_reply",
+        "no_concrete_followup",
+        "social_media_overread"
+      ],
+      "scoreFloor": 95,
+      "scoreCeiling": 95,
+      "explanationTemplates": [
+        "Being left on read for a week and then getting an Instagram post like is a crumb, not romance.",
+        "An Instagram post like does not erase a whole week on read. That is app confetti over a silence problem."
+      ],
+      "nextMoveTemplates": [
+        "Wait for actual words, not a like.",
+        "Do not let one tap rewrite a week of silence."
+      ]
+    },
+    {
+      "id": "manager_coffee_hr",
+      "requiredSignalIds": [
+        "authority_work_context",
+        "workplace_perk"
+      ],
+      "scoreFloor": 95,
+      "scoreCeiling": 95,
+      "explanationTemplates": [
+        "That is the company's corporate card, not a courtship. Drink the free iced latte and immediately stop flirting with your boss.",
+        "That is the company's corporate card, not a courtship. Workplace lunch is not forbidden romance; HR can smell this from the hallway."
+      ],
+      "nextMoveTemplates": [
+        "Enjoy the coffee and keep the boundary aggressively normal.",
+        "Do not turn a 1-on-1 into an HR training module."
+      ]
+    },
+    {
+      "id": "blank_slate_eye_contact",
+      "category": "general",
+      "requiredSignalIds": [
+        "blank_slate_short_prompt",
+        "assumption_without_action"
+      ],
+      "scoreFloor": 88,
+      "scoreCeiling": 88,
+      "explanationTemplates": [
+        "You are trying to build a legal case out of someone accidentally looking in your general direction.",
+        "Eye contact in a meeting is not a legal case; it is someone looking in your general direction with office lighting."
+      ],
+      "nextMoveTemplates": [
+        "Get an actual interaction before opening arguments.",
+        "Treat this as visual noise until words happen."
       ]
     },
     {
@@ -641,24 +1943,6 @@
       ]
     },
     {
-      "id": "manager_coffee_hr",
-      "category": "romance",
-      "requiredSignalIds": [
-        "authority_work_context",
-        "workplace_perk"
-      ],
-      "scoreFloor": 95,
-      "scoreCeiling": 95,
-      "explanationTemplates": [
-        "That is the company's corporate card, not a courtship. Drink the free iced latte and immediately stop flirting with your boss.",
-        "A manager buying coffee in a 1-on-1 is workplace theater, not forbidden romance. HR can smell this from the hallway."
-      ],
-      "nextMoveTemplates": [
-        "Enjoy the coffee and keep the boundary aggressively normal.",
-        "Do not turn a 1-on-1 into an HR training module."
-      ]
-    },
-    {
       "id": "best_friend_tiktok_delay",
       "category": "friendship",
       "requiredSignalIds": [
@@ -687,7 +1971,7 @@
       "scoreFloor": 65,
       "scoreCeiling": 65,
       "explanationTemplates": [
-        "She doesn't have a crush on you; she has a crush on your Golden Retriever. You are strictly the middleman to the animal.",
+        "They do not have a crush on you; they have a crush on your Golden Retriever. You are strictly the middleman to the animal.",
         "Remembering the dog's birthday is adorable, but the 14-hour reply says you may be the dog's assistant, not the lead."
       ],
       "nextMoveTemplates": [

@@ -9,9 +9,10 @@ import type { VerdictLabel } from '../../../types/shared';
 interface ScorePanelProps {
   score: number;
   verdictLabel: VerdictLabel;
+  displayLabel?: string;
 }
 
-export function ScorePanel({ score, verdictLabel }: ScorePanelProps) {
+export function ScorePanel({ score, verdictLabel, displayLabel }: ScorePanelProps) {
   const stroke = scoreColor(score);
   const circumference = 2 * Math.PI * 91;
   const offset = circumference - (score / 100) * circumference;
@@ -22,7 +23,7 @@ export function ScorePanel({ score, verdictLabel }: ScorePanelProps) {
         {verdictIcons[verdictLabel]}
       </AppText>
       <AppText variant="display" center style={styles.verdict}>
-        {verdictLabels[verdictLabel]}
+        {displayLabel ?? verdictLabels[verdictLabel]}
       </AppText>
       <View style={styles.ringWrap}>
         <Svg width={200} height={200} viewBox="0 0 200 200">

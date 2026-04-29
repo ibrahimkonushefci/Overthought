@@ -23,6 +23,65 @@ export const verdictLabels: Record<VerdictLabel, string> = {
   full_clown_territory: 'Full Clown Territory',
 };
 
+export const verdictDisplayLabelVariants: Record<VerdictLabel, string[]> = {
+  barely_delusional: [
+    'Barely Delusional',
+    "You're Probably Fine",
+    'Normal Human Behavior Detected',
+    'Low Drama Detected',
+    'Put The Corkboard Away',
+  ],
+  slight_reach: [
+    'Reaching, Slightly',
+    'Tiny Reach',
+    'Light Spiral',
+    'One Toe In Delulu',
+    'Suspicious, But Barely',
+  ],
+  mild_delusion: [
+    'Mild Delusion',
+    'Evidence Is On Probation',
+    'The Math Is Wobbly',
+    'Maybe, But Relax',
+    'The Plot Is Thin',
+  ],
+  dangerous_overthinking: [
+    'Dangerous Overthinking',
+    'Put The Phone Down',
+    'Certified Spiral',
+    'Severe Plot Construction',
+    'Overthinking With Intent',
+  ],
+  full_clown_territory: [
+    'Full Clown Territory',
+    'Circus Alert',
+    'Emergency Clown Mode',
+    'Delulu Level: Federal',
+    'Case Has Left Reality',
+  ],
+};
+
+function hashDisplaySeed(value: string): number {
+  let hash = 0;
+
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash << 5) - hash + value.charCodeAt(index);
+    hash |= 0;
+  }
+
+  return Math.abs(hash);
+}
+
+export function getVerdictDisplayLabel(verdictLabel: VerdictLabel, seed?: string): string {
+  const variants = verdictDisplayLabelVariants[verdictLabel];
+
+  if (!variants?.length || !seed) {
+    return verdictLabels[verdictLabel];
+  }
+
+  return variants[hashDisplaySeed(seed) % variants.length];
+}
+
 export const verdictIcons: Record<VerdictLabel, string> = {
   barely_delusional: '✅',
   slight_reach: '🤔',

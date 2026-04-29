@@ -47,6 +47,8 @@ function assertSignalNeutralizer(value: unknown): asserts value is SignalNeutral
   if (
     typeof neutralizer.id !== 'string' ||
     !Array.isArray(neutralizer.requiredSignalIds) ||
+    (typeof neutralizer.excludedSignalIds !== 'undefined' &&
+      !Array.isArray(neutralizer.excludedSignalIds)) ||
     !Array.isArray(neutralizer.affectedSignalIds)
   ) {
     throw new Error(`Invalid signal neutralizer shape for: ${String(neutralizer?.id)}`);
