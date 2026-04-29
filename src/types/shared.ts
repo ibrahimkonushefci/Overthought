@@ -13,6 +13,20 @@ export type VerdictLabel =
   | 'full_clown_territory';
 export type EntitlementStatus = 'free' | 'premium' | 'grace_period' | 'expired';
 export type EntitlementSource = 'none' | 'revenuecat' | 'manual_debug';
+export type DeepReadTargetType = 'case' | 'case_update';
+export type DeepReadAccessTier = 'guest' | 'free' | 'premium';
+export type DeepReadUsageStatus = 'reserved' | 'succeeded' | 'failed' | 'expired';
+export type DeepReadFailureCode =
+  | 'not_authenticated'
+  | 'case_not_found'
+  | 'deep_read_not_configured'
+  | 'quota_exceeded'
+  | 'fair_use_exceeded'
+  | 'ai_timeout'
+  | 'ai_failed'
+  | 'invalid_ai_response'
+  | 'cache_write_failed'
+  | 'unknown';
 
 export interface Profile {
   id: UUID;
@@ -55,6 +69,36 @@ export interface PremiumPackage {
   title: string;
   priceString: string;
   periodLabel: string | null;
+}
+
+export interface DeepReadOutput {
+  whatsActuallyHappening: string;
+  whatYoureOverreading: string;
+  whatEvidenceActuallyMatters: string;
+  whatToDoNext: string;
+  roastLine: string;
+}
+
+export interface DeepReadCacheMetadata {
+  id: UUID | string;
+  source: 'cache' | 'generated';
+  targetType: DeepReadTargetType;
+  targetFingerprint: string;
+  modelProvider: string;
+  modelName: string;
+  modelVersion: string | null;
+  promptVersion: number;
+  responseSchemaVersion: number;
+  createdAt: string;
+}
+
+export interface DeepReadAccessState {
+  accessTier: DeepReadAccessTier;
+  allowed: boolean;
+  remaining: number | null;
+  limit: number | null;
+  quotaBucket: string | null;
+  reason?: 'guest_used' | 'daily_limit' | 'fair_use' | 'not_authenticated' | 'not_configured';
 }
 
 export interface AnalysisOutput {
@@ -138,6 +182,49 @@ export interface AnalyzeCaseInput {
   };
   updateText?: string;
 }
+
+export interface DeepReadCaseSnapshot {
+  targetType: 'case';
+  caseId: UUID | string;
+  category: CaseCategory;
+  inputText: string;
+  localVerdictLabel: VerdictLabel;
+  localDelusionScore: number;
+  localVerdictVersion: number;
+}
+
+export interface DeepReadCaseUpdateSnapshot {
+  targetType: 'case_update';
+  caseId: UUID | string;
+  caseUpdateId: UUID | string;
+  category: CaseCategory;
+  inputText: string;
+  updateText: string;
+  localVerdictLabel: VerdictLabel;
+  localDelusionScore: number;
+  localVerdictVersion: number;
+}
+
+export type DeepReadTargetSnapshot = DeepReadCaseSnapshot | DeepReadCaseUpdateSnapshot;
+
+export interface DeepReadRequest {
+  target: DeepReadTargetSnapshot;
+  guestLocalId?: string;
+}
+
+export type DeepReadResponse =
+  | {
+      ok: true;
+      deepRead: DeepReadOutput;
+      cache: DeepReadCacheMetadata;
+      access: DeepReadAccessState;
+    }
+  | {
+      ok: false;
+      code: DeepReadFailureCode;
+      message: string;
+      access?: DeepReadAccessState;
+    };
 
 export interface GuestMigrationPayload {
   guestLocalId: string;
