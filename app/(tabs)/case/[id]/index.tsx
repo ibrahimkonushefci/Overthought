@@ -3,9 +3,10 @@ import { ActivityIndicator, Alert, Animated, Pressable, Share, StyleSheet, View 
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Check, CircleHelp, Plus, Share2, Sparkles, Trash2, X } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
-import type { OutcomeStatus } from '../../../../src/types/shared';
+import type { DeepReadResponse, OutcomeStatus } from '../../../../src/types/shared';
 import { caseRepository } from '../../../../src/features/cases/repositories/caseRepository';
 import { caseUpdateRepository } from '../../../../src/features/cases/repositories/caseUpdateRepository';
+import { deepReadService } from '../../../../src/features/deep-read/deepReadService';
 import type { CaseEntity, CaseUpdateEntity } from '../../../../src/features/cases/types';
 import { getCaseId, isGuestCase } from '../../../../src/features/cases/types';
 import { ScorePanel } from '../../../../src/features/cases/components/ScorePanel';
@@ -24,12 +25,17 @@ import { relativeTime } from '../../../../src/shared/utils/date';
 
 const detailScrollByCaseId = new Map<string, number>();
 
+type DeepReadStatus = 'idle' | 'loading' | 'ready' | 'not_authenticated' | 'quota' | 'fair_use' | 'error';
+
 export default function CaseDetailRoute() {
   const router = useRouter();
   const { id, fromAnalysis } = useLocalSearchParams<{ id: string; fromAnalysis?: string }>();
   const [record, setRecord] = useState<CaseEntity | null>(null);
   const [updates, setUpdates] = useState<CaseUpdateEntity[]>([]);
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
+  const [deepReadStatus, setDeepReadStatus] = useState<DeepReadStatus>('idle');
+  const [deepReadResult, setDeepReadResult] = useState<Extract<DeepReadResponse, { ok: true }> | null>(null);
+  const [deepReadMessage, setDeepReadMessage] = useState<string | null>(null);
   const shouldPresentNewResult = fromAnalysis === '1';
   const [shouldRunResultIntro, setShouldRunResultIntro] = useState(shouldPresentNewResult);
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -55,6 +61,9 @@ export default function CaseDetailRoute() {
     setInitialLoadComplete(false);
     setRecord(null);
     setUpdates([]);
+    setDeepReadStatus('idle');
+    setDeepReadResult(null);
+    setDeepReadMessage(null);
     setShouldRunResultIntro(shouldPresentNewResult);
   }, [id]);
 
@@ -156,6 +165,43 @@ export default function CaseDetailRoute() {
     ]);
   };
 
+  const requestDeepRead = async () => {
+    if (!record || deepReadStatus === 'loading') {
+      return;
+    }
+
+    setDeepReadStatus('loading');
+    setDeepReadMessage(null);
+
+    const result = await deepReadService.requestCaseDeepRead(getCaseId(record));
+
+    if (result.ok) {
+      setDeepReadResult(result);
+      setDeepReadStatus('ready');
+      return;
+    }
+
+    setDeepReadResult(null);
+    setDeepReadMessage(result.message);
+
+    if (result.code === 'not_authenticated') {
+      setDeepReadStatus('not_authenticated');
+      return;
+    }
+
+    if (result.code === 'quota_exceeded') {
+      setDeepReadStatus('quota');
+      return;
+    }
+
+    if (result.code === 'fair_use_exceeded') {
+      setDeepReadStatus('fair_use');
+      return;
+    }
+
+    setDeepReadStatus('error');
+  };
+
   return (
     <Screen
       bottomInset={92}
@@ -217,11 +263,13 @@ export default function CaseDetailRoute() {
           <AppText variant="subtitle" color="rgba(255, 255, 255, 0.72)" style={styles.deepSubtitle}>
             The version your group chat would actually send.
           </AppText>
-          <Pressable accessibilityRole="button" accessibilityState={{ disabled: true }} disabled style={styles.deepButton}>
-            <AppText variant="title" center color={colors.text.onAccent} style={styles.deepButtonText}>
-              Get Deep Read
-            </AppText>
-          </Pressable>
+          <DeepReadContent
+            status={deepReadStatus}
+            result={deepReadResult}
+            message={deepReadMessage}
+            onRequest={() => void requestDeepRead()}
+            onSignIn={() => router.push('/auth')}
+          />
         </View>
 
         <SectionLabel title="Original Situation" />
@@ -280,6 +328,133 @@ export default function CaseDetailRoute() {
         </Pressable>
       </Animated.View>
     </Screen>
+  );
+}
+
+function DeepReadContent({
+  status,
+  result,
+  message,
+  onRequest,
+  onSignIn,
+}: {
+  status: DeepReadStatus;
+  result: Extract<DeepReadResponse, { ok: true }> | null;
+  message: string | null;
+  onRequest: () => void;
+  onSignIn: () => void;
+}) {
+  if (status === 'ready' && result) {
+    return (
+      <View style={styles.deepResult}>
+        <AppText variant="eyebrow" color={colors.accent.lime} style={styles.deepResultMeta}>
+          {result.cache.source === 'cache' ? 'Saved Deep Read' : 'Fresh Deep Read'}
+        </AppText>
+        <DeepReadField label="What's actually happening" body={result.deepRead.whatsActuallyHappening} />
+        <DeepReadField label="What you're overreading" body={result.deepRead.whatYoureOverreading} />
+        <DeepReadField label="What evidence matters" body={result.deepRead.whatEvidenceActuallyMatters} />
+        <DeepReadField label="What to do next" body={result.deepRead.whatToDoNext} />
+        <View style={styles.roastLine}>
+          <AppText variant="body" color={colors.text.onAccent} style={styles.roastLineText}>
+            {result.deepRead.roastLine}
+          </AppText>
+        </View>
+      </View>
+    );
+  }
+
+  if (status === 'not_authenticated') {
+    return (
+      <View style={styles.deepStateStack}>
+        <DeepReadStateText text="Sign in to use Deep Read. The local verdict still works either way." />
+        <DeepReadButton label="Sign in" onPress={onSignIn} />
+      </View>
+    );
+  }
+
+  if (status === 'quota') {
+    return (
+      <View style={styles.deepStateStack}>
+        <DeepReadStateText text="You've used today's free Deep Reads. Local verdicts still work unlimited." />
+      </View>
+    );
+  }
+
+  if (status === 'fair_use') {
+    return (
+      <View style={styles.deepStateStack}>
+        <DeepReadStateText text="Deep Read is temporarily limited for fair use. Your local verdict is still available." />
+        <DeepReadButton label="Try again" onPress={onRequest} />
+      </View>
+    );
+  }
+
+  if (status === 'error') {
+    return (
+      <View style={styles.deepStateStack}>
+        <DeepReadStateText text={message ?? "Deep Read couldn't load. Your local verdict is unchanged."} />
+        <DeepReadStateText text="Your local verdict is unchanged." compact />
+        <DeepReadButton label="Try again" onPress={onRequest} />
+      </View>
+    );
+  }
+
+  return (
+    <DeepReadButton
+      label={status === 'loading' ? 'Reading...' : 'Get Deep Read'}
+      loading={status === 'loading'}
+      onPress={onRequest}
+    />
+  );
+}
+
+function DeepReadField({ label, body }: { label: string; body: string }) {
+  return (
+    <View style={styles.deepField}>
+      <AppText variant="eyebrow" color="rgba(255, 255, 255, 0.62)" style={styles.deepFieldLabel}>
+        {label}
+      </AppText>
+      <AppText variant="body" color={colors.text.onBrand} style={styles.deepFieldBody}>
+        {body}
+      </AppText>
+    </View>
+  );
+}
+
+function DeepReadStateText({ text, compact = false }: { text: string; compact?: boolean }) {
+  return (
+    <AppText
+      variant="subtitle"
+      color="rgba(255, 255, 255, 0.76)"
+      style={[styles.deepStateText, compact && styles.deepStateTextCompact]}
+    >
+      {text}
+    </AppText>
+  );
+}
+
+function DeepReadButton({
+  label,
+  loading = false,
+  onPress,
+}: {
+  label: string;
+  loading?: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ disabled: loading }}
+      disabled={loading}
+      onPress={onPress}
+      style={[styles.deepButton, loading && styles.deepButtonDisabled]}
+    >
+      {loading ? <ActivityIndicator color={colors.text.onAccent} /> : null}
+      <AppText variant="title" center color={colors.text.onAccent} style={styles.deepButtonText}>
+        {label}
+      </AppText>
+    </Pressable>
   );
 }
 
@@ -435,13 +610,68 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.accent.lime,
     borderRadius: radii.md,
+    flexDirection: 'row',
+    gap: spacing.sm,
     justifyContent: 'center',
     minHeight: 52,
+  },
+  deepButtonDisabled: {
+    opacity: 0.72,
   },
   deepButtonText: {
     fontFamily: typography.family.displayBold,
     fontSize: 15,
     lineHeight: 20,
+  },
+  deepResult: {
+    gap: spacing.md,
+    marginTop: spacing.xs,
+  },
+  deepResultMeta: {
+    fontFamily: typography.family.displayBold,
+    fontSize: 10,
+    letterSpacing: 0.8,
+    lineHeight: 13,
+  },
+  deepField: {
+    borderTopColor: 'rgba(255, 255, 255, 0.14)',
+    borderTopWidth: 1,
+    gap: 4,
+    paddingTop: spacing.sm,
+  },
+  deepFieldLabel: {
+    fontFamily: typography.family.displayBold,
+    fontSize: 9,
+    letterSpacing: 0.8,
+    lineHeight: 12,
+  },
+  deepFieldBody: {
+    fontFamily: typography.family.body,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  roastLine: {
+    backgroundColor: colors.accent.lime,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  roastLineText: {
+    fontFamily: typography.family.displaySemiBold,
+    fontSize: 14,
+    lineHeight: 19,
+  },
+  deepStateStack: {
+    gap: spacing.md,
+    marginTop: spacing.xs,
+  },
+  deepStateText: {
+    fontFamily: typography.family.body,
+    fontSize: 13,
+    lineHeight: 19,
+  },
+  deepStateTextCompact: {
+    marginTop: -spacing.sm,
   },
   sectionHeaderRow: {
     alignItems: 'center',

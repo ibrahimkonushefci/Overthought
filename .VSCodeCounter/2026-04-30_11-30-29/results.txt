@@ -1,0 +1,231 @@
+Date : 2026-04-30 11:30:29
+Directory : /Users/ibrahimi/Overthought
+Total : 121 files,  27865 codes, 300 comments, 2019 blanks, all 30184 lines
+
+Languages
++--------------------+------------+------------+------------+------------+------------+
+| language           | files      | code       | comment    | blank      | total      |
++--------------------+------------+------------+------------+------------+------------+
+| JSON               |         10 |     15,013 |          0 |          7 |     15,020 |
+| TypeScript         |         48 |      6,271 |         80 |        942 |      7,293 |
+| TypeScript JSX     |         28 |      3,521 |          0 |        246 |      3,767 |
+| Markdown           |          8 |      2,147 |          0 |        654 |      2,801 |
+| MS SQL             |          3 |        423 |         40 |         55 |        518 |
+| Groovy             |          3 |        145 |         69 |         34 |        248 |
+| XML                |         10 |        118 |         23 |          9 |        150 |
+| Swift              |          1 |         54 |          4 |         12 |         70 |
+| Ruby               |          1 |         50 |          4 |         12 |         66 |
+| JavaScript         |          3 |         43 |          1 |          7 |         51 |
+| Batch              |          1 |         41 |         32 |         22 |         95 |
+| Properties         |          2 |         20 |         35 |         15 |         70 |
+| JSON with Comments |          1 |         18 |          0 |          1 |         19 |
+| Dotenv             |          1 |          1 |          9 |          2 |         12 |
+| C++                |          1 |          0 |          3 |          1 |          4 |
++--------------------+------------+------------+------------+------------+------------+
+
+Directories
++-----------------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| path                                                                                                      | files      | code       | comment    | blank      | total      |
++-----------------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| .                                                                                                         |        121 |     27,865 |        300 |      2,019 |     30,184 |
+| . (Files)                                                                                                 |         10 |     13,111 |          1 |         59 |     13,171 |
+| android                                                                                                   |         15 |        285 |        159 |         80 |        524 |
+| android (Files)                                                                                           |          4 |        107 |         68 |         47 |        222 |
+| android/app                                                                                               |         10 |        171 |         91 |         32 |        294 |
+| android/app (Files)                                                                                       |          1 |         92 |         68 |         23 |        183 |
+| android/app/src                                                                                           |          9 |         79 |         23 |          9 |        111 |
+| android/app/src/debug                                                                                     |          1 |          5 |          0 |          3 |          8 |
+| android/app/src/debugOptimized                                                                            |          1 |          5 |          0 |          3 |          8 |
+| android/app/src/main                                                                                      |          7 |         69 |         23 |          3 |         95 |
+| android/app/src/main (Files)                                                                              |          1 |         32 |          0 |          0 |         32 |
+| android/app/src/main/res                                                                                  |          6 |         37 |         23 |          3 |         63 |
+| android/app/src/main/res/drawable                                                                         |          2 |         18 |         23 |          3 |         44 |
+| android/app/src/main/res/values                                                                           |          3 |         18 |          0 |          0 |         18 |
+| android/app/src/main/res/values-night                                                                     |          1 |          1 |          0 |          0 |          1 |
+| android/gradle                                                                                            |          1 |          7 |          0 |          1 |          8 |
+| android/gradle/wrapper                                                                                    |          1 |          7 |          0 |          1 |          8 |
+| app                                                                                                       |         17 |      2,713 |          0 |        186 |      2,899 |
+| app (Files)                                                                                               |          2 |         73 |          0 |         10 |         83 |
+| app/(modals)                                                                                              |          3 |        138 |          0 |         22 |        160 |
+| app/(public)                                                                                              |          3 |        315 |          0 |         23 |        338 |
+| app/(tabs)                                                                                                |          9 |      2,187 |          0 |        131 |      2,318 |
+| app/(tabs) (Files)                                                                                        |          6 |      1,218 |          0 |         63 |      1,281 |
+| app/(tabs)/account                                                                                        |          1 |         92 |          0 |          5 |         97 |
+| app/(tabs)/account/profile                                                                                |          1 |         92 |          0 |          5 |         97 |
+| app/(tabs)/case                                                                                           |          2 |        877 |          0 |         63 |        940 |
+| app/(tabs)/case/[id]                                                                                      |          2 |        877 |          0 |         63 |        940 |
+| design-reference                                                                                          |          1 |        124 |          0 |         17 |        141 |
+| docs                                                                                                      |          5 |      1,893 |          0 |        583 |      2,476 |
+| ios                                                                                                       |          9 |        188 |         20 |         29 |        237 |
+| ios (Files)                                                                                               |          3 |         55 |         13 |         15 |         83 |
+| ios/Overthought                                                                                           |          6 |        133 |          7 |         14 |        154 |
+| ios/Overthought (Files)                                                                                   |          3 |         93 |          7 |         13 |        113 |
+| ios/Overthought/Images.xcassets                                                                           |          3 |         40 |          0 |          1 |         41 |
+| ios/Overthought/Images.xcassets (Files)                                                                   |          1 |          6 |          0 |          1 |          7 |
+| ios/Overthought/Images.xcassets/AppIcon.appiconset                                                        |          1 |         14 |          0 |          0 |         14 |
+| ios/Overthought/Images.xcassets/SplashScreenBackground.colorset                                           |          1 |         20 |          0 |          0 |         20 |
+| src                                                                                                       |         56 |      8,288 |         77 |        857 |      9,222 |
+| src/features                                                                                              |         38 |      7,042 |         74 |        731 |      7,847 |
+| src/features/analysis                                                                                     |          2 |         37 |          0 |          8 |         45 |
+| src/features/auth                                                                                         |          2 |        429 |         71 |         79 |        579 |
+| src/features/cases                                                                                        |         11 |      1,227 |          0 |        182 |      1,409 |
+| src/features/cases (Files)                                                                                |          1 |         12 |          0 |          5 |         17 |
+| src/features/cases/components                                                                             |          4 |        320 |          0 |         18 |        338 |
+| src/features/cases/repositories                                                                           |          5 |        843 |          0 |        152 |        995 |
+| src/features/cases/services                                                                               |          1 |         52 |          0 |          7 |         59 |
+| src/features/deep-read                                                                                    |          2 |        353 |          2 |         53 |        408 |
+| src/features/migration                                                                                    |          3 |        306 |          0 |         53 |        359 |
+| src/features/premium                                                                                      |          5 |      1,033 |          1 |        177 |      1,211 |
+| src/features/profile                                                                                      |          1 |         43 |          0 |          9 |         52 |
+| src/features/share                                                                                        |          1 |         10 |          0 |          2 |         12 |
+| src/features/verdict-engine                                                                               |         11 |      3,604 |          0 |        168 |      3,772 |
+| src/features/verdict-engine (Files)                                                                       |         10 |      1,513 |          0 |        167 |      1,680 |
+| src/features/verdict-engine/config                                                                        |          1 |      2,091 |          0 |          1 |      2,092 |
+| src/lib                                                                                                   |          3 |         54 |          0 |          9 |         63 |
+| src/lib (Files)                                                                                           |          1 |         14 |          0 |          2 |         16 |
+| src/lib/analytics                                                                                         |          1 |         20 |          0 |          2 |         22 |
+| src/lib/supabase                                                                                          |          1 |         20 |          0 |          5 |         25 |
+| src/shared                                                                                                |         10 |        678 |          0 |         70 |        748 |
+| src/shared/theme                                                                                          |          1 |        120 |          0 |          8 |        128 |
+| src/shared/ui                                                                                             |          6 |        427 |          0 |         33 |        460 |
+| src/shared/utils                                                                                          |          3 |        131 |          0 |         29 |        160 |
+| src/storage                                                                                               |          1 |         14 |          0 |          3 |         17 |
+| src/store                                                                                                 |          3 |        273 |          0 |         17 |        290 |
+| src/types                                                                                                 |          1 |        227 |          3 |         27 |        257 |
+| supabase                                                                                                  |          8 |      1,263 |         43 |        208 |      1,514 |
+| supabase/.temp                                                                                            |          1 |          1 |          0 |          0 |          1 |
+| supabase/functions                                                                                        |          4 |        839 |          3 |        153 |        995 |
+| supabase/functions/_shared                                                                                |          1 |          5 |          0 |          1 |          6 |
+| supabase/functions/deep-read                                                                              |          1 |        609 |          3 |         98 |        710 |
+| supabase/functions/delete-account                                                                         |          1 |         56 |          0 |         17 |         73 |
+| supabase/functions/sync-premium-state                                                                     |          1 |        169 |          0 |         37 |        206 |
+| supabase/migrations                                                                                       |          3 |        423 |         40 |         55 |        518 |
++-----------------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+
+Files
++-----------------------------------------------------------------------------------------------------------+--------------------+------------+------------+------------+------------+
+| filename                                                                                                  | language           | code       | comment    | blank      | total      |
++-----------------------------------------------------------------------------------------------------------+--------------------+------------+------------+------------+------------+
+| /Users/ibrahimi/Overthought/README.md                                                                     | Markdown           |         84 |          0 |         38 |        122 |
+| /Users/ibrahimi/Overthought/android/app/build.gradle                                                      | Groovy             |         92 |         68 |         23 |        183 |
+| /Users/ibrahimi/Overthought/android/app/src/debug/AndroidManifest.xml                                     | XML                |          5 |          0 |          3 |          8 |
+| /Users/ibrahimi/Overthought/android/app/src/debugOptimized/AndroidManifest.xml                            | XML                |          5 |          0 |          3 |          8 |
+| /Users/ibrahimi/Overthought/android/app/src/main/AndroidManifest.xml                                      | XML                |         32 |          0 |          0 |         32 |
+| /Users/ibrahimi/Overthought/android/app/src/main/res/drawable/ic_launcher_background.xml                  | XML                |          6 |          0 |          0 |          6 |
+| /Users/ibrahimi/Overthought/android/app/src/main/res/drawable/rn_edit_text_material.xml                   | XML                |         12 |         23 |          3 |         38 |
+| /Users/ibrahimi/Overthought/android/app/src/main/res/values-night/colors.xml                              | XML                |          1 |          0 |          0 |          1 |
+| /Users/ibrahimi/Overthought/android/app/src/main/res/values/colors.xml                                    | XML                |          4 |          0 |          0 |          4 |
+| /Users/ibrahimi/Overthought/android/app/src/main/res/values/strings.xml                                   | XML                |          3 |          0 |          0 |          3 |
+| /Users/ibrahimi/Overthought/android/app/src/main/res/values/styles.xml                                    | XML                |         11 |          0 |          0 |         11 |
+| /Users/ibrahimi/Overthought/android/build.gradle                                                          | Groovy             |         20 |          1 |          4 |         25 |
+| /Users/ibrahimi/Overthought/android/gradle.properties                                                     | Properties         |         13 |         35 |         14 |         62 |
+| /Users/ibrahimi/Overthought/android/gradle/wrapper/gradle-wrapper.properties                              | Properties         |          7 |          0 |          1 |          8 |
+| /Users/ibrahimi/Overthought/android/gradlew.bat                                                           | Batch              |         41 |         32 |         22 |         95 |
+| /Users/ibrahimi/Overthought/android/settings.gradle                                                       | Groovy             |         33 |          0 |          7 |         40 |
+| /Users/ibrahimi/Overthought/app.config.js                                                                 | JavaScript         |         30 |          1 |          4 |         35 |
+| /Users/ibrahimi/Overthought/app.json                                                                      | JSON               |         31 |          0 |          1 |         32 |
+| /Users/ibrahimi/Overthought/app/(modals)/_layout.tsx                                                      | TypeScript JSX     |         12 |          0 |          2 |         14 |
+| /Users/ibrahimi/Overthought/app/(modals)/paywall.tsx                                                      | TypeScript JSX     |        118 |          0 |         16 |        134 |
+| /Users/ibrahimi/Overthought/app/(modals)/result.tsx                                                       | TypeScript JSX     |          8 |          0 |          4 |         12 |
+| /Users/ibrahimi/Overthought/app/(public)/_layout.tsx                                                      | TypeScript JSX     |         12 |          0 |          2 |         14 |
+| /Users/ibrahimi/Overthought/app/(public)/auth.tsx                                                         | TypeScript JSX     |        102 |          0 |          8 |        110 |
+| /Users/ibrahimi/Overthought/app/(public)/welcome.tsx                                                      | TypeScript JSX     |        201 |          0 |         13 |        214 |
+| /Users/ibrahimi/Overthought/app/(tabs)/_layout.tsx                                                        | TypeScript JSX     |        144 |          0 |          4 |        148 |
+| /Users/ibrahimi/Overthought/app/(tabs)/account/profile/delete-account.tsx                                 | TypeScript JSX     |         92 |          0 |          5 |         97 |
+| /Users/ibrahimi/Overthought/app/(tabs)/case/[id]/add-update.tsx                                           | TypeScript JSX     |        149 |          0 |         12 |        161 |
+| /Users/ibrahimi/Overthought/app/(tabs)/case/[id]/index.tsx                                                | TypeScript JSX     |        728 |          0 |         51 |        779 |
+| /Users/ibrahimi/Overthought/app/(tabs)/cases.tsx                                                          | TypeScript JSX     |        120 |          0 |         10 |        130 |
+| /Users/ibrahimi/Overthought/app/(tabs)/home.tsx                                                           | TypeScript JSX     |        160 |          0 |          9 |        169 |
+| /Users/ibrahimi/Overthought/app/(tabs)/new-case.tsx                                                       | TypeScript JSX     |        242 |          0 |         15 |        257 |
+| /Users/ibrahimi/Overthought/app/(tabs)/profile.tsx                                                        | TypeScript JSX     |        327 |          0 |         15 |        342 |
+| /Users/ibrahimi/Overthought/app/(tabs)/stats.tsx                                                          | TypeScript JSX     |        225 |          0 |         10 |        235 |
+| /Users/ibrahimi/Overthought/app/_layout.tsx                                                               | TypeScript JSX     |         54 |          0 |          5 |         59 |
+| /Users/ibrahimi/Overthought/app/index.tsx                                                                 | TypeScript JSX     |         19 |          0 |          5 |         24 |
+| /Users/ibrahimi/Overthought/babel.config.js                                                               | JavaScript         |          6 |          0 |          2 |          8 |
+| /Users/ibrahimi/Overthought/design-reference/color-palette.md                                             | Markdown           |        124 |          0 |         17 |        141 |
+| /Users/ibrahimi/Overthought/docs/overthought-api-contracts.md                                             | Markdown           |        385 |          0 |        111 |        496 |
+| /Users/ibrahimi/Overthought/docs/overthought-codex-spec.md                                                | Markdown           |        653 |          0 |        172 |        825 |
+| /Users/ibrahimi/Overthought/docs/overthought-master-handoff.md                                            | Markdown           |        254 |          0 |         87 |        341 |
+| /Users/ibrahimi/Overthought/docs/overthought-v1-architecture-addendum.md                                  | Markdown           |         52 |          0 |         20 |         72 |
+| /Users/ibrahimi/Overthought/docs/overthought-verdict-engine-spec.md                                       | Markdown           |        549 |          0 |        193 |        742 |
+| /Users/ibrahimi/Overthought/eas.json                                                                      | JSON               |         25 |          0 |          1 |         26 |
+| /Users/ibrahimi/Overthought/ios/.xcode.env                                                                | Dotenv             |          1 |          9 |          2 |         12 |
+| /Users/ibrahimi/Overthought/ios/Overthought/AppDelegate.swift                                             | Swift              |         54 |          4 |         12 |         70 |
+| /Users/ibrahimi/Overthought/ios/Overthought/Images.xcassets/AppIcon.appiconset/Contents.json              | JSON               |         14 |          0 |          0 |         14 |
+| /Users/ibrahimi/Overthought/ios/Overthought/Images.xcassets/Contents.json                                 | JSON               |          6 |          0 |          1 |          7 |
+| /Users/ibrahimi/Overthought/ios/Overthought/Images.xcassets/SplashScreenBackground.colorset/Contents.json | JSON               |         20 |          0 |          0 |         20 |
+| /Users/ibrahimi/Overthought/ios/Overthought/Overthought-Bridging-Header.h                                 | C++                |          0 |          3 |          1 |          4 |
+| /Users/ibrahimi/Overthought/ios/Overthought/SplashScreen.storyboard                                       | XML                |         39 |          0 |          0 |         39 |
+| /Users/ibrahimi/Overthought/ios/Podfile                                                                   | Ruby               |         50 |          4 |         12 |         66 |
+| /Users/ibrahimi/Overthought/ios/Podfile.properties.json                                                   | JSON               |          4 |          0 |          1 |          5 |
+| /Users/ibrahimi/Overthought/jest.config.js                                                                | JavaScript         |          7 |          0 |          1 |          8 |
+| /Users/ibrahimi/Overthought/jest.setup.ts                                                                 | TypeScript         |         89 |          0 |          9 |         98 |
+| /Users/ibrahimi/Overthought/package-lock.json                                                             | JSON               |     12,766 |          0 |          1 |     12,767 |
+| /Users/ibrahimi/Overthought/package.json                                                                  | JSON               |         55 |          0 |          1 |         56 |
+| /Users/ibrahimi/Overthought/src/features/analysis/analysisService.test.ts                                 | TypeScript         |         16 |          0 |          3 |         19 |
+| /Users/ibrahimi/Overthought/src/features/analysis/analysisService.ts                                      | TypeScript         |         21 |          0 |          5 |         26 |
+| /Users/ibrahimi/Overthought/src/features/auth/authService.test.ts                                         | TypeScript         |        121 |          0 |         18 |        139 |
+| /Users/ibrahimi/Overthought/src/features/auth/authService.ts                                              | TypeScript         |        308 |         71 |         61 |        440 |
+| /Users/ibrahimi/Overthought/src/features/cases/components/CaseCard.tsx                                    | TypeScript JSX     |         90 |          0 |          5 |         95 |
+| /Users/ibrahimi/Overthought/src/features/cases/components/CategoryPill.tsx                                | TypeScript JSX     |         67 |          0 |          4 |         71 |
+| /Users/ibrahimi/Overthought/src/features/cases/components/HeroActionCard.tsx                              | TypeScript JSX     |         64 |          0 |          4 |         68 |
+| /Users/ibrahimi/Overthought/src/features/cases/components/ScorePanel.tsx                                  | TypeScript JSX     |         99 |          0 |          5 |        104 |
+| /Users/ibrahimi/Overthought/src/features/cases/repositories/caseMappers.ts                                | TypeScript         |         70 |          0 |          5 |         75 |
+| /Users/ibrahimi/Overthought/src/features/cases/repositories/caseRepository.test.ts                        | TypeScript         |        192 |          0 |         38 |        230 |
+| /Users/ibrahimi/Overthought/src/features/cases/repositories/caseRepository.ts                             | TypeScript         |        207 |          0 |         43 |        250 |
+| /Users/ibrahimi/Overthought/src/features/cases/repositories/caseUpdateRepository.test.ts                  | TypeScript         |        239 |          0 |         38 |        277 |
+| /Users/ibrahimi/Overthought/src/features/cases/repositories/caseUpdateRepository.ts                       | TypeScript         |        135 |          0 |         28 |        163 |
+| /Users/ibrahimi/Overthought/src/features/cases/services/useCases.ts                                       | TypeScript         |         52 |          0 |          7 |         59 |
+| /Users/ibrahimi/Overthought/src/features/cases/types.ts                                                   | TypeScript         |         12 |          0 |          5 |         17 |
+| /Users/ibrahimi/Overthought/src/features/deep-read/deepReadService.test.ts                                | TypeScript         |        227 |          0 |         27 |        254 |
+| /Users/ibrahimi/Overthought/src/features/deep-read/deepReadService.ts                                     | TypeScript         |        126 |          2 |         26 |        154 |
+| /Users/ibrahimi/Overthought/src/features/migration/MigrationPrompt.tsx                                    | TypeScript JSX     |         61 |          0 |          9 |         70 |
+| /Users/ibrahimi/Overthought/src/features/migration/migrationService.test.ts                               | TypeScript         |         93 |          0 |         17 |        110 |
+| /Users/ibrahimi/Overthought/src/features/migration/migrationService.ts                                    | TypeScript         |        152 |          0 |         27 |        179 |
+| /Users/ibrahimi/Overthought/src/features/premium/featureFlags.ts                                          | TypeScript         |         10 |          0 |          3 |         13 |
+| /Users/ibrahimi/Overthought/src/features/premium/premiumService.test.ts                                   | TypeScript         |        406 |          0 |         54 |        460 |
+| /Users/ibrahimi/Overthought/src/features/premium/premiumService.ts                                        | TypeScript         |        446 |          0 |         86 |        532 |
+| /Users/ibrahimi/Overthought/src/features/premium/revenueCatClient.test.ts                                 | TypeScript         |         19 |          0 |          7 |         26 |
+| /Users/ibrahimi/Overthought/src/features/premium/revenueCatClient.ts                                      | TypeScript         |        152 |          1 |         27 |        180 |
+| /Users/ibrahimi/Overthought/src/features/profile/profileRepository.ts                                     | TypeScript         |         43 |          0 |          9 |         52 |
+| /Users/ibrahimi/Overthought/src/features/share/shareTypes.ts                                              | TypeScript         |         10 |          0 |          2 |         12 |
+| /Users/ibrahimi/Overthought/src/features/verdict-engine/README.md                                         | Markdown           |         46 |          0 |         16 |         62 |
+| /Users/ibrahimi/Overthought/src/features/verdict-engine/analyzeCase.ts                                    | TypeScript         |        257 |          0 |         50 |        307 |
+| /Users/ibrahimi/Overthought/src/features/verdict-engine/config.ts                                         | TypeScript         |        124 |          0 |         28 |        152 |
+| /Users/ibrahimi/Overthought/src/features/verdict-engine/config/verdict-config.v1.json                     | JSON               |      2,091 |          0 |          1 |      2,092 |
+| /Users/ibrahimi/Overthought/src/features/verdict-engine/copy.ts                                           | TypeScript         |        137 |          0 |         21 |        158 |
+| /Users/ibrahimi/Overthought/src/features/verdict-engine/exampleUsage.ts                                   | TypeScript         |         31 |          0 |          5 |         36 |
+| /Users/ibrahimi/Overthought/src/features/verdict-engine/index.ts                                          | TypeScript         |         17 |          0 |          1 |         18 |
+| /Users/ibrahimi/Overthought/src/features/verdict-engine/normalize.ts                                      | TypeScript         |         33 |          0 |          5 |         38 |
+| /Users/ibrahimi/Overthought/src/features/verdict-engine/patterns.ts                                       | TypeScript         |         60 |          0 |         13 |         73 |
+| /Users/ibrahimi/Overthought/src/features/verdict-engine/types.ts                                          | TypeScript         |        102 |          0 |         16 |        118 |
+| /Users/ibrahimi/Overthought/src/features/verdict-engine/verdictEngine.test.ts                             | TypeScript         |        706 |          0 |         12 |        718 |
+| /Users/ibrahimi/Overthought/src/lib/analytics/analyticsService.ts                                         | TypeScript         |         20 |          0 |          2 |         22 |
+| /Users/ibrahimi/Overthought/src/lib/env.ts                                                                | TypeScript         |         14 |          0 |          2 |         16 |
+| /Users/ibrahimi/Overthought/src/lib/supabase/client.ts                                                    | TypeScript         |         20 |          0 |          5 |         25 |
+| /Users/ibrahimi/Overthought/src/shared/theme/tokens.ts                                                    | TypeScript         |        120 |          0 |          8 |        128 |
+| /Users/ibrahimi/Overthought/src/shared/ui/Button.tsx                                                      | TypeScript JSX     |        123 |          0 |          7 |        130 |
+| /Users/ibrahimi/Overthought/src/shared/ui/Card.tsx                                                        | TypeScript JSX     |         28 |          0 |          4 |         32 |
+| /Users/ibrahimi/Overthought/src/shared/ui/EmptyState.tsx                                                  | TypeScript JSX     |         63 |          0 |          4 |         67 |
+| /Users/ibrahimi/Overthought/src/shared/ui/Header.tsx                                                      | TypeScript JSX     |         65 |          0 |          5 |         70 |
+| /Users/ibrahimi/Overthought/src/shared/ui/Screen.tsx                                                      | TypeScript JSX     |         68 |          0 |          8 |         76 |
+| /Users/ibrahimi/Overthought/src/shared/ui/Text.tsx                                                        | TypeScript JSX     |         80 |          0 |          5 |         85 |
+| /Users/ibrahimi/Overthought/src/shared/utils/date.ts                                                      | TypeScript         |         20 |          0 |          6 |         26 |
+| /Users/ibrahimi/Overthought/src/shared/utils/id.ts                                                        | TypeScript         |          4 |          0 |          2 |          6 |
+| /Users/ibrahimi/Overthought/src/shared/utils/verdict.ts                                                   | TypeScript         |        107 |          0 |         21 |        128 |
+| /Users/ibrahimi/Overthought/src/storage/mmkv.ts                                                           | TypeScript         |         14 |          0 |          3 |         17 |
+| /Users/ibrahimi/Overthought/src/store/authStore.ts                                                        | TypeScript         |         51 |          0 |          5 |         56 |
+| /Users/ibrahimi/Overthought/src/store/guestStore.ts                                                       | TypeScript         |        203 |          0 |          8 |        211 |
+| /Users/ibrahimi/Overthought/src/store/premiumStore.ts                                                     | TypeScript         |         19 |          0 |          4 |         23 |
+| /Users/ibrahimi/Overthought/src/types/shared.ts                                                           | TypeScript         |        227 |          3 |         27 |        257 |
+| /Users/ibrahimi/Overthought/supabase/.temp/linked-project.json                                            | JSON               |          1 |          0 |          0 |          1 |
+| /Users/ibrahimi/Overthought/supabase/functions/_shared/cors.ts                                            | TypeScript         |          5 |          0 |          1 |          6 |
+| /Users/ibrahimi/Overthought/supabase/functions/deep-read/index.ts                                         | TypeScript         |        609 |          3 |         98 |        710 |
+| /Users/ibrahimi/Overthought/supabase/functions/delete-account/index.ts                                    | TypeScript         |         56 |          0 |         17 |         73 |
+| /Users/ibrahimi/Overthought/supabase/functions/sync-premium-state/index.ts                                | TypeScript         |        169 |          0 |         37 |        206 |
+| /Users/ibrahimi/Overthought/supabase/migrations/0001_initial_schema.sql                                   | MS SQL             |        260 |         29 |         37 |        326 |
+| /Users/ibrahimi/Overthought/supabase/migrations/0002_guest_migration_idempotency.sql                      | MS SQL             |          3 |          1 |          1 |          5 |
+| /Users/ibrahimi/Overthought/supabase/migrations/0003_deep_read.sql                                        | MS SQL             |        160 |         10 |         17 |        187 |
+| /Users/ibrahimi/Overthought/tsconfig.json                                                                 | JSON with Comments |         18 |          0 |          1 |         19 |
+| Total                                                                                                     |                    |     27,865 |        300 |      2,019 |     30,184 |
++-----------------------------------------------------------------------------------------------------------+--------------------+------------+------------+------------+------------+

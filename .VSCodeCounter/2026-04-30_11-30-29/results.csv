@@ -1,0 +1,123 @@
+"filename", "language", "TypeScript", "TypeScript JSX", "JSON", "Markdown", "JSON with Comments", "Properties", "Batch", "Groovy", "XML", "JavaScript", "MS SQL", "Dotenv", "Ruby", "C++", "Swift", "comment", "blank", "total"
+"/Users/ibrahimi/Overthought/README.md", "Markdown", 0, 0, 0, 84, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 38, 122
+"/Users/ibrahimi/Overthought/android/app/build.gradle", "Groovy", 0, 0, 0, 0, 0, 0, 0, 92, 0, 0, 0, 0, 0, 0, 0, 68, 23, 183
+"/Users/ibrahimi/Overthought/android/app/src/debug/AndroidManifest.xml", "XML", 0, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 3, 8
+"/Users/ibrahimi/Overthought/android/app/src/debugOptimized/AndroidManifest.xml", "XML", 0, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 3, 8
+"/Users/ibrahimi/Overthought/android/app/src/main/AndroidManifest.xml", "XML", 0, 0, 0, 0, 0, 0, 0, 0, 32, 0, 0, 0, 0, 0, 0, 0, 0, 32
+"/Users/ibrahimi/Overthought/android/app/src/main/res/drawable/ic_launcher_background.xml", "XML", 0, 0, 0, 0, 0, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0, 0, 6
+"/Users/ibrahimi/Overthought/android/app/src/main/res/drawable/rn_edit_text_material.xml", "XML", 0, 0, 0, 0, 0, 0, 0, 0, 12, 0, 0, 0, 0, 0, 0, 23, 3, 38
+"/Users/ibrahimi/Overthought/android/app/src/main/res/values-night/colors.xml", "XML", 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1
+"/Users/ibrahimi/Overthought/android/app/src/main/res/values/colors.xml", "XML", 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 4
+"/Users/ibrahimi/Overthought/android/app/src/main/res/values/strings.xml", "XML", 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 3
+"/Users/ibrahimi/Overthought/android/app/src/main/res/values/styles.xml", "XML", 0, 0, 0, 0, 0, 0, 0, 0, 11, 0, 0, 0, 0, 0, 0, 0, 0, 11
+"/Users/ibrahimi/Overthought/android/build.gradle", "Groovy", 0, 0, 0, 0, 0, 0, 0, 20, 0, 0, 0, 0, 0, 0, 0, 1, 4, 25
+"/Users/ibrahimi/Overthought/android/gradle.properties", "Properties", 0, 0, 0, 0, 0, 13, 0, 0, 0, 0, 0, 0, 0, 0, 0, 35, 14, 62
+"/Users/ibrahimi/Overthought/android/gradle/wrapper/gradle-wrapper.properties", "Properties", 0, 0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 8
+"/Users/ibrahimi/Overthought/android/gradlew.bat", "Batch", 0, 0, 0, 0, 0, 0, 41, 0, 0, 0, 0, 0, 0, 0, 0, 32, 22, 95
+"/Users/ibrahimi/Overthought/android/settings.gradle", "Groovy", 0, 0, 0, 0, 0, 0, 0, 33, 0, 0, 0, 0, 0, 0, 0, 0, 7, 40
+"/Users/ibrahimi/Overthought/app.config.js", "JavaScript", 0, 0, 0, 0, 0, 0, 0, 0, 0, 30, 0, 0, 0, 0, 0, 1, 4, 35
+"/Users/ibrahimi/Overthought/app.json", "JSON", 0, 0, 31, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 32
+"/Users/ibrahimi/Overthought/app/(modals)/_layout.tsx", "TypeScript JSX", 0, 12, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 14
+"/Users/ibrahimi/Overthought/app/(modals)/paywall.tsx", "TypeScript JSX", 0, 118, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 16, 134
+"/Users/ibrahimi/Overthought/app/(modals)/result.tsx", "TypeScript JSX", 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 12
+"/Users/ibrahimi/Overthought/app/(public)/_layout.tsx", "TypeScript JSX", 0, 12, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 14
+"/Users/ibrahimi/Overthought/app/(public)/auth.tsx", "TypeScript JSX", 0, 102, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 110
+"/Users/ibrahimi/Overthought/app/(public)/welcome.tsx", "TypeScript JSX", 0, 201, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 13, 214
+"/Users/ibrahimi/Overthought/app/(tabs)/_layout.tsx", "TypeScript JSX", 0, 144, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 148
+"/Users/ibrahimi/Overthought/app/(tabs)/account/profile/delete-account.tsx", "TypeScript JSX", 0, 92, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 97
+"/Users/ibrahimi/Overthought/app/(tabs)/case/[id]/add-update.tsx", "TypeScript JSX", 0, 149, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 12, 161
+"/Users/ibrahimi/Overthought/app/(tabs)/case/[id]/index.tsx", "TypeScript JSX", 0, 728, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 51, 779
+"/Users/ibrahimi/Overthought/app/(tabs)/cases.tsx", "TypeScript JSX", 0, 120, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 130
+"/Users/ibrahimi/Overthought/app/(tabs)/home.tsx", "TypeScript JSX", 0, 160, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9, 169
+"/Users/ibrahimi/Overthought/app/(tabs)/new-case.tsx", "TypeScript JSX", 0, 242, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 15, 257
+"/Users/ibrahimi/Overthought/app/(tabs)/profile.tsx", "TypeScript JSX", 0, 327, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 15, 342
+"/Users/ibrahimi/Overthought/app/(tabs)/stats.tsx", "TypeScript JSX", 0, 225, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 235
+"/Users/ibrahimi/Overthought/app/_layout.tsx", "TypeScript JSX", 0, 54, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 59
+"/Users/ibrahimi/Overthought/app/index.tsx", "TypeScript JSX", 0, 19, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 24
+"/Users/ibrahimi/Overthought/babel.config.js", "JavaScript", 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 2, 8
+"/Users/ibrahimi/Overthought/design-reference/color-palette.md", "Markdown", 0, 0, 0, 124, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 17, 141
+"/Users/ibrahimi/Overthought/docs/overthought-api-contracts.md", "Markdown", 0, 0, 0, 385, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 111, 496
+"/Users/ibrahimi/Overthought/docs/overthought-codex-spec.md", "Markdown", 0, 0, 0, 653, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 172, 825
+"/Users/ibrahimi/Overthought/docs/overthought-master-handoff.md", "Markdown", 0, 0, 0, 254, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 87, 341
+"/Users/ibrahimi/Overthought/docs/overthought-v1-architecture-addendum.md", "Markdown", 0, 0, 0, 52, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 20, 72
+"/Users/ibrahimi/Overthought/docs/overthought-verdict-engine-spec.md", "Markdown", 0, 0, 0, 549, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 193, 742
+"/Users/ibrahimi/Overthought/eas.json", "JSON", 0, 0, 25, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 26
+"/Users/ibrahimi/Overthought/ios/.xcode.env", "Dotenv", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 9, 2, 12
+"/Users/ibrahimi/Overthought/ios/Overthought/AppDelegate.swift", "Swift", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 54, 4, 12, 70
+"/Users/ibrahimi/Overthought/ios/Overthought/Images.xcassets/AppIcon.appiconset/Contents.json", "JSON", 0, 0, 14, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 14
+"/Users/ibrahimi/Overthought/ios/Overthought/Images.xcassets/Contents.json", "JSON", 0, 0, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 7
+"/Users/ibrahimi/Overthought/ios/Overthought/Images.xcassets/SplashScreenBackground.colorset/Contents.json", "JSON", 0, 0, 20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 20
+"/Users/ibrahimi/Overthought/ios/Overthought/Overthought-Bridging-Header.h", "C++", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 1, 4
+"/Users/ibrahimi/Overthought/ios/Overthought/SplashScreen.storyboard", "XML", 0, 0, 0, 0, 0, 0, 0, 0, 39, 0, 0, 0, 0, 0, 0, 0, 0, 39
+"/Users/ibrahimi/Overthought/ios/Podfile", "Ruby", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 50, 0, 0, 4, 12, 66
+"/Users/ibrahimi/Overthought/ios/Podfile.properties.json", "JSON", 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 5
+"/Users/ibrahimi/Overthought/jest.config.js", "JavaScript", 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 0, 1, 8
+"/Users/ibrahimi/Overthought/jest.setup.ts", "TypeScript", 89, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9, 98
+"/Users/ibrahimi/Overthought/package-lock.json", "JSON", 0, 0, 12766, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 12767
+"/Users/ibrahimi/Overthought/package.json", "JSON", 0, 0, 55, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 56
+"/Users/ibrahimi/Overthought/src/features/analysis/analysisService.test.ts", "TypeScript", 16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 19
+"/Users/ibrahimi/Overthought/src/features/analysis/analysisService.ts", "TypeScript", 21, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 26
+"/Users/ibrahimi/Overthought/src/features/auth/authService.test.ts", "TypeScript", 121, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 18, 139
+"/Users/ibrahimi/Overthought/src/features/auth/authService.ts", "TypeScript", 308, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 71, 61, 440
+"/Users/ibrahimi/Overthought/src/features/cases/components/CaseCard.tsx", "TypeScript JSX", 0, 90, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 95
+"/Users/ibrahimi/Overthought/src/features/cases/components/CategoryPill.tsx", "TypeScript JSX", 0, 67, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 71
+"/Users/ibrahimi/Overthought/src/features/cases/components/HeroActionCard.tsx", "TypeScript JSX", 0, 64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 68
+"/Users/ibrahimi/Overthought/src/features/cases/components/ScorePanel.tsx", "TypeScript JSX", 0, 99, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 104
+"/Users/ibrahimi/Overthought/src/features/cases/repositories/caseMappers.ts", "TypeScript", 70, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 75
+"/Users/ibrahimi/Overthought/src/features/cases/repositories/caseRepository.test.ts", "TypeScript", 192, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 38, 230
+"/Users/ibrahimi/Overthought/src/features/cases/repositories/caseRepository.ts", "TypeScript", 207, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 43, 250
+"/Users/ibrahimi/Overthought/src/features/cases/repositories/caseUpdateRepository.test.ts", "TypeScript", 239, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 38, 277
+"/Users/ibrahimi/Overthought/src/features/cases/repositories/caseUpdateRepository.ts", "TypeScript", 135, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 28, 163
+"/Users/ibrahimi/Overthought/src/features/cases/services/useCases.ts", "TypeScript", 52, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 59
+"/Users/ibrahimi/Overthought/src/features/cases/types.ts", "TypeScript", 12, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 17
+"/Users/ibrahimi/Overthought/src/features/deep-read/deepReadService.test.ts", "TypeScript", 227, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 27, 254
+"/Users/ibrahimi/Overthought/src/features/deep-read/deepReadService.ts", "TypeScript", 126, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 26, 154
+"/Users/ibrahimi/Overthought/src/features/migration/MigrationPrompt.tsx", "TypeScript JSX", 0, 61, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9, 70
+"/Users/ibrahimi/Overthought/src/features/migration/migrationService.test.ts", "TypeScript", 93, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 17, 110
+"/Users/ibrahimi/Overthought/src/features/migration/migrationService.ts", "TypeScript", 152, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 27, 179
+"/Users/ibrahimi/Overthought/src/features/premium/featureFlags.ts", "TypeScript", 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 13
+"/Users/ibrahimi/Overthought/src/features/premium/premiumService.test.ts", "TypeScript", 406, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 54, 460
+"/Users/ibrahimi/Overthought/src/features/premium/premiumService.ts", "TypeScript", 446, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 86, 532
+"/Users/ibrahimi/Overthought/src/features/premium/revenueCatClient.test.ts", "TypeScript", 19, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 26
+"/Users/ibrahimi/Overthought/src/features/premium/revenueCatClient.ts", "TypeScript", 152, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 27, 180
+"/Users/ibrahimi/Overthought/src/features/profile/profileRepository.ts", "TypeScript", 43, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9, 52
+"/Users/ibrahimi/Overthought/src/features/share/shareTypes.ts", "TypeScript", 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 12
+"/Users/ibrahimi/Overthought/src/features/verdict-engine/README.md", "Markdown", 0, 0, 0, 46, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 16, 62
+"/Users/ibrahimi/Overthought/src/features/verdict-engine/analyzeCase.ts", "TypeScript", 257, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 50, 307
+"/Users/ibrahimi/Overthought/src/features/verdict-engine/config.ts", "TypeScript", 124, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 28, 152
+"/Users/ibrahimi/Overthought/src/features/verdict-engine/config/verdict-config.v1.json", "JSON", 0, 0, 2091, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2092
+"/Users/ibrahimi/Overthought/src/features/verdict-engine/copy.ts", "TypeScript", 137, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 21, 158
+"/Users/ibrahimi/Overthought/src/features/verdict-engine/exampleUsage.ts", "TypeScript", 31, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 36
+"/Users/ibrahimi/Overthought/src/features/verdict-engine/index.ts", "TypeScript", 17, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 18
+"/Users/ibrahimi/Overthought/src/features/verdict-engine/normalize.ts", "TypeScript", 33, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 38
+"/Users/ibrahimi/Overthought/src/features/verdict-engine/patterns.ts", "TypeScript", 60, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 13, 73
+"/Users/ibrahimi/Overthought/src/features/verdict-engine/types.ts", "TypeScript", 102, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 16, 118
+"/Users/ibrahimi/Overthought/src/features/verdict-engine/verdictEngine.test.ts", "TypeScript", 706, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 12, 718
+"/Users/ibrahimi/Overthought/src/lib/analytics/analyticsService.ts", "TypeScript", 20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 22
+"/Users/ibrahimi/Overthought/src/lib/env.ts", "TypeScript", 14, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 16
+"/Users/ibrahimi/Overthought/src/lib/supabase/client.ts", "TypeScript", 20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 25
+"/Users/ibrahimi/Overthought/src/shared/theme/tokens.ts", "TypeScript", 120, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 128
+"/Users/ibrahimi/Overthought/src/shared/ui/Button.tsx", "TypeScript JSX", 0, 123, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 130
+"/Users/ibrahimi/Overthought/src/shared/ui/Card.tsx", "TypeScript JSX", 0, 28, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 32
+"/Users/ibrahimi/Overthought/src/shared/ui/EmptyState.tsx", "TypeScript JSX", 0, 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 67
+"/Users/ibrahimi/Overthought/src/shared/ui/Header.tsx", "TypeScript JSX", 0, 65, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 70
+"/Users/ibrahimi/Overthought/src/shared/ui/Screen.tsx", "TypeScript JSX", 0, 68, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 76
+"/Users/ibrahimi/Overthought/src/shared/ui/Text.tsx", "TypeScript JSX", 0, 80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 85
+"/Users/ibrahimi/Overthought/src/shared/utils/date.ts", "TypeScript", 20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 26
+"/Users/ibrahimi/Overthought/src/shared/utils/id.ts", "TypeScript", 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 6
+"/Users/ibrahimi/Overthought/src/shared/utils/verdict.ts", "TypeScript", 107, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 21, 128
+"/Users/ibrahimi/Overthought/src/storage/mmkv.ts", "TypeScript", 14, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 17
+"/Users/ibrahimi/Overthought/src/store/authStore.ts", "TypeScript", 51, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 56
+"/Users/ibrahimi/Overthought/src/store/guestStore.ts", "TypeScript", 203, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 211
+"/Users/ibrahimi/Overthought/src/store/premiumStore.ts", "TypeScript", 19, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 23
+"/Users/ibrahimi/Overthought/src/types/shared.ts", "TypeScript", 227, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 27, 257
+"/Users/ibrahimi/Overthought/supabase/.temp/linked-project.json", "JSON", 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1
+"/Users/ibrahimi/Overthought/supabase/functions/_shared/cors.ts", "TypeScript", 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 6
+"/Users/ibrahimi/Overthought/supabase/functions/deep-read/index.ts", "TypeScript", 609, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 98, 710
+"/Users/ibrahimi/Overthought/supabase/functions/delete-account/index.ts", "TypeScript", 56, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 17, 73
+"/Users/ibrahimi/Overthought/supabase/functions/sync-premium-state/index.ts", "TypeScript", 169, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 37, 206
+"/Users/ibrahimi/Overthought/supabase/migrations/0001_initial_schema.sql", "MS SQL", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 260, 0, 0, 0, 0, 29, 37, 326
+"/Users/ibrahimi/Overthought/supabase/migrations/0002_guest_migration_idempotency.sql", "MS SQL", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 1, 1, 5
+"/Users/ibrahimi/Overthought/supabase/migrations/0003_deep_read.sql", "MS SQL", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 160, 0, 0, 0, 0, 10, 17, 187
+"/Users/ibrahimi/Overthought/tsconfig.json", "JSON with Comments", 0, 0, 0, 0, 18, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 19
+"Total", "-", 6271, 3521, 15013, 2147, 18, 20, 41, 145, 118, 43, 423, 1, 50, 0, 54, 300, 2019, 30184
