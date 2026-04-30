@@ -14,12 +14,44 @@ function authenticatedCaseId(caseId: string): string {
   return useGuestStore.getState().migratedCaseMap[caseId] ?? caseId;
 }
 
+function sanitizeLogField(value: unknown): string | null {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const sanitized = value.replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ').trim();
+  return sanitized ? sanitized.slice(0, 220) : null;
+}
+
+function supabaseErrorDetails(error: unknown) {
+  const record = error && typeof error === 'object' ? (error as Record<string, unknown>) : {};
+
+  return {
+    code: sanitizeLogField(record.code),
+    message: sanitizeLogField(record.message),
+    details: sanitizeLogField(record.details),
+    hint: sanitizeLogField(record.hint),
+  };
+}
+
+function logCaseCreateDiagnostic(event: string, details: Record<string, unknown>) {
+  console.info(`[case-create] ${event}`, details);
+}
+
 export const caseRepository = {
   async createCase(input: CreateCaseInput): Promise<CaseEntity> {
     const analysis = await analysisService.analyzeCase(input);
     const title = input.title ?? titleFromInput(input.inputText);
     const timestamp = nowIso();
     const auth = useAuthStore.getState();
+
+    logCaseCreateDiagnostic('case_create_start', {
+      sessionMode: auth.sessionMode,
+      hasAuthUser: Boolean(auth.user),
+      supabaseConfigured: Boolean(supabase),
+      category: input.category,
+      inputLength: input.inputText.length,
+    });
 
     trackEvent('case_analyzed', {
       category: input.category,
@@ -31,6 +63,10 @@ export const caseRepository = {
     }
 
     if (auth.sessionMode === 'authenticated' && supabase) {
+      logCaseCreateDiagnostic('case_create_path', {
+        path: 'authenticated_supabase',
+      });
+
       if (!auth.user) {
         throw new Error('Authenticated session is missing a user.');
       }
@@ -53,12 +89,32 @@ export const caseRepository = {
         .single();
 
       if (error) {
+        const profileLookup = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', auth.user.id)
+          .maybeSingle();
+
+        logCaseCreateDiagnostic('case_create_supabase_insert_failed', {
+          sessionMode: auth.sessionMode,
+          hasAuthUser: Boolean(auth.user),
+          supabaseConfigured: Boolean(supabase),
+          ...supabaseErrorDetails(error),
+          profileLookupOk: !profileLookup.error,
+          profileExists: Boolean(profileLookup.data),
+          profileLookupError: profileLookup.error ? supabaseErrorDetails(profileLookup.error) : null,
+        });
+
         throw error;
       }
 
       trackEvent('case_saved', { mode: 'authenticated' });
       return mapCaseRow(data as CaseRow);
     }
+
+    logCaseCreateDiagnostic('case_create_path', {
+      path: 'guest_local',
+    });
 
     const localOwnerId = useGuestStore.getState().ensureGuestSession();
     const record: GuestCaseLocal = {

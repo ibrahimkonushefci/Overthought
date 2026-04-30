@@ -109,6 +109,8 @@ const RESPONSE_SCHEMA_VERSION = 1;
 const FREE_DAILY_LIMIT = 2;
 const PREMIUM_DAILY_FAIR_USE_LIMIT = 100;
 const GEMINI_TIMEOUT_MS = 12_000;
+const GEMINI_MAX_ATTEMPTS = 2;
+const GEMINI_RETRY_DELAY_MS = 750;
 const DEEP_READ_FIELD_LIMITS = {
   whatsActuallyHappening: 210,
   whatYoureOverreading: 220,
@@ -267,6 +269,32 @@ async function readGeminiError(response: Response) {
       errorMessage: null,
     };
   }
+}
+
+function wait(milliseconds: number) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, milliseconds);
+  });
+}
+
+function isTemporaryProviderStatus(status: number, providerErrorStatus: string | null, providerErrorMessage: string | null) {
+  if (status === 502 || status === 503 || status === 504) {
+    return true;
+  }
+
+  if (status !== 429) {
+    return false;
+  }
+
+  const retryText = `${providerErrorStatus ?? ''} ${providerErrorMessage ?? ''}`.toLowerCase();
+  return (
+    retryText.includes('temporar') ||
+    retryText.includes('retry') ||
+    retryText.includes('unavailable') ||
+    retryText.includes('overload') ||
+    retryText.includes('high demand') ||
+    retryText.includes('rate limit')
+  );
 }
 
 function deepReadJsonSchema() {
@@ -442,108 +470,170 @@ function parseDeepReadJson(value: string): DeepReadProviderResult {
 }
 
 async function generateDeepRead(row: CaseRow, apiKey: string): Promise<DeepReadProviderResult> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), GEMINI_TIMEOUT_MS);
-
   logDeepReadDiagnostic('deep_read_gemini_start', {
     hasGeminiApiKey: Boolean(apiKey),
     modelName: MODEL_NAME,
   });
 
-  try {
-    const response = await fetch(geminiUrl(apiKey), {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      signal: controller.signal,
-      body: JSON.stringify({
-        contents: [
-          {
-            role: 'user',
-            parts: [{ text: buildDeepReadPrompt(row) }],
-          },
-        ],
-        generationConfig: {
-          temperature: 0.7,
-          topP: 0.9,
-          maxOutputTokens: 900,
-          responseMimeType: 'application/json',
-          responseJsonSchema: deepReadJsonSchema(),
-        },
-      }),
+  for (let attempt = 1; attempt <= GEMINI_MAX_ATTEMPTS; attempt += 1) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), GEMINI_TIMEOUT_MS);
+
+    logDeepReadDiagnostic('deep_read_gemini_attempt_start', {
+      attempt,
+      maxAttempts: GEMINI_MAX_ATTEMPTS,
+      modelName: MODEL_NAME,
     });
-
-    if (!response.ok) {
-      const providerError = await readGeminiError(response);
-      logDeepReadDiagnostic('deep_read_gemini_non_2xx', {
-        httpStatus: response.status,
-        modelName: MODEL_NAME,
-        providerErrorCode: providerError.errorCode,
-        providerErrorStatus: providerError.errorStatus,
-        providerErrorMessage: providerError.errorMessage,
-        bodyLength: providerError.bodyLength,
-      });
-      return { ok: false, code: 'ai_failed' };
-    }
-
-    let responseJson: GeminiGenerateContentResponse;
 
     try {
-      responseJson = (await response.json()) as GeminiGenerateContentResponse;
-    } catch {
-      logDeepReadDiagnostic('deep_read_gemini_response_json_failed', {
-        httpStatus: response.status,
-        modelName: MODEL_NAME,
+      const response = await fetch(geminiUrl(apiKey), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        signal: controller.signal,
+        body: JSON.stringify({
+          contents: [
+            {
+              role: 'user',
+              parts: [{ text: buildDeepReadPrompt(row) }],
+            },
+          ],
+          generationConfig: {
+            temperature: 0.7,
+            topP: 0.9,
+            maxOutputTokens: 900,
+            responseMimeType: 'application/json',
+            responseJsonSchema: deepReadJsonSchema(),
+          },
+        }),
       });
-      return { ok: false, code: 'invalid_ai_response' };
-    }
 
-    const text = extractGeminiText(responseJson);
+      if (!response.ok) {
+        const providerError = await readGeminiError(response);
+        const retryable = isTemporaryProviderStatus(
+          response.status,
+          providerError.errorStatus,
+          providerError.errorMessage,
+        );
 
-    if (!text) {
-      logDeepReadDiagnostic('deep_read_gemini_missing_candidate_text', {
+        logDeepReadDiagnostic('deep_read_gemini_non_2xx', {
+          attempt,
+          httpStatus: response.status,
+          modelName: MODEL_NAME,
+          providerErrorCode: providerError.errorCode,
+          providerErrorStatus: providerError.errorStatus,
+          providerErrorMessage: providerError.errorMessage,
+          bodyLength: providerError.bodyLength,
+          retryable,
+        });
+
+        if (retryable && attempt < GEMINI_MAX_ATTEMPTS) {
+          logDeepReadDiagnostic('deep_read_gemini_retry_scheduled', {
+            attempt,
+            nextAttempt: attempt + 1,
+            delayMs: GEMINI_RETRY_DELAY_MS,
+            httpStatus: response.status,
+            providerErrorStatus: providerError.errorStatus,
+          });
+          clearTimeout(timeout);
+          await wait(GEMINI_RETRY_DELAY_MS);
+          continue;
+        }
+
+        if (retryable) {
+          logDeepReadDiagnostic('deep_read_gemini_retry_exhausted', {
+            attempts: attempt,
+            httpStatus: response.status,
+            providerErrorStatus: providerError.errorStatus,
+          });
+        }
+
+        return { ok: false, code: 'ai_failed' };
+      }
+
+      let responseJson: GeminiGenerateContentResponse;
+
+      try {
+        responseJson = (await response.json()) as GeminiGenerateContentResponse;
+      } catch {
+        logDeepReadDiagnostic('deep_read_gemini_response_json_failed', {
+          attempt,
+          httpStatus: response.status,
+          modelName: MODEL_NAME,
+        });
+        return { ok: false, code: 'invalid_ai_response' };
+      }
+
+      const text = extractGeminiText(responseJson);
+
+      if (!text) {
+        logDeepReadDiagnostic('deep_read_gemini_missing_candidate_text', {
+          attempt,
+          modelName: MODEL_NAME,
+          candidateCount: responseJson.candidates?.length ?? 0,
+        });
+        return { ok: false, code: 'invalid_ai_response' };
+      }
+
+      const parsed = parseDeepReadJson(text);
+
+      if (!parsed.ok) {
+        return parsed;
+      }
+
+      logDeepReadDiagnostic('deep_read_gemini_success', {
+        attempt,
         modelName: MODEL_NAME,
-        candidateCount: responseJson.candidates?.length ?? 0,
+        responseTextLength: text.length,
+        modelVersionPresent: typeof responseJson.modelVersion === 'string',
       });
-      return { ok: false, code: 'invalid_ai_response' };
-    }
 
-    const parsed = parseDeepReadJson(text);
+      return {
+        ok: true,
+        deepRead: parsed.deepRead,
+        modelVersion: typeof responseJson.modelVersion === 'string' ? responseJson.modelVersion : null,
+      };
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        logDeepReadDiagnostic('deep_read_gemini_timeout', {
+          attempt,
+          modelName: MODEL_NAME,
+          timeoutMs: GEMINI_TIMEOUT_MS,
+        });
+        return { ok: false, code: 'ai_timeout' };
+      }
 
-    if (!parsed.ok) {
-      return parsed;
-    }
-
-    logDeepReadDiagnostic('deep_read_gemini_success', {
-      modelName: MODEL_NAME,
-      responseTextLength: text.length,
-      modelVersionPresent: typeof responseJson.modelVersion === 'string',
-    });
-
-    return {
-      ok: true,
-      deepRead: parsed.deepRead,
-      modelVersion: typeof responseJson.modelVersion === 'string' ? responseJson.modelVersion : null,
-    };
-  } catch (error) {
-    if (error instanceof DOMException && error.name === 'AbortError') {
-      logDeepReadDiagnostic('deep_read_gemini_timeout', {
+      logDeepReadDiagnostic('deep_read_gemini_fetch_failed', {
+        attempt,
         modelName: MODEL_NAME,
-        timeoutMs: GEMINI_TIMEOUT_MS,
+        errorName: error instanceof Error ? error.name : 'unknown',
+        errorMessage: sanitizeProviderMessage(error instanceof Error ? error.message : null),
       });
-      return { ok: false, code: 'ai_timeout' };
-    }
 
-    logDeepReadDiagnostic('deep_read_gemini_fetch_failed', {
-      modelName: MODEL_NAME,
-      errorName: error instanceof Error ? error.name : 'unknown',
-      errorMessage: sanitizeProviderMessage(error instanceof Error ? error.message : null),
-    });
-    return { ok: false, code: 'ai_failed' };
-  } finally {
-    clearTimeout(timeout);
+      if (attempt < GEMINI_MAX_ATTEMPTS) {
+        logDeepReadDiagnostic('deep_read_gemini_retry_scheduled', {
+          attempt,
+          nextAttempt: attempt + 1,
+          delayMs: GEMINI_RETRY_DELAY_MS,
+          reason: 'fetch_failed',
+        });
+        clearTimeout(timeout);
+        await wait(GEMINI_RETRY_DELAY_MS);
+        continue;
+      }
+
+      logDeepReadDiagnostic('deep_read_gemini_retry_exhausted', {
+        attempts: attempt,
+        reason: 'fetch_failed',
+      });
+      return { ok: false, code: 'ai_failed' };
+    } finally {
+      clearTimeout(timeout);
+    }
   }
+
+  return { ok: false, code: 'ai_failed' };
 }
 
 function isValidDeepReadOutput(value: unknown): value is DeepReadOutput {
