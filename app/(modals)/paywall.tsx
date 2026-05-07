@@ -16,7 +16,7 @@ export default function PaywallPlaceholderRoute() {
   const premiumState = usePremiumStore((state) => state.premiumState);
   const hasPremium = isPremiumStateActive(premiumState);
   const [subtitle, setSubtitle] = useState(
-    'Deeper reads, share cards, tone modes, and unlimited history can plug in here when pricing is ready.',
+    'Go deeper on the situations you cannot stop replaying.',
   );
   const [ctaTitle, setCtaTitle] = useState('Not yet');
   const [loading, setLoading] = useState(false);
@@ -41,7 +41,7 @@ export default function PaywallPlaceholderRoute() {
           ? `${result.packageInfo.priceString}/${result.packageInfo.periodLabel}`
           : result.packageInfo.priceString;
 
-        setSubtitle(`Deeper reads, share cards, tone modes, and unlimited history. ${packageLabel}.`);
+        setSubtitle(`More Deep Reads for your cases. Fair-use limits apply. ${packageLabel}.`);
         setCtaTitle(`Start ${result.packageInfo.priceString}`);
         return;
       }
@@ -95,7 +95,7 @@ export default function PaywallPlaceholderRoute() {
           </AppText>
         </View>
         <AppText variant="display" color={colors.text.onBrand} style={styles.title}>
-          Sharper verdicts.
+          Sharper Deep Reads.
         </AppText>
         <AppText variant="subtitle" color={colors.text.onBrand}>
           {subtitle}

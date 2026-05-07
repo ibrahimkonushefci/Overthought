@@ -4,6 +4,7 @@ import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { authService } from '../../src/features/auth/authService';
+import { env } from '../../src/lib/env';
 import { useAuthStore } from '../../src/store/authStore';
 import { Button } from '../../src/shared/ui/Button';
 import { AppText } from '../../src/shared/ui/Text';
@@ -71,9 +72,11 @@ export default function WelcomeRoute() {
 
       <View style={styles.actions}>
         <Button title="Continue as guest →" onPress={continueGuest} />
-        <View style={styles.providerRow}>
-          <ProviderButton glyph="G" title="Google" onPress={() => void signInWithGoogle()} glyphStyle={styles.googleGlyph} />
-        </View>
+        {env.enableGoogleAuth ? (
+          <View style={styles.providerRow}>
+            <ProviderButton glyph="G" title="Google" onPress={() => void signInWithGoogle()} glyphStyle={styles.googleGlyph} />
+          </View>
+        ) : null}
         <Button title="Continue with email" variant="ghost" onPress={() => router.push('/auth')} />
       </View>
     </Screen>

@@ -24,11 +24,20 @@ This app does **not** target Expo Go. It uses `react-native-mmkv` v4, which depe
    - `EXPO_PUBLIC_SUPABASE_ANON_KEY`
    - `EXPO_PUBLIC_SUPABASE_REDIRECT_URL`
 
-   Native Google sign-in also needs:
+   For the first TestFlight build, keep Google auth disabled:
+
+   - `EXPO_PUBLIC_ENABLE_GOOGLE_AUTH=false`
+
+   Re-enabled native Google sign-in also needs:
 
    - `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`
    - `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`
    - `EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME`
+
+   Profile legal links use:
+
+   - `EXPO_PUBLIC_PRIVACY_POLICY_URL`
+   - `EXPO_PUBLIC_TERMS_URL`
 
 3. Build and run the iOS development app on a simulator:
 
@@ -42,7 +51,21 @@ This app does **not** target Expo Go. It uses `react-native-mmkv` v4, which depe
    npm run ios:device
    ```
 
-   Choose your connected iPhone when prompted. Xcode signing must be configured for the `com.overthought.app` bundle identifier.
+   Choose your connected iPhone when prompted. For local physical-device development, Xcode signing must be configured for the current dev bundle identifier:
+
+   - `com.ibrahim.overthought.dev`
+
+   This is intentionally still a temporary development bundle ID. The final TestFlight/App Store bundle ID is deferred until Apple Developer and App Store Connect setup is ready.
+
+   If the device install fails with a signing or bundle identifier error:
+
+   - Open `ios/Overthought.xcworkspace` in Xcode.
+   - Select the `Overthought` target, then Signing & Capabilities.
+   - Choose your Apple account/team.
+   - Confirm the bundle identifier is `com.ibrahim.overthought.dev`.
+   - Make sure the provisioning profile Xcode creates or selects also matches `com.ibrahim.overthought.dev`.
+   - If an older Overthought app is already installed on the iPhone, delete it from the phone before reinstalling.
+   - Do not run `npm run prebuild:ios` just for signing cleanup; the Expo config and native Xcode bundle identifiers already match.
 
 5. Start Metro for an already-installed development build:
 

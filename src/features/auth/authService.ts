@@ -20,6 +20,7 @@ export interface AuthActionResult {
   message?: string;
   needsNativeSetup?: boolean;
   cancelled?: boolean;
+  disabled?: boolean;
 }
 
 interface DeleteAccountFunctionSuccess {
@@ -316,6 +317,14 @@ export const authService = {
     */
   },
   async signInWithGoogle(): Promise<AuthActionResult> {
+    if (!env.enableGoogleAuth) {
+      return {
+        ok: false,
+        disabled: true,
+        message: 'Google sign-in is disabled for this TestFlight build.',
+      };
+    }
+
     trackEvent('auth_started', { provider: 'google' });
 
     if (!supabase) {

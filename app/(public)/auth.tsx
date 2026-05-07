@@ -3,6 +3,7 @@ import { Alert, StyleSheet, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, Mail } from 'lucide-react-native';
 import { authService } from '../../src/features/auth/authService';
+import { env } from '../../src/lib/env';
 import { useAuthStore } from '../../src/store/authStore';
 import { Button } from '../../src/shared/ui/Button';
 import { AppText } from '../../src/shared/ui/Text';
@@ -66,13 +67,15 @@ export default function AuthRoute() {
         disabled={!email.includes('@') || emailLoading || googleLoading}
         onPress={() => void submit()}
       />
-      <Button
-        title="Continue with Google"
-        variant="outline"
-        loading={googleLoading}
-        disabled={emailLoading || googleLoading}
-        onPress={() => void signInWithGoogle()}
-      />
+      {env.enableGoogleAuth ? (
+        <Button
+          title="Continue with Google"
+          variant="outline"
+          loading={googleLoading}
+          disabled={emailLoading || googleLoading}
+          onPress={() => void signInWithGoogle()}
+        />
+      ) : null}
       <Button
         title="Continue as guest"
         variant="ghost"

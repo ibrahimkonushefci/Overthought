@@ -85,6 +85,7 @@ type DeepReadProviderResult =
 
 interface GeminiGenerateContentResponse {
   candidates?: Array<{
+    finishReason?: string;
     content?: {
       parts?: Array<{
         text?: string;
@@ -92,6 +93,14 @@ interface GeminiGenerateContentResponse {
     };
   }>;
   modelVersion?: string;
+}
+
+interface GeminiParseContext {
+  attempt: number;
+  modelName: string;
+  candidateCount: number;
+  finishReason: string | null;
+  modelVersionPresent: boolean;
 }
 
 interface GeminiErrorResponse {
@@ -332,8 +341,25 @@ function deepReadJsonSchema() {
   };
 }
 
-function buildDeepReadPrompt(row: CaseRow): string {
+function buildDeepReadPrompt(row: CaseRow, strictJsonOnly = false): string {
+  const jsonContract = `CRITICAL OUTPUT CONTRACT:
+  - Return exactly one valid JSON object and nothing else.
+  - Do not return markdown, code fences, commentary, a standalone punchline, or prose outside JSON.
+  - Use exactly these keys: whatsActuallyHappening, whatYoureOverreading, whatEvidenceActuallyMatters, whatToDoNext, roastLine.
+  - Every value must be a non-empty string. No extra keys.`;
+
+  const strictJsonReminder = strictJsonOnly
+    ? `
+  STRICT RETRY MODE:
+  - Your previous output was not parseable as JSON.
+  - This response must be JSON only.
+  - Start with "{" and end with "}".
+  - Do not include markdown, explanations, or a lone roast line.`
+    : '';
+
   return `You are Deep Read, an AI enrichment layer for Overthought.
+
+  ${jsonContract}${strictJsonReminder}
 
   The deterministic local verdict is canonical. Do not override it, recalculate it, rename it, or imply that it is wrong. Your job is to explain the situation more richly underneath that verdict.
 
@@ -390,7 +416,7 @@ function buildDeepReadPrompt(row: CaseRow): string {
   - whatToDoNext: 1 direct practical instruction, max ${DEEP_READ_FIELD_LIMITS.whatToDoNext} characters.
   - roastLine: 1 punchy line only, max ${DEEP_READ_FIELD_LIMITS.roastLine} characters.
 
-  Target style examples:
+  Target style examples for JSON string values only. These are not the response format:
   - "A story view is not a confession."
   - "That is a crumb, not a contract."
   - "Your brain is building a Netflix series from a notification."
@@ -416,7 +442,9 @@ function buildDeepReadPrompt(row: CaseRow): string {
 )}
 
 Untrusted case text:
-${JSON.stringify(row.input_text)}`;
+${JSON.stringify(row.input_text)}
+
+Final reminder: return exactly one valid JSON object with exactly these keys: whatsActuallyHappening, whatYoureOverreading, whatEvidenceActuallyMatters, whatToDoNext, roastLine.`;
 }
 
 function sanitizeDeepReadOutput(value: DeepReadOutput): DeepReadOutput {
@@ -437,36 +465,112 @@ function extractGeminiText(value: GeminiGenerateContentResponse): string | null 
   return value.candidates?.[0]?.content?.parts?.find((part) => typeof part.text === 'string')?.text ?? null;
 }
 
-function parseDeepReadJson(value: string): DeepReadProviderResult {
+function geminiFinishReason(value: GeminiGenerateContentResponse): string | null {
+  const finishReason = value.candidates?.[0]?.finishReason;
+  return typeof finishReason === 'string' ? finishReason : null;
+}
+
+function responseTextShape(value: string) {
+  const trimmed = value.trim();
+
+  return {
+    responseTextLength: value.length,
+    trimmedResponseTextLength: trimmed.length,
+    firstChar: trimmed[0] ?? null,
+    lastChar: trimmed[trimmed.length - 1] ?? null,
+    startsWithJsonObject: trimmed.startsWith('{'),
+    endsWithJsonObject: trimmed.endsWith('}'),
+    containsCodeFence: value.includes('```'),
+  };
+}
+
+function parseUnknownJson(value: string): { ok: true; parsed: unknown } | { ok: false } {
   try {
-    const parsed = JSON.parse(value) as unknown;
-
-    if (!isValidDeepReadOutput(parsed)) {
-      logDeepReadDiagnostic('deep_read_gemini_output_validation_failed', {
-        responseTextLength: value.length,
-      });
-      return { ok: false, code: 'invalid_ai_response' };
-    }
-
-    const sanitized = sanitizeDeepReadOutput(parsed);
-    if (!isValidDeepReadOutput(sanitized)) {
-      logDeepReadDiagnostic('deep_read_gemini_output_validation_failed', {
-        responseTextLength: value.length,
-      });
-      return { ok: false, code: 'invalid_ai_response' };
-    }
-
-    return {
-      ok: true,
-      deepRead: sanitized,
-      modelVersion: null,
-    };
+    return { ok: true, parsed: JSON.parse(value) as unknown };
   } catch {
-    logDeepReadDiagnostic('deep_read_gemini_output_json_parse_failed', {
-      responseTextLength: value.length,
+    return { ok: false };
+  }
+}
+
+function extractJsonObjectText(value: string): { text: string; candidateLength: number } | null {
+  const trimmed = value.trim();
+  const start = trimmed.indexOf('{');
+  const end = trimmed.lastIndexOf('}');
+
+  if (start === -1 || end <= start) {
+    return null;
+  }
+
+  const text = trimmed.slice(start, end + 1);
+  return {
+    text,
+    candidateLength: text.length,
+  };
+}
+
+function parseDeepReadJson(value: string, context: GeminiParseContext): DeepReadProviderResult {
+  const trimmed = value.trim();
+  const directParse = parseUnknownJson(trimmed);
+  let parsed: unknown;
+  let parsedFromExtraction = false;
+  let extractionCandidateLength: number | null = null;
+
+  if (directParse.ok) {
+    parsed = directParse.parsed;
+  } else {
+    const extracted = extractJsonObjectText(trimmed);
+    extractionCandidateLength = extracted?.candidateLength ?? null;
+
+    if (extracted) {
+      const extractedParse = parseUnknownJson(extracted.text);
+
+      if (extractedParse.ok) {
+        parsed = extractedParse.parsed;
+        parsedFromExtraction = true;
+        logDeepReadDiagnostic('deep_read_gemini_output_json_extracted', {
+          ...context,
+          ...responseTextShape(value),
+          extractionCandidateLength,
+        });
+      }
+    }
+
+    if (parsed === undefined) {
+      logDeepReadDiagnostic('deep_read_gemini_output_json_parse_failed', {
+        ...context,
+        ...responseTextShape(value),
+        extractionAttempted: Boolean(extracted),
+        extractionCandidateLength,
+      });
+      return { ok: false, code: 'invalid_ai_response' };
+    }
+  }
+
+  if (!isValidDeepReadOutput(parsed)) {
+    logDeepReadDiagnostic('deep_read_gemini_output_validation_failed', {
+      ...context,
+      ...responseTextShape(value),
+      parsedFromExtraction,
     });
     return { ok: false, code: 'invalid_ai_response' };
   }
+
+  const sanitized = sanitizeDeepReadOutput(parsed);
+  if (!isValidDeepReadOutput(sanitized)) {
+    logDeepReadDiagnostic('deep_read_gemini_output_validation_failed', {
+      ...context,
+      ...responseTextShape(value),
+      parsedFromExtraction,
+      afterSanitize: true,
+    });
+    return { ok: false, code: 'invalid_ai_response' };
+  }
+
+  return {
+    ok: true,
+    deepRead: sanitized,
+    modelVersion: null,
+  };
 }
 
 async function generateDeepRead(row: CaseRow, apiKey: string): Promise<DeepReadProviderResult> {
@@ -478,11 +582,13 @@ async function generateDeepRead(row: CaseRow, apiKey: string): Promise<DeepReadP
   for (let attempt = 1; attempt <= GEMINI_MAX_ATTEMPTS; attempt += 1) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), GEMINI_TIMEOUT_MS);
+    const strictJsonOnly = attempt > 1;
 
     logDeepReadDiagnostic('deep_read_gemini_attempt_start', {
       attempt,
       maxAttempts: GEMINI_MAX_ATTEMPTS,
       modelName: MODEL_NAME,
+      strictJsonOnly,
     });
 
     try {
@@ -496,13 +602,13 @@ async function generateDeepRead(row: CaseRow, apiKey: string): Promise<DeepReadP
           contents: [
             {
               role: 'user',
-              parts: [{ text: buildDeepReadPrompt(row) }],
+              parts: [{ text: buildDeepReadPrompt(row, strictJsonOnly) }],
             },
           ],
           generationConfig: {
             temperature: 0.7,
             topP: 0.9,
-            maxOutputTokens: 900,
+            maxOutputTokens: 2048,
             responseMimeType: 'application/json',
             responseJsonSchema: deepReadJsonSchema(),
           },
@@ -572,13 +678,37 @@ async function generateDeepRead(row: CaseRow, apiKey: string): Promise<DeepReadP
           attempt,
           modelName: MODEL_NAME,
           candidateCount: responseJson.candidates?.length ?? 0,
+          finishReason: geminiFinishReason(responseJson),
+          modelVersionPresent: typeof responseJson.modelVersion === 'string',
         });
         return { ok: false, code: 'invalid_ai_response' };
       }
 
-      const parsed = parseDeepReadJson(text);
+      const parsed = parseDeepReadJson(text, {
+        attempt,
+        modelName: MODEL_NAME,
+        candidateCount: responseJson.candidates?.length ?? 0,
+        finishReason: geminiFinishReason(responseJson),
+        modelVersionPresent: typeof responseJson.modelVersion === 'string',
+      });
 
       if (!parsed.ok) {
+        if (attempt < GEMINI_MAX_ATTEMPTS) {
+          logDeepReadDiagnostic('deep_read_gemini_retry_scheduled', {
+            attempt,
+            nextAttempt: attempt + 1,
+            delayMs: GEMINI_RETRY_DELAY_MS,
+            reason: 'invalid_json',
+          });
+          clearTimeout(timeout);
+          await wait(GEMINI_RETRY_DELAY_MS);
+          continue;
+        }
+
+        logDeepReadDiagnostic('deep_read_gemini_retry_exhausted', {
+          attempts: attempt,
+          reason: 'invalid_json',
+        });
         return parsed;
       }
 
@@ -586,6 +716,8 @@ async function generateDeepRead(row: CaseRow, apiKey: string): Promise<DeepReadP
         attempt,
         modelName: MODEL_NAME,
         responseTextLength: text.length,
+        trimmedResponseTextLength: text.trim().length,
+        finishReason: geminiFinishReason(responseJson),
         modelVersionPresent: typeof responseJson.modelVersion === 'string',
       });
 

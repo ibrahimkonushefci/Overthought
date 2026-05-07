@@ -1,4 +1,4 @@
-import { Alert, Pressable, StyleSheet, View } from 'react-native';
+import { Alert, Linking, Pressable, StyleSheet, View } from 'react-native';
 import type { ComponentType } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Bell, ChevronRight, LogIn, Shield, Trash2, Crown, FileText, Sparkles } from 'lucide-react-native';
@@ -15,6 +15,7 @@ import { Card } from '../../src/shared/ui/Card';
 import { useAuthStore } from '../../src/store/authStore';
 import { useCases } from '../../src/features/cases/services/useCases';
 import { caseRepository } from '../../src/features/cases/repositories/caseRepository';
+import { env } from '../../src/lib/env';
 import { colors, gradients, radii, shadows, spacing, typography } from '../../src/shared/theme/tokens';
 
 export default function ProfileRoute() {
@@ -82,6 +83,21 @@ export default function ProfileRoute() {
     );
   };
 
+  const openConfiguredUrl = async (label: string, url: string, envName: string) => {
+    const trimmedUrl = url.trim();
+
+    if (!trimmedUrl) {
+      Alert.alert(label, `Add ${envName} to enable this link.`);
+      return;
+    }
+
+    try {
+      await Linking.openURL(trimmedUrl);
+    } catch {
+      Alert.alert(label, 'Could not open this link right now.');
+    }
+  };
+
   return (
     <Screen>
       <View style={styles.header}>
@@ -129,12 +145,12 @@ export default function ProfileRoute() {
           </AppText>
         </View>
         <AppText variant="title" color={colors.text.onBrand} style={styles.premiumTitle}>
-          Sharper verdicts.
+          Sharper Deep Reads.
         </AppText>
         <AppText variant="subtitle" color={colors.text.onBrand} style={styles.premiumSubtitle}>
           {hasPremium
             ? 'Premium is active on this account.'
-            : 'Deeper reads, share cards, tone modes and unlimited history.'}
+            : 'Get more AI reads for the cases you cannot stop replaying. Fair-use limits apply.'}
         </AppText>
         <View style={styles.premiumButton}>
           <Button
@@ -148,8 +164,16 @@ export default function ProfileRoute() {
 
       <View style={styles.settings}>
         <SettingsRow icon={Bell} title="Notifications" value="Off" />
-        <SettingsRow icon={Shield} title="Privacy" />
-        <SettingsRow icon={FileText} title="Terms and policies" />
+        <SettingsRow
+          icon={Shield}
+          title="Privacy"
+          onPress={() => void openConfiguredUrl('Privacy Policy', env.privacyPolicyUrl, 'EXPO_PUBLIC_PRIVACY_POLICY_URL')}
+        />
+        <SettingsRow
+          icon={FileText}
+          title="Terms and policies"
+          onPress={() => void openConfiguredUrl('Terms and policies', env.termsUrl, 'EXPO_PUBLIC_TERMS_URL')}
+        />
         <Pressable accessibilityRole="button" onPress={() => void restore()} style={styles.row}>
           <View style={styles.settingIcon}>
             <Crown color={colors.text.secondary} size={17} />
@@ -190,13 +214,15 @@ function SettingsRow({
   icon: Icon,
   title,
   value,
+  onPress,
 }: {
   icon: ComponentType<LucideProps>;
   title: string;
   value?: string;
+  onPress?: () => void;
 }) {
-  return (
-    <View style={styles.row}>
+  const content = (
+    <>
       <View style={styles.settingIcon}>
         <Icon color={colors.text.secondary} size={17} />
       </View>
@@ -205,6 +231,20 @@ function SettingsRow({
       </AppText>
       {value ? <AppText variant="body" color={colors.text.secondary}>{value}</AppText> : null}
       <ChevronRight color={colors.text.secondary} size={20} />
+    </>
+  );
+
+  if (onPress) {
+    return (
+      <Pressable accessibilityRole="button" onPress={onPress} style={styles.row}>
+        {content}
+      </Pressable>
+    );
+  }
+
+  return (
+    <View style={styles.row}>
+      {content}
     </View>
   );
 }
