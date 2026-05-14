@@ -12,7 +12,7 @@
     ],
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.ibrahim.overthought.dev",
+      "bundleIdentifier": "com.ibrahim.overthought",
       "newArchEnabled": true
     },
     "plugins": [
@@ -25,7 +25,13 @@
       ]
     ],
     "android": {
-      "package": "com.overthought.app"
+      "package": "com.ibrahim.overthought"
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "de992f0f-c45d-43ca-8655-b8428d4a9e5f"
+      }
     }
   }
 }

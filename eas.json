@@ -20,6 +20,14 @@
     "preview": {
       "distribution": "internal"
     },
+    "production": {
+      "environment": "production",
+      "env": {
+        "APP_VARIANT": "production"
+      }
+    }
+  },
+  "submit": {
     "production": {}
   }
 }

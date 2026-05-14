@@ -55,7 +55,7 @@ This app does **not** target Expo Go. It uses `react-native-mmkv` v4, which depe
 
    - `com.ibrahim.overthought.dev`
 
-   This is intentionally still a temporary development bundle ID. The final TestFlight/App Store bundle ID is deferred until Apple Developer and App Store Connect setup is ready.
+   This is intentionally a development bundle ID. TestFlight/App Store builds use the production bundle identifier `com.ibrahim.overthought` via `APP_VARIANT=production`.
 
    If the device install fails with a signing or bundle identifier error:
 
@@ -73,7 +73,11 @@ This app does **not** target Expo Go. It uses `react-native-mmkv` v4, which depe
    npm start
    ```
 
-   If the dev build is already installed on your phone, open that app, not Expo Go.
+   Local development defaults to the development bundle identifier:
+
+   - `com.ibrahim.overthought.dev`
+
+   If the dev build is already installed on your phone, open that app, not Expo Go. Pressing `i` from Expo CLI should target the installed `.dev` development build.
 
 6. Clear Metro cache if the phone keeps loading stale JavaScript:
 
@@ -98,6 +102,27 @@ npm start
 ```
 
 Then open the installed Overthought development build on the iPhone.
+
+### TestFlight bundle identity
+
+Local development builds default to:
+
+- `com.ibrahim.overthought.dev`
+
+Production/TestFlight config uses:
+
+- `com.ibrahim.overthought`
+
+The EAS `production` profile sets `APP_VARIANT=production`, which makes `app.config.js` use the production bundle identifier. The first TestFlight auth path is guest + email only; Google and Apple Sign In remain disabled/deferred for now.
+
+Local development leaves `APP_VARIANT` unset, so Expo config uses `com.ibrahim.overthought.dev` and disables premium/RevenueCat even if RevenueCat keys exist in a local `.env`. Production/TestFlight builds use `APP_VARIANT=production`; premium is only enabled there when `EXPO_PUBLIC_ENABLE_PREMIUM=true`.
+
+Confirm the active bundle identifiers with:
+
+```sh
+npx expo config --type public
+APP_VARIANT=production npx expo config --type public
+```
 
 ## What is implemented
 

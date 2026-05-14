@@ -1,4 +1,10 @@
+const appVariant =
+  process.env.EXPO_PUBLIC_APP_VARIANT === 'production' || process.env.APP_VARIANT === 'production'
+    ? 'production'
+    : 'development';
+
 export const env = {
+  appVariant,
   supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL ?? '',
   supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '',
   supabaseRedirectUrl: process.env.EXPO_PUBLIC_SUPABASE_REDIRECT_URL ?? 'overthought://auth',
@@ -8,7 +14,7 @@ export const env = {
   enableGoogleAuth: process.env.EXPO_PUBLIC_ENABLE_GOOGLE_AUTH === 'true',
   revenueCatIosApiKey: process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY ?? '',
   revenueCatAndroidApiKey: process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY ?? '',
-  enablePremium: process.env.EXPO_PUBLIC_ENABLE_PREMIUM === 'true',
+  enablePremium: appVariant === 'production' && process.env.EXPO_PUBLIC_ENABLE_PREMIUM === 'true',
   privacyPolicyUrl: process.env.EXPO_PUBLIC_PRIVACY_POLICY_URL ?? '',
   termsUrl: process.env.EXPO_PUBLIC_TERMS_URL ?? '',
 } as const;

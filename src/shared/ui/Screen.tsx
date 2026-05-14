@@ -9,6 +9,7 @@ interface ScreenProps {
   children: ReactNode;
   scroll?: boolean;
   bottomInset?: number;
+  backgroundColor?: string;
   scrollResetKey?: string | number;
   initialScrollY?: number;
   onScrollYChange?: (scrollY: number) => void;
@@ -18,6 +19,7 @@ export function Screen({
   children,
   scroll = true,
   bottomInset = 132,
+  backgroundColor = colors.bg.base,
   scrollResetKey,
   initialScrollY = 0,
   onScrollYChange,
@@ -40,17 +42,17 @@ export function Screen({
 
   if (!scroll) {
     return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={[styles.content, { paddingBottom: bottomInset }]}>{children}</View>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor }]}>
+        <View style={[styles.content, { backgroundColor, paddingBottom: bottomInset }]}>{children}</View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor }]}>
       <ScrollView
         ref={scrollRef}
-        contentContainerStyle={[styles.content, { paddingBottom: bottomInset }]}
+        contentContainerStyle={[styles.content, { backgroundColor, paddingBottom: bottomInset }]}
         keyboardShouldPersistTaps="handled"
         onScroll={onScrollYChange ? handleScroll : undefined}
         scrollEventThrottle={onScrollYChange ? 16 : undefined}

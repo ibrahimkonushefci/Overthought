@@ -8,6 +8,10 @@ let configuredApiKey: string | null = null;
 let authTransitionChain: Promise<void> = Promise.resolve();
 
 function getRevenueCatApiKey(): string | null {
+  if (!env.enablePremium) {
+    return null;
+  }
+
   if (Platform.OS === 'ios') {
     return env.revenueCatIosApiKey || null;
   }

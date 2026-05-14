@@ -28,7 +28,7 @@
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>overthought</string>
-				<string>com.ibrahim.overthought.dev</string>
+				<string>com.ibrahim.overthought</string>
 			</array>
 		</dict>
 		<dict>

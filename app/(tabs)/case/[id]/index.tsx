@@ -1,7 +1,21 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Animated, Pressable, Share, StyleSheet, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
+import { ActivityIndicator, Alert, Animated, Modal, Pressable, Share, StyleSheet, View } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, Check, CircleHelp, Plus, Share2, Sparkles, Trash2, X } from 'lucide-react-native';
+import * as Sharing from 'expo-sharing';
+import ViewShot from 'react-native-view-shot';
+import {
+  ArrowLeft,
+  ArrowUpRight,
+  Check,
+  ChevronDown,
+  ChevronUp,
+  CircleHelp,
+  Plus,
+  Share2,
+  Sparkles,
+  Trash2,
+  X,
+} from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
 import type { DeepReadResponse, OutcomeStatus } from '../../../../src/types/shared';
 import { caseRepository } from '../../../../src/features/cases/repositories/caseRepository';
@@ -10,6 +24,8 @@ import { deepReadService } from '../../../../src/features/deep-read/deepReadServ
 import type { CaseEntity, CaseUpdateEntity } from '../../../../src/features/cases/types';
 import { getCaseId, isGuestCase } from '../../../../src/features/cases/types';
 import { ScorePanel } from '../../../../src/features/cases/components/ScorePanel';
+import { ShareResultCard } from '../../../../src/features/share/ShareResultCard';
+import type { ShareCardPayload } from '../../../../src/features/share/shareTypes';
 import { Screen } from '../../../../src/shared/ui/Screen';
 import { AppText } from '../../../../src/shared/ui/Text';
 import { Card } from '../../../../src/shared/ui/Card';
@@ -24,6 +40,7 @@ import {
 import { relativeTime } from '../../../../src/shared/utils/date';
 
 const detailScrollByCaseId = new Map<string, number>();
+const caseDetailBackground = '#FBF9F2';
 
 type DeepReadStatus = 'idle' | 'loading' | 'ready' | 'not_authenticated' | 'quota' | 'fair_use' | 'error';
 
@@ -36,6 +53,9 @@ export default function CaseDetailRoute() {
   const [deepReadStatus, setDeepReadStatus] = useState<DeepReadStatus>('idle');
   const [deepReadResult, setDeepReadResult] = useState<Extract<DeepReadResponse, { ok: true }> | null>(null);
   const [deepReadMessage, setDeepReadMessage] = useState<string | null>(null);
+  const [sharePreviewVisible, setSharePreviewVisible] = useState(false);
+  const [shareInProgress, setShareInProgress] = useState(false);
+  const shareCardRef = useRef<ViewShot | null>(null);
   const shouldPresentNewResult = fromAnalysis === '1';
   const [shouldRunResultIntro, setShouldRunResultIntro] = useState(shouldPresentNewResult);
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -128,11 +148,60 @@ export default function CaseDetailRoute() {
     record.verdictLabel,
     `${getCaseId(record)}|${record.inputText}|${record.delusionScore}`,
   );
+  const displayCaseId = formatDisplayCaseId(getCaseId(record));
+  const deepReadShare = deepReadStatus === 'ready' ? deepReadResult?.deepRead : null;
+  const sharePayload: ShareCardPayload = {
+    mode: deepReadShare ? 'deep_read' : 'result',
+    title: heroDisplayLabel,
+    caseDisplayId: displayCaseId,
+    category: record.category,
+    verdictLabel: record.verdictLabel,
+    delusionScore: record.delusionScore,
+    explanationText: record.explanationText,
+    nextMoveText: record.nextMoveText,
+    deepReadRoastLine: deepReadShare?.roastLine,
+    deepReadTakeaway: deepReadShare?.whatToDoNext,
+    appName: 'Overthought',
+  };
+  const shareMessage = deepReadShare
+    ? `Overthought Deep Read: ${deepReadShare.roastLine} ${deepReadShare.whatToDoNext}`
+    : `Overthought verdict: ${verdictLabels[record.verdictLabel]} (${record.delusionScore}/100). ${record.nextMoveText}`;
 
-  const share = async () => {
+  const shareTextFallback = async () => {
     await Share.share({
-      message: `Overthought verdict: ${verdictLabels[record.verdictLabel]} (${record.delusionScore}/100). ${record.nextMoveText}`,
+      message: shareMessage,
     });
+  };
+
+  const shareCard = async () => {
+    if (shareInProgress) {
+      return;
+    }
+
+    setShareInProgress(true);
+    try {
+      const canShareFiles = await Sharing.isAvailableAsync();
+      const uri = await shareCardRef.current?.capture?.();
+
+      if (canShareFiles && uri) {
+        await Sharing.shareAsync(uri, {
+          dialogTitle: 'Share your Overthought result',
+          mimeType: 'image/png',
+          UTI: 'public.png',
+        });
+        return;
+      }
+
+      await shareTextFallback();
+    } catch (error) {
+      try {
+        await shareTextFallback();
+      } catch {
+        Alert.alert('Could not share result', error instanceof Error ? error.message : 'Try again.');
+      }
+    } finally {
+      setShareInProgress(false);
+    }
   };
 
   const setOutcome = async (outcomeStatus: OutcomeStatus) => {
@@ -204,7 +273,8 @@ export default function CaseDetailRoute() {
 
   return (
     <Screen
-      bottomInset={92}
+      backgroundColor={caseDetailBackground}
+      bottomInset={72}
       initialScrollY={restoredScrollY}
       onScrollYChange={(scrollY) => {
         if (!shouldRunResultIntro) {
@@ -223,42 +293,34 @@ export default function CaseDetailRoute() {
               {categoryIcons[record.category]} {categoryLabels[record.category]}
             </AppText>
           </View>
-          <Pressable accessibilityRole="button" onPress={() => void share()} style={styles.iconButton}>
+          <Pressable accessibilityRole="button" onPress={() => setSharePreviewVisible(true)} style={styles.iconButton}>
             <Share2 color={colors.text.primary} size={21} strokeWidth={2.4} />
           </Pressable>
         </View>
 
         <ScorePanel
+          caseId={getCaseId(record)}
           score={record.delusionScore}
           verdictLabel={record.verdictLabel}
           displayLabel={heroDisplayLabel}
+          readText={record.explanationText}
+          nextMoveText={record.nextMoveText}
         />
-
-        <SectionLabel title="The Read" />
-        <View style={styles.readCard}>
-          <AppText variant="body" style={styles.readText}>
-            {record.explanationText}
-          </AppText>
-        </View>
-
-        <SectionLabel title="Next Move" />
-        <View style={styles.nextMove}>
-          <AppText variant="title" style={styles.nextMoveText}>
-            {record.nextMoveText}
-          </AppText>
-        </View>
 
         <View style={styles.deepRead}>
           <View style={styles.deepHeader}>
-            <AppText variant="title" color={colors.text.onBrand} style={styles.deepTitle}>
-              Deep Read
-            </AppText>
-            <View style={styles.aiBadge}>
-              <Sparkles color={colors.text.onAccent} size={14} strokeWidth={2.8} />
-              <AppText variant="eyebrow" color={colors.text.onAccent} style={styles.aiBadgeText}>
-                AI
+            <View style={styles.deepTitleRow}>
+              <AppText variant="title" color={colors.text.onBrand} style={styles.deepTitle}>
+                Deep Read
               </AppText>
+              <View style={styles.aiBadge}>
+                <Sparkles color={colors.text.onAccent} size={14} strokeWidth={2.8} />
+                <AppText variant="eyebrow" color={colors.text.onAccent} style={styles.aiBadgeText}>
+                  AI
+                </AppText>
+              </View>
             </View>
+            <RemainingReads remaining={deepReadResult?.access.remaining ?? null} />
           </View>
           <AppText variant="subtitle" color="rgba(255, 255, 255, 0.72)" style={styles.deepSubtitle}>
             The version your group chat would actually send.
@@ -272,63 +334,138 @@ export default function CaseDetailRoute() {
           />
         </View>
 
-        <SectionLabel title="Original Situation" />
-        <View style={styles.quote}>
-          <AppText variant="subtitle" style={styles.quoteText}>
-            {record.inputText}
-          </AppText>
-        </View>
+        <View style={styles.caseFileSection}>
+          <CaseFileDivider />
 
-        <View style={styles.sectionHeaderRow}>
-          <SectionLabel title={`Updates · ${updates.length}`} noMargin />
-          <Pressable accessibilityRole="button" onPress={() => router.push(`/case/${id}/add-update`)} style={styles.addUpdate}>
-            <Plus color={colors.brand.pink} size={20} strokeWidth={2.6} />
-            <AppText variant="body" color={colors.brand.pink} style={styles.addUpdateText}>
-              Add update
+          <SectionLabel title="Original Situation" />
+          <View style={styles.quote}>
+            <AppText variant="subtitle" style={styles.quoteText}>
+              {record.inputText}
+            </AppText>
+          </View>
+
+          <View style={styles.sectionHeaderRow}>
+            <SectionLabel title={`Updates · ${updates.length}`} noMargin />
+            <Pressable accessibilityRole="button" onPress={() => router.push(`/case/${id}/add-update`)} style={styles.addUpdate}>
+              <Plus color={colors.brand.pink} size={19} strokeWidth={2.6} />
+              <AppText variant="body" color={colors.brand.pink} style={styles.addUpdateText}>
+                Add update
+              </AppText>
+            </Pressable>
+          </View>
+
+          {updates.length > 0 ? (
+            <View style={styles.updateList}>
+              {updates.map((item) => (
+                <Card key={'localId' in item ? item.localId : item.id} style={styles.updateCard}>
+                  <AppText variant="meta">{relativeTime(item.createdAt)}</AppText>
+                  <AppText variant="body" style={styles.updateText}>
+                    {item.updateText}
+                  </AppText>
+                  {item.verdictLabel ? (
+                    <AppText variant="meta">
+                      {verdictLabels[item.verdictLabel]} · {item.delusionScore}/100
+                    </AppText>
+                  ) : null}
+                </Card>
+              ))}
+            </View>
+          ) : (
+            <View style={styles.noUpdates}>
+              <AppText variant="subtitle" center style={styles.noUpdatesText}>
+                No updates yet. Plot still developing.
+              </AppText>
+            </View>
+          )}
+
+          <SectionLabel title="How Did It End?" />
+          <View style={styles.outcomes}>
+            <OutcomeButton icon={Check} label="I was right" selected={record.outcomeStatus === 'right'} onPress={() => void setOutcome('right')} />
+            <OutcomeButton icon={X} label="I was wrong" selected={record.outcomeStatus === 'wrong'} onPress={() => void setOutcome('wrong')} />
+            <OutcomeButton icon={CircleHelp} label="Still unclear" selected={record.outcomeStatus === 'unclear'} onPress={() => void setOutcome('unclear')} />
+          </View>
+
+          <Pressable accessibilityRole="button" onPress={archive} style={styles.deleteAction}>
+            <Trash2 color={colors.text.secondary} size={17} strokeWidth={2.2} />
+            <AppText variant="body" color={colors.text.secondary} style={styles.deleteText}>
+              Delete this case
             </AppText>
           </Pressable>
         </View>
-
-        {updates.length > 0 ? (
-          <View style={styles.updateList}>
-            {updates.map((item) => (
-              <Card key={'localId' in item ? item.localId : item.id} style={styles.updateCard}>
-                <AppText variant="meta">{relativeTime(item.createdAt)}</AppText>
-                <AppText variant="body" style={styles.updateText}>
-                  {item.updateText}
-                </AppText>
-                {item.verdictLabel ? (
-                  <AppText variant="meta">
-                    {verdictLabels[item.verdictLabel]} · {item.delusionScore}/100
-                  </AppText>
-                ) : null}
-              </Card>
-            ))}
-          </View>
-        ) : (
-          <View style={styles.noUpdates}>
-            <AppText variant="subtitle" center style={styles.noUpdatesText}>
-              No updates yet. Plot still developing.
-            </AppText>
-          </View>
-        )}
-
-        <SectionLabel title="How Did It End?" />
-        <View style={styles.outcomes}>
-          <OutcomeButton icon={Check} label="I was right" selected={record.outcomeStatus === 'right'} onPress={() => void setOutcome('right')} />
-          <OutcomeButton icon={X} label="I was wrong" selected={record.outcomeStatus === 'wrong'} onPress={() => void setOutcome('wrong')} />
-          <OutcomeButton icon={CircleHelp} label="Still unclear" selected={record.outcomeStatus === 'unclear'} onPress={() => void setOutcome('unclear')} />
-        </View>
-
-        <Pressable accessibilityRole="button" onPress={archive} style={styles.deleteAction}>
-          <Trash2 color={colors.text.secondary} size={18} strokeWidth={2.2} />
-          <AppText variant="body" color={colors.text.secondary} style={styles.deleteText}>
-            Delete this case
-          </AppText>
-        </Pressable>
       </Animated.View>
+      <SharePreviewModal
+        payload={sharePayload}
+        shareCardRef={shareCardRef}
+        sharing={shareInProgress}
+        visible={sharePreviewVisible}
+        onClose={() => setSharePreviewVisible(false)}
+        onShare={() => void shareCard()}
+      />
     </Screen>
   );
+}
+
+function SharePreviewModal({
+  payload,
+  shareCardRef,
+  sharing,
+  visible,
+  onClose,
+  onShare,
+}: {
+  payload: ShareCardPayload;
+  shareCardRef: RefObject<ViewShot | null>;
+  sharing: boolean;
+  visible: boolean;
+  onClose: () => void;
+  onShare: () => void;
+}) {
+  return (
+    <Modal animationType="fade" onRequestClose={onClose} transparent visible={visible}>
+      <View style={styles.shareModalOverlay}>
+        <View style={styles.shareModalContent}>
+          <View style={styles.sharePreviewScale}>
+            <ShareResultCard payload={payload} />
+          </View>
+          <View style={styles.shareHiddenCapture} pointerEvents="none">
+            <ViewShot
+              ref={shareCardRef}
+              options={{ format: 'png', quality: 1, result: 'tmpfile' }}
+              style={styles.shareCapture}
+            >
+              <ShareResultCard payload={payload} />
+            </ViewShot>
+          </View>
+
+          <View style={styles.shareActions}>
+            <Pressable accessibilityRole="button" onPress={onClose} style={styles.shareSecondaryButton}>
+              <X color={colors.text.primary} size={18} strokeWidth={2.5} />
+              <AppText variant="body" style={styles.shareSecondaryText}>
+                Close
+              </AppText>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ disabled: sharing }}
+              disabled={sharing}
+              onPress={onShare}
+              style={[styles.sharePrimaryButton, sharing && styles.sharePrimaryButtonDisabled]}
+            >
+              {sharing ? <ActivityIndicator color={colors.text.onAccent} /> : <Share2 color={colors.text.onAccent} size={18} strokeWidth={2.6} />}
+              <AppText variant="body" color={colors.text.onAccent} style={styles.sharePrimaryText}>
+                {sharing ? 'Preparing...' : 'Share'}
+              </AppText>
+            </Pressable>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+function formatDisplayCaseId(caseId: string): string {
+  const suffix = caseId.replace(/[^a-zA-Z0-9]/g, '').slice(0, 4).toUpperCase();
+  return suffix ? `OT-${suffix}` : 'OT';
 }
 
 function DeepReadContent({
@@ -344,19 +481,57 @@ function DeepReadContent({
   onRequest: () => void;
   onSignIn: () => void;
 }) {
+  const [openSection, setOpenSection] = useState<DeepReadSectionKey>('whatsActuallyHappening');
+
   if (status === 'ready' && result) {
+    const sections: DeepReadSection[] = [
+      {
+        key: 'whatsActuallyHappening',
+        label: "What's happening",
+        body: result.deepRead.whatsActuallyHappening,
+      },
+      {
+        key: 'whatYoureOverreading',
+        label: "You're overreading",
+        body: result.deepRead.whatYoureOverreading,
+      },
+      {
+        key: 'whatEvidenceActuallyMatters',
+        label: 'What matters',
+        body: result.deepRead.whatEvidenceActuallyMatters,
+      },
+    ];
+
     return (
       <View style={styles.deepResult}>
-        <AppText variant="eyebrow" color={colors.accent.lime} style={styles.deepResultMeta}>
-          {result.cache.source === 'cache' ? 'Saved Deep Read' : 'Fresh Deep Read'}
+        <View style={styles.groupChatRead}>
+          <View style={styles.groupChatBadge}>
+            <AppText variant="eyebrow" color={colors.text.onAccent} style={styles.groupChatBadgeText}>
+              Group Chat Read
+            </AppText>
+          </View>
+          <AppText variant="title" color={colors.text.onBrand} style={styles.groupChatText}>
+            {result.deepRead.roastLine}
+          </AppText>
+        </View>
+
+        <View style={styles.deepSections}>
+          {sections.map((section) => (
+            <DeepReadSectionRow
+              key={section.key}
+              section={section}
+              expanded={openSection === section.key}
+              onPress={() => setOpenSection((current) => (current === section.key ? 'none' : section.key))}
+            />
+          ))}
+        </View>
+
+        <AppText variant="eyebrow" color={colors.accent.lime} style={styles.deepTakeawayLabel}>
+          Do this →
         </AppText>
-        <DeepReadField label="What's actually happening" body={result.deepRead.whatsActuallyHappening} />
-        <DeepReadField label="What you're overreading" body={result.deepRead.whatYoureOverreading} />
-        <DeepReadField label="What evidence matters" body={result.deepRead.whatEvidenceActuallyMatters} />
-        <DeepReadField label="What to do next" body={result.deepRead.whatToDoNext} />
         <View style={styles.roastLine}>
           <AppText variant="body" color={colors.text.onAccent} style={styles.roastLineText}>
-            {result.deepRead.roastLine}
+            {result.deepRead.whatToDoNext}
           </AppText>
         </View>
       </View>
@@ -408,15 +583,47 @@ function DeepReadContent({
   );
 }
 
-function DeepReadField({ label, body }: { label: string; body: string }) {
+type DeepReadSectionKey =
+  | 'none'
+  | 'whatsActuallyHappening'
+  | 'whatYoureOverreading'
+  | 'whatEvidenceActuallyMatters';
+
+interface DeepReadSection {
+  key: Exclude<DeepReadSectionKey, 'none'>;
+  label: string;
+  body: string;
+}
+
+function DeepReadSectionRow({
+  section,
+  expanded,
+  onPress,
+}: {
+  section: DeepReadSection;
+  expanded: boolean;
+  onPress: () => void;
+}) {
+  const Icon = expanded ? ChevronUp : ChevronDown;
+
   return (
-    <View style={styles.deepField}>
-      <AppText variant="eyebrow" color="rgba(255, 255, 255, 0.62)" style={styles.deepFieldLabel}>
-        {label}
-      </AppText>
-      <AppText variant="body" color={colors.text.onBrand} style={styles.deepFieldBody}>
-        {body}
-      </AppText>
+    <View style={styles.deepSection}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ expanded }}
+        onPress={onPress}
+        style={styles.deepSectionHeader}
+      >
+        <AppText variant="eyebrow" color="rgba(255, 255, 255, 0.62)" style={styles.deepFieldLabel}>
+          {section.label}
+        </AppText>
+        <Icon color="rgba(255, 255, 255, 0.62)" size={18} strokeWidth={2.2} />
+      </Pressable>
+      {expanded ? (
+        <AppText variant="body" color={colors.text.onBrand} style={styles.deepFieldBody}>
+          {section.body}
+        </AppText>
+      ) : null}
     </View>
   );
 }
@@ -454,7 +661,32 @@ function DeepReadButton({
       <AppText variant="title" center color={colors.text.onAccent} style={styles.deepButtonText}>
         {label}
       </AppText>
+      {!loading ? <ArrowUpRight color={colors.text.onAccent} size={19} strokeWidth={2.8} /> : null}
     </Pressable>
+  );
+}
+
+function RemainingReads({ remaining }: { remaining: number | null }) {
+  if (remaining === null) {
+    return null;
+  }
+
+  return (
+    <AppText variant="eyebrow" color="rgba(255, 255, 255, 0.58)" style={styles.remainingReads}>
+      {remaining} left
+    </AppText>
+  );
+}
+
+function CaseFileDivider() {
+  return (
+    <View style={styles.caseFileDivider}>
+      <View style={styles.caseFileLine} />
+      <AppText variant="eyebrow" style={styles.caseFileLabel}>
+        Case File
+      </AppText>
+      <View style={styles.caseFileLine} />
+    </View>
   );
 }
 
@@ -491,7 +723,10 @@ function OutcomeButton({
 
 const styles = StyleSheet.create({
   content: {
+    backgroundColor: caseDetailBackground,
+    marginHorizontal: -spacing.xl,
     paddingBottom: 0,
+    paddingHorizontal: spacing.xl,
   },
   topRow: {
     alignItems: 'center',
@@ -520,57 +755,25 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 18,
   },
-  readCard: {
-    backgroundColor: colors.bg.surface,
-    borderColor: colors.ui.border,
-    borderRadius: radii.lg,
-    borderWidth: 1,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.xl,
-  },
   sectionLabel: {
     fontFamily: typography.family.displayMedium,
-    fontSize: 10,
+    fontSize: 9,
     letterSpacing: 0.8,
-    lineHeight: 13,
+    lineHeight: 12,
   },
   sectionLabelSpaced: {
-    marginBottom: spacing.md,
-    marginTop: spacing.xxl,
-  },
-  readText: {
-    fontFamily: typography.family.body,
-    fontSize: 15,
-    lineHeight: 22,
-  },
-  nextMove: {
-    backgroundColor: colors.bg.surface,
-    borderColor: colors.brand.ink,
-    borderRadius: radii.lg,
-    borderWidth: 2,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.xl,
-    shadowColor: colors.brand.ink,
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 1,
-    shadowRadius: 0,
-    elevation: 4,
-  },
-  nextMoveText: {
-    color: colors.text.primary,
-    fontFamily: typography.family.displayBold,
-    fontSize: 16,
-    lineHeight: 22,
+    marginBottom: spacing.sm,
+    marginTop: spacing.xl,
   },
   deepRead: {
-    backgroundColor: colors.brand.ink,
-    borderColor: colors.brand.ink,
+    backgroundColor: '#090910',
+    borderColor: '#090910',
     borderRadius: radii.xl,
     borderWidth: 2,
     gap: spacing.sm,
-    marginTop: spacing.xxl,
+    marginTop: spacing.xl,
     padding: spacing.lg,
-    shadowColor: colors.brand.ink,
+    shadowColor: '#090910',
     shadowOffset: { width: 0, height: 5 },
     shadowOpacity: 1,
     shadowRadius: 0,
@@ -579,12 +782,18 @@ const styles = StyleSheet.create({
   deepHeader: {
     alignItems: 'center',
     flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  deepTitleRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    flexShrink: 1,
     gap: spacing.sm,
   },
   deepTitle: {
     fontFamily: typography.family.displayBold,
-    fontSize: 19,
-    lineHeight: 24,
+    fontSize: 18,
+    lineHeight: 23,
   },
   aiBadge: {
     alignItems: 'center',
@@ -601,10 +810,17 @@ const styles = StyleSheet.create({
     letterSpacing: 0,
     lineHeight: 12,
   },
+  remainingReads: {
+    flexShrink: 0,
+    fontFamily: typography.family.displayBold,
+    fontSize: 9,
+    letterSpacing: 1.7,
+    lineHeight: 13,
+  },
   deepSubtitle: {
     fontFamily: typography.family.body,
-    fontSize: 12,
-    lineHeight: 18,
+    fontSize: 11,
+    lineHeight: 17,
   },
   deepButton: {
     alignItems: 'center',
@@ -620,46 +836,88 @@ const styles = StyleSheet.create({
   },
   deepButtonText: {
     fontFamily: typography.family.displayBold,
-    fontSize: 15,
-    lineHeight: 20,
+    fontSize: 14,
+    lineHeight: 19,
   },
   deepResult: {
     gap: spacing.md,
-    marginTop: spacing.xs,
+    marginTop: spacing.sm,
   },
-  deepResultMeta: {
+  groupChatRead: {
+    backgroundColor: '#111119',
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.lg,
+    paddingTop: spacing.xl,
+    position: 'relative',
+  },
+  groupChatBadge: {
+    backgroundColor: colors.accent.lime,
+    borderRadius: radii.pill,
+    left: spacing.lg,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 3,
+    position: 'absolute',
+    top: -spacing.sm,
+  },
+  groupChatBadgeText: {
     fontFamily: typography.family.displayBold,
-    fontSize: 10,
-    letterSpacing: 0.8,
-    lineHeight: 13,
+    fontSize: 9,
+    letterSpacing: 1.1,
+    lineHeight: 12,
   },
-  deepField: {
-    borderTopColor: 'rgba(255, 255, 255, 0.14)',
+  groupChatText: {
+    fontFamily: typography.family.displayBold,
+    fontSize: 17,
+    lineHeight: 24,
+  },
+  deepSections: {
+    borderBottomColor: 'rgba(255, 255, 255, 0.09)',
+    borderBottomWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.09)',
     borderTopWidth: 1,
-    gap: 4,
-    paddingTop: spacing.sm,
+  },
+  deepSection: {
+    borderTopColor: 'rgba(255, 255, 255, 0.09)',
+    borderTopWidth: 1,
+    gap: spacing.sm,
+    paddingVertical: spacing.lg,
+  },
+  deepSectionHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    minHeight: 22,
   },
   deepFieldLabel: {
     fontFamily: typography.family.displayBold,
     fontSize: 9,
-    letterSpacing: 0.8,
+    letterSpacing: 1.5,
     lineHeight: 12,
   },
   deepFieldBody: {
     fontFamily: typography.family.body,
     fontSize: 14,
-    lineHeight: 20,
+    lineHeight: 21,
+  },
+  deepTakeawayLabel: {
+    fontFamily: typography.family.displayBold,
+    fontSize: 10,
+    letterSpacing: 1.3,
+    lineHeight: 13,
   },
   roastLine: {
     backgroundColor: colors.accent.lime,
     borderRadius: radii.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
   },
   roastLineText: {
-    fontFamily: typography.family.displaySemiBold,
-    fontSize: 14,
-    lineHeight: 19,
+    fontFamily: typography.family.displayBold,
+    fontSize: 15,
+    lineHeight: 20,
   },
   deepStateStack: {
     gap: spacing.md,
@@ -677,19 +935,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: spacing.xxl,
+    marginTop: spacing.xl,
+  },
+  caseFileSection: {
+    backgroundColor: caseDetailBackground,
+    marginHorizontal: -spacing.xl,
+    marginTop: spacing.xl,
+    paddingBottom: spacing.md,
+    paddingHorizontal: spacing.xl,
   },
   quote: {
-    backgroundColor: colors.bg.muted,
+    backgroundColor: '#F0ECE5',
     borderRadius: radii.lg,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.xl,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
   },
   quoteText: {
     color: colors.text.primary,
     fontFamily: typography.family.body,
-    fontSize: 14,
-    lineHeight: 21,
+    fontSize: 13,
+    lineHeight: 20,
   },
   addUpdate: {
     alignItems: 'center',
@@ -698,7 +963,7 @@ const styles = StyleSheet.create({
   },
   addUpdateText: {
     fontFamily: typography.family.bodyMedium,
-    fontSize: 14,
+    fontSize: 13,
   },
   updateList: {
     gap: spacing.md,
@@ -709,8 +974,8 @@ const styles = StyleSheet.create({
   },
   updateText: {
     fontFamily: typography.family.body,
-    fontSize: 16,
-    lineHeight: 23,
+    fontSize: 14,
+    lineHeight: 21,
     marginVertical: spacing.sm,
   },
   noUpdates: {
@@ -718,19 +983,39 @@ const styles = StyleSheet.create({
     borderRadius: radii.lg,
     borderStyle: 'dashed',
     borderWidth: 1,
-    marginTop: spacing.md,
+    marginTop: spacing.sm,
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.xxl,
+    paddingVertical: spacing.xl,
   },
   noUpdatesText: {
     fontFamily: typography.family.bodyMedium,
-    fontSize: 15,
-    lineHeight: 20,
+    fontSize: 14,
+    lineHeight: 19,
+  },
+  caseFileDivider: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.md,
+    marginTop: 0,
+    marginBottom: spacing.lg,
+    paddingTop: spacing.sm,
+  },
+  caseFileLine: {
+    backgroundColor: colors.ui.border,
+    flex: 1,
+    height: 1,
+  },
+  caseFileLabel: {
+    color: colors.text.secondary,
+    fontFamily: typography.family.displayBold,
+    fontSize: 10,
+    letterSpacing: 2.1,
+    lineHeight: 13,
   },
   outcomes: {
     flexDirection: 'row',
-    gap: spacing.md,
-    marginBottom: spacing.xl,
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
   },
   outcome: {
     alignItems: 'center',
@@ -739,16 +1024,16 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     borderWidth: 1,
     flex: 1,
-    minHeight: 98,
+    minHeight: 78,
     justifyContent: 'center',
     gap: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: spacing.sm,
   },
   outcomeLabel: {
     fontFamily: typography.family.displayMedium,
-    fontSize: 13,
-    lineHeight: 17,
+    fontSize: 12,
+    lineHeight: 16,
   },
   outcomeSelected: {
     backgroundColor: colors.accent.lime,
@@ -761,18 +1046,89 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.sm,
     justifyContent: 'center',
-    minHeight: 40,
+    minHeight: 34,
     paddingHorizontal: spacing.lg,
   },
   deleteText: {
     fontFamily: typography.family.bodyMedium,
-    fontSize: 15,
-    lineHeight: 20,
+    fontSize: 14,
+    lineHeight: 19,
   },
   initialLoadState: {
     alignItems: 'center',
     flex: 1,
     gap: spacing.md,
     justifyContent: 'center',
+  },
+  shareModalOverlay: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(31, 23, 34, 0.72)',
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.xxl,
+  },
+  shareModalContent: {
+    alignItems: 'center',
+    gap: spacing.lg,
+    maxWidth: 360,
+    width: '100%',
+  },
+  sharePreviewScale: {
+    transform: [{ scale: 0.9 }],
+  },
+  shareHiddenCapture: {
+    left: -10000,
+    position: 'absolute',
+    top: 0,
+  },
+  shareCapture: {
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+    justifyContent: 'center',
+  },
+  shareActions: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    width: '100%',
+  },
+  sharePrimaryButton: {
+    alignItems: 'center',
+    backgroundColor: colors.accent.lime,
+    borderColor: colors.brand.ink,
+    borderRadius: radii.pill,
+    borderWidth: 2,
+    flex: 1,
+    flexDirection: 'row',
+    gap: spacing.sm,
+    justifyContent: 'center',
+    minHeight: 52,
+    paddingHorizontal: spacing.lg,
+  },
+  sharePrimaryButtonDisabled: {
+    opacity: 0.72,
+  },
+  sharePrimaryText: {
+    fontFamily: typography.family.displayBold,
+    fontSize: 15,
+    lineHeight: 20,
+  },
+  shareSecondaryButton: {
+    alignItems: 'center',
+    backgroundColor: colors.bg.surface,
+    borderColor: colors.brand.ink,
+    borderRadius: radii.pill,
+    borderWidth: 2,
+    flex: 1,
+    flexDirection: 'row',
+    gap: spacing.sm,
+    justifyContent: 'center',
+    minHeight: 52,
+    paddingHorizontal: spacing.lg,
+  },
+  shareSecondaryText: {
+    fontFamily: typography.family.displayBold,
+    fontSize: 15,
+    lineHeight: 20,
   },
 });

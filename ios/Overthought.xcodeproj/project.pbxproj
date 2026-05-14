@@ -428,7 +428,7 @@
 					"-lc++",
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
-				PRODUCT_BUNDLE_IDENTIFIER = com.ibrahim.overthought.dev;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ibrahim.overthought;
 				PRODUCT_NAME = Overthought;
 				SWIFT_OBJC_BRIDGING_HEADER = "Overthought/Overthought-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
