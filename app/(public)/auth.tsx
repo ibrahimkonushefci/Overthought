@@ -15,6 +15,8 @@ export default function AuthRoute() {
   const sessionMode = useAuthStore((state) => state.sessionMode);
   const [email, setEmail] = useState('');
   const [emailLoading, setEmailLoading] = useState(false);
+  const [appleAvailable, setAppleAvailable] = useState(false);
+  const [appleLoading, setAppleLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
   useEffect(() => {
@@ -22,6 +24,20 @@ export default function AuthRoute() {
       router.replace('/home');
     }
   }, [router, sessionMode]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    void authService.isAppleSignInAvailable().then((isAvailable) => {
+      if (isMounted) {
+        setAppleAvailable(isAvailable);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const submit = async () => {
     setEmailLoading(true);
@@ -36,7 +52,17 @@ export default function AuthRoute() {
     setGoogleLoading(false);
 
     if (!result.ok && !result.cancelled) {
-      Alert.alert('Sign-in failed', result.message ?? 'Try again.');
+      Alert.alert(result.needsNativeSetup ? 'Native setup needed' : 'Sign-in failed', result.message ?? 'Try again.');
+    }
+  };
+
+  const signInWithApple = async () => {
+    setAppleLoading(true);
+    const result = await authService.signInWithApple();
+    setAppleLoading(false);
+
+    if (!result.ok && !result.cancelled) {
+      Alert.alert(result.needsNativeSetup ? 'Native setup needed' : 'Sign-in failed', result.message ?? 'Try again.');
     }
   };
 
@@ -64,15 +90,24 @@ export default function AuthRoute() {
         title="Send magic link"
         icon={Mail}
         loading={emailLoading}
-        disabled={!email.includes('@') || emailLoading || googleLoading}
+        disabled={!email.includes('@') || emailLoading || appleLoading || googleLoading}
         onPress={() => void submit()}
       />
+      {appleAvailable ? (
+        <Button
+          title="Continue with Apple"
+          variant="outline"
+          loading={appleLoading}
+          disabled={emailLoading || appleLoading || googleLoading}
+          onPress={() => void signInWithApple()}
+        />
+      ) : null}
       {env.enableGoogleAuth ? (
         <Button
           title="Continue with Google"
           variant="outline"
           loading={googleLoading}
-          disabled={emailLoading || googleLoading}
+          disabled={emailLoading || appleLoading || googleLoading}
           onPress={() => void signInWithGoogle()}
         />
       ) : null}

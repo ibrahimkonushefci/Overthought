@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import type { StyleProp, TextStyle } from 'react-native';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -14,12 +14,28 @@ import { colors, gradients, shadows, spacing, typography } from '../../src/share
 export default function WelcomeRoute() {
   const router = useRouter();
   const sessionMode = useAuthStore((state) => state.sessionMode);
+  const [appleAvailable, setAppleAvailable] = useState(false);
+  const [appleLoading, setAppleLoading] = useState(false);
 
   useEffect(() => {
     if (sessionMode === 'authenticated') {
       router.replace('/home');
     }
   }, [router, sessionMode]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    void authService.isAppleSignInAvailable().then((isAvailable) => {
+      if (isMounted) {
+        setAppleAvailable(isAvailable);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const continueGuest = () => {
     authService.continueAsGuest();
@@ -28,6 +44,21 @@ export default function WelcomeRoute() {
 
   const signInWithGoogle = async () => {
     const result = await authService.signInWithGoogle();
+
+    if (result.ok) {
+      router.replace('/home');
+      return;
+    }
+
+    if (!result.cancelled) {
+      Alert.alert(result.needsNativeSetup ? 'Native setup needed' : 'Sign-in failed', result.message ?? 'Try again.');
+    }
+  };
+
+  const signInWithApple = async () => {
+    setAppleLoading(true);
+    const result = await authService.signInWithApple();
+    setAppleLoading(false);
 
     if (result.ok) {
       router.replace('/home');
@@ -72,6 +103,16 @@ export default function WelcomeRoute() {
 
       <View style={styles.actions}>
         <Button title="Continue as guest →" onPress={continueGuest} />
+        {appleAvailable ? (
+          <View style={styles.providerRow}>
+            <ProviderButton
+              glyph=""
+              title={appleLoading ? 'Signing in…' : 'Apple'}
+              onPress={() => void signInWithApple()}
+              disabled={appleLoading}
+            />
+          </View>
+        ) : null}
         {env.enableGoogleAuth ? (
           <View style={styles.providerRow}>
             <ProviderButton glyph="G" title="Google" onPress={() => void signInWithGoogle()} glyphStyle={styles.googleGlyph} />
@@ -87,15 +128,22 @@ function ProviderButton({
   glyph,
   title,
   onPress,
+  disabled,
   glyphStyle,
 }: {
   glyph: string;
   title: string;
   onPress: () => void;
+  disabled?: boolean;
   glyphStyle?: StyleProp<TextStyle>;
 }) {
   return (
-    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.providerButton, pressed && styles.providerPressed]}>
+    <Pressable
+      accessibilityRole="button"
+      disabled={disabled}
+      onPress={onPress}
+      style={({ pressed }) => [styles.providerButton, pressed && !disabled && styles.providerPressed, disabled && styles.providerDisabled]}
+    >
       <Text style={[styles.providerGlyph, glyphStyle]}>{glyph}</Text>
       <Text style={styles.providerLabel}>{title}</Text>
     </Pressable>
@@ -196,6 +244,9 @@ const styles = StyleSheet.create({
   },
   providerPressed: {
     transform: [{ translateY: 1 }],
+  },
+  providerDisabled: {
+    opacity: 0.6,
   },
   providerGlyph: {
     color: colors.text.primary,

@@ -24,15 +24,21 @@ This app does **not** target Expo Go. It uses `react-native-mmkv` v4, which depe
    - `EXPO_PUBLIC_SUPABASE_ANON_KEY`
    - `EXPO_PUBLIC_SUPABASE_REDIRECT_URL`
 
-   For the first TestFlight build, keep Google auth disabled:
+   Apple Sign In is available behind an explicit flag after Apple Developer and Supabase provider setup:
+
+   - `EXPO_PUBLIC_ENABLE_APPLE_AUTH=false`
+
+   Native Google Sign-In is also behind an explicit flag:
 
    - `EXPO_PUBLIC_ENABLE_GOOGLE_AUTH=false`
 
-   Re-enabled native Google sign-in also needs:
+   Enable it only after Google Cloud and Supabase provider setup. Native Google sign-in also needs:
 
    - `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`
    - `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`
-   - `EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME`
+   - `EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME` as the reversed iOS client ID, for example `com.googleusercontent.apps.1234567890-abcdef`, not the normal `...apps.googleusercontent.com` client ID.
+
+   In Supabase Auth > Providers > Google, include the web, dev iOS, and production iOS client IDs. For native iOS Google Sign-In, enable `Skip nonce check`; the React Native Google Sign-In SDK used here does not expose a matching raw nonce to pass through to Supabase.
 
    Profile legal links use:
 
@@ -113,9 +119,27 @@ Production/TestFlight config uses:
 
 - `com.ibrahim.overthought`
 
-The EAS `production` profile sets `APP_VARIANT=production`, which makes `app.config.js` use the production bundle identifier. The first TestFlight auth path is guest + email only; Google and Apple Sign In remain disabled/deferred for now.
+The EAS `production` profile sets `APP_VARIANT=production`, which makes `app.config.js` use the production bundle identifier. Apple Sign In is wired natively but remains hidden unless `EXPO_PUBLIC_ENABLE_APPLE_AUTH=true`; native Google Sign-In remains hidden unless `EXPO_PUBLIC_ENABLE_GOOGLE_AUTH=true`.
 
 Local development leaves `APP_VARIANT` unset, so Expo config uses `com.ibrahim.overthought.dev` and disables premium/RevenueCat even if RevenueCat keys exist in a local `.env`. Production/TestFlight builds use `APP_VARIANT=production`; premium is only enabled there when `EXPO_PUBLIC_ENABLE_PREMIUM=true`.
+
+### Production/TestFlight auth environment
+
+Before the next TestFlight build that ships Apple and Google sign-in, set the production EAS environment to:
+
+- `APP_VARIANT=production`
+- `EXPO_PUBLIC_ENABLE_APPLE_AUTH=true`
+- `EXPO_PUBLIC_ENABLE_GOOGLE_AUTH=true`
+- `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID=<Google web OAuth client ID>`
+- `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID=<Google iOS OAuth client ID for com.ibrahim.overthought>`
+- `EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME=<reversed Google iOS client ID for com.ibrahim.overthought>`
+
+Also confirm external provider setup:
+
+- Apple Developer has Sign in with Apple enabled for `com.ibrahim.overthought`.
+- Supabase Apple provider allows the production bundle ID.
+- Supabase Google provider includes the web, dev iOS, and production iOS client IDs.
+- Supabase Google provider has `Skip nonce check` enabled for native iOS Google Sign-In.
 
 Confirm the active bundle identifiers with:
 
@@ -130,7 +154,7 @@ APP_VARIANT=production npx expo config --type public
 - Palette-backed theme tokens and reusable UI primitives.
 - Guest persistence with Zustand, `persist`, and `react-native-mmkv`.
 - Supabase client wiring with environment handling.
-- Auth/session scaffolding for guest, email magic-link, Apple placeholder, and Google placeholder.
+- Auth/session scaffolding for guest, email magic-link, native Apple Sign In, and native Google Sign-In.
 - Repository/service boundaries for cases, updates, profiles, premium, migration, share payloads, and deterministic analysis.
 - Local verdict engine integration without changing scoring behavior.
 - Base screens aligned to the supplied design references: welcome, home, new case, cases, case detail/result, add update, stats, profile, delete account.
@@ -139,8 +163,10 @@ APP_VARIANT=production npx expo config --type public
 
 - Configure Supabase project URL/key and apply the SQL files under `supabase/migrations/`.
 - Use an iOS development build, not Expo Go, because MMKV/Nitro requires native pods and New Architecture codegen.
-- Set Apple Sign In entitlement and Supabase OAuth/native callback configuration.
-- Configure Google OAuth client IDs, the reversed iOS URL scheme, and the Supabase Google provider.
+- Enable Sign in with Apple for both Apple Developer App IDs: `com.ibrahim.overthought.dev` and `com.ibrahim.overthought`.
+- Enable the Supabase Apple provider and add both bundle IDs as allowed native client IDs before setting `EXPO_PUBLIC_ENABLE_APPLE_AUTH=true`.
+- Configure Google OAuth client IDs, the reversed iOS URL scheme, and the Supabase Google provider before setting `EXPO_PUBLIC_ENABLE_GOOGLE_AUTH=true`. For native iOS Google Sign-In, the Supabase Google provider must have `Skip nonce check` enabled.
+- Rebuild the native iOS app after changing `EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME`; the scheme is embedded in `Info.plist`.
 - Add RevenueCat SDK/API key and wire restore/purchase calls.
 - Add a secured Supabase Edge Function for final `auth.users` deletion.
 - Rebuild the iOS development build after changing native auth credentials or config plugins.

@@ -23,6 +23,7 @@
     "@react-native-google-signin/google-signin": "^16.1.2",
     "@supabase/supabase-js": "^2.104.0",
     "expo": "^55.0.16",
+    "expo-apple-authentication": "~55.0.13",
     "expo-crypto": "^55.0.14",
     "expo-dev-client": "~55.0.28",
     "expo-font": "^55.0.6",

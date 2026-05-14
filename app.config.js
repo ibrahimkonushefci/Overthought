@@ -1,12 +1,26 @@
 const base = require('./app.json');
 
-const googleIosUrlScheme =
-  process.env.EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME ||
-  'com.googleusercontent.apps.overthought-placeholder';
+const enableGoogleAuth = process.env.EXPO_PUBLIC_ENABLE_GOOGLE_AUTH === 'true';
+const googleIosUrlScheme = process.env.EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME;
+const fallbackGoogleIosUrlScheme = 'com.googleusercontent.apps.overthought-placeholder';
 const appVariant = process.env.APP_VARIANT === 'production' ? 'production' : 'development';
 const isProduction = appVariant === 'production';
 
 process.env.EXPO_PUBLIC_APP_VARIANT = appVariant;
+
+if (enableGoogleAuth) {
+  if (!googleIosUrlScheme) {
+    throw new Error(
+      'EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME is required when EXPO_PUBLIC_ENABLE_GOOGLE_AUTH=true. Use the reversed iOS client ID, for example com.googleusercontent.apps.<id>.',
+    );
+  }
+
+  if (!googleIosUrlScheme.startsWith('com.googleusercontent.apps.')) {
+    throw new Error(
+      'EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME must be the reversed iOS client ID and should start with com.googleusercontent.apps.',
+    );
+  }
+}
 
 module.exports = () => {
   const baseExpo = base.expo;
@@ -21,8 +35,7 @@ module.exports = () => {
       ios: {
         ...baseExpo.ios,
         bundleIdentifier: isProduction ? 'com.ibrahim.overthought' : 'com.ibrahim.overthought.dev',
-        // TODO: Re-enable Apple Sign In after Apple Developer enrollment and signing are available.
-        usesAppleSignIn: false,
+        usesAppleSignIn: true,
       },
       extra: {
         ...baseExpo.extra,
@@ -30,12 +43,13 @@ module.exports = () => {
       },
       plugins: [
         ...plugins,
+        'expo-apple-authentication',
         'expo-web-browser',
         'expo-sharing',
         [
           '@react-native-google-signin/google-signin',
           {
-            iosUrlScheme: googleIosUrlScheme,
+            iosUrlScheme: googleIosUrlScheme || fallbackGoogleIosUrlScheme,
           },
         ],
       ],
