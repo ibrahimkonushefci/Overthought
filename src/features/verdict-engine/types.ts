@@ -9,6 +9,49 @@ export type SignalType =
 
 export type ConfidenceLevel = 'low' | 'medium' | 'high';
 
+export type SemanticFactId =
+  | 'hasInvitation'
+  | 'hasSpecificPlan'
+  | 'hasTimeOrDate'
+  | 'hasNoFollowThrough'
+  | 'hasDelayedReply'
+  | 'hasGhosting'
+  | 'hasLateNightTiming'
+  | 'hasLateNightReply'
+  | 'hasSocialMediaSignal'
+  | 'hasStrangerSignal'
+  | 'hasEyeContact'
+  | 'hasWorkPowerContext'
+  | 'hasFriendContext'
+  | 'hasConcreteNegativeAction'
+  | 'hasApology'
+  | 'hasExplanation'
+  | 'hasMixedConsistency'
+  | 'hasInPersonPositive'
+  | 'hasTextingNegative'
+  | 'hasQuestionForAvailability'
+  | 'hasUserConclusion'
+  | 'hasDinnerContext'
+  | 'hasDeliveredNoReply'
+  | 'hasActiveOnSocial'
+  | 'hasCanceledPlan'
+  | 'hasExcuse'
+  | 'hasContradictorySocialPost'
+  | 'hasRepeatedBehavior'
+  | 'hasOddGiftOrObject'
+  | 'hasNeighborContext'
+  | 'hasWorkCriticism'
+  | 'hasPrivateReassurance'
+  | 'hasPromotionSignal'
+  | 'hasIgnoredImportantEvent'
+  | 'hasDeflection'
+  | 'hasUserForcedToApologize'
+  | 'hasFormalWorkAmbiguity';
+
+export interface SemanticFacts extends Record<SemanticFactId, boolean> {
+  ids: SemanticFactId[];
+}
+
 export interface PreviousCaseContext {
   originalInputText: string;
   priorScore: number;
@@ -61,6 +104,7 @@ export interface ScenarioOverride {
   id: string;
   category?: Category;
   requiredSignalIds: string[];
+  excludedSignalIds?: string[];
   priority?: number;
   scoreFloor?: number;
   scoreCeiling?: number;
@@ -102,6 +146,7 @@ export interface AnalysisDebugInfo {
   previousScoreDelta?: number;
   dominantSignalId?: string;
   scenarioOverrideId?: string;
+  semanticFacts: SemanticFacts;
   matchedSignals: TriggeredSignal[];
 }
 

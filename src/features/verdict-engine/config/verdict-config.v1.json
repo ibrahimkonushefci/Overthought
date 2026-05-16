@@ -112,7 +112,9 @@
         "didn't respond",
         "did not respond",
         "no response",
-        "9 hours",
+        "went quiet",
+        "then went quiet",
+        "and then went quiet",
         "hasn't replied back",
         "since we matched",
         "after we matched"
@@ -130,6 +132,10 @@
         "took her 14 hours",
         "took him 14 hours",
         "took 14 hours",
+        "takes 8 hours to reply",
+        "takes eight hours to reply",
+        "8 hours to reply",
+        "eight hours to reply",
         "took 6 hours",
         "took 6 hours to reply",
         "6 hours to reply",
@@ -138,6 +144,9 @@
         "didnt reply for 2 days",
         "didn't reply for 2 days",
         "did not reply for 2 days",
+        "the delay",
+        "after like 2 days",
+        "after 2 days",
         "2 days",
         "left me on read",
         "on read for a whole week",
@@ -157,6 +166,73 @@
       ]
     },
     {
+      "id": "verbal_dinner_interest",
+      "type": "positive_evidence",
+      "defaultWeight": -20,
+      "patterns": [
+        "i am down for a dinner date",
+        "down for a dinner date",
+        "i am down for dinner",
+        "down for dinner",
+        "down to get dinner",
+        "said i am down for a dinner date",
+        "said i am down for dinner"
+      ]
+    },
+    {
+      "id": "availability_question",
+      "type": "context_modifier",
+      "defaultWeight": 0,
+      "patterns": [
+        "asked when she is free",
+        "asked when he is free",
+        "asked when they are free",
+        "asked when she was free",
+        "asked when he was free",
+        "asked when they were free",
+        "when she is free",
+        "when he is free",
+        "when they are free"
+      ]
+    },
+    {
+      "id": "stopped_replying_after_availability",
+      "type": "weak_evidence",
+      "defaultWeight": 34,
+      "patterns": [
+        "stopped replying after like 2 days when i asked when she is free",
+        "stopped replying after like 2 days when i asked when he is free",
+        "stopped replying after like 2 days when i asked when they are free",
+        "stopped replying after 2 days when i asked when she is free",
+        "stopped replying after 2 days when i asked when he is free",
+        "stopped replying after 2 days when i asked when they are free",
+        "stopped replying when i asked when she is free",
+        "stopped replying when i asked when he is free",
+        "stopped replying when i asked when they are free"
+      ]
+    },
+    {
+      "id": "clear_negative_action",
+      "type": "positive_evidence",
+      "defaultWeight": -34,
+      "patterns": [
+        "blocked me",
+        "she blocked me",
+        "he blocked me",
+        "they blocked me",
+        "unfollowed me",
+        "removed me",
+        "removed me from",
+        "said not interested",
+        "said she is not interested",
+        "said he is not interested",
+        "said they are not interested",
+        "told me she is not interested",
+        "told me he is not interested",
+        "told me they are not interested"
+      ]
+    },
+    {
       "id": "message_avoidance",
       "type": "weak_evidence",
       "defaultWeight": 16,
@@ -169,6 +245,16 @@
         "not open my message",
         "open my message for hours",
         "message for hours"
+      ]
+    },
+    {
+      "id": "heart_emoji_signal",
+      "type": "weak_evidence",
+      "defaultWeight": 12,
+      "patterns": [
+        "heart emoji",
+        "sent a heart emoji",
+        "sends heart emojis"
       ]
     },
     {
@@ -204,7 +290,8 @@
         "i miss u",
         "i miss you",
         "miss u",
-        "miss you"
+        "miss you",
+        "misses me"
       ]
     },
     {
@@ -218,6 +305,11 @@
         "kind of dry today",
         "dry today",
         "dry reply",
+        "dry over text",
+        "dry over texts",
+        "dry texting",
+        "dry texter",
+        "dry replies",
         "spiraling",
         "spiralling",
         "spiraling lol",
@@ -275,6 +367,15 @@
         "never followed up",
         "no date",
         "no plan",
+        "has not made plans",
+        "hasn't made plans",
+        "hasnt made plans",
+        "has not made a plan",
+        "hasn't made a plan",
+        "never plans anything",
+        "never plans",
+        "doesn't plan anything",
+        "does not plan anything",
         "didn't text again",
         "did not text again",
         "never texted again",
@@ -289,6 +390,10 @@
         "has not dmed",
         "hasnt dm'd",
         "hasn't dm'd",
+        "have not dm'd",
+        "have not dmed",
+        "haven't dm'd",
+        "havent dmed",
         "no dm",
         "no direct message",
         "hasn't texted",
@@ -332,7 +437,12 @@
         "meet up",
         "mention getting drinks",
         "getting drinks",
+        "suggest drinks",
+        "suggest getting drinks",
+        "every time i suggest drinks",
         "schedule is crazy",
+        "work is crazy",
+        "work is crazy every time",
         "his schedule is crazy",
         "her schedule is crazy",
         "their schedule is crazy",
@@ -351,6 +461,8 @@
         "i think this means",
         "this must mean",
         "must mean",
+        "i think it was for me",
+        "think it was for me",
         "probably likes me",
         "surely interested",
         "maybe this is a sign",
@@ -406,6 +518,11 @@
         "smiles at me",
         "smiles at me a lot",
         "was nice to me",
+        "is nice to me",
+        "nice in person",
+        "is nice in person",
+        "friend is nice in person",
+        "my friend is nice in person",
         "complimented me once",
         "helped me",
         "answered politely"
@@ -442,6 +559,15 @@
         "all my stories",
         "liked my selfie",
         "reacted to my selfie",
+        "posts on her story",
+        "posts on his story",
+        "posts on their story",
+        "post stories after my texts",
+        "posts stories after my texts",
+        "post stories after i text",
+        "posts stories after i text",
+        "story right after i text",
+        "story after my texts",
         "/\\bsnap\\b/",
         "sent a heart emoji",
         "heart emoji",
@@ -455,9 +581,14 @@
       "defaultWeight": 34,
       "patterns": [
         "ghosted me",
+        "ghosting me",
         "ghosted",
         "went silent",
         "disappeared",
+        "after disappearing",
+        "disappearing",
+        "stopped texting me",
+        "stopped texting",
         "stopped talking to me",
         "left on read",
         "left me on read",
@@ -473,7 +604,6 @@
         "long time no see",
         "replied to my ig story",
         "replied to my story",
-        "liked my story",
         "sent to my selfie",
         "to my selfie",
         "selfie",
@@ -567,6 +697,21 @@
         "across the bar",
         "in the elevator",
         "in a meeting"
+      ]
+    },
+    {
+      "id": "one_off_event",
+      "type": "weak_evidence",
+      "defaultWeight": 18,
+      "patterns": [
+        "laughed at my joke",
+        "laughed at a joke",
+        "laughed at my joke in a meeting",
+        "laughed in a meeting",
+        "my joke in a meeting",
+        "one joke",
+        "one compliment",
+        "one moment"
       ]
     },
     {
@@ -680,6 +825,10 @@
         "has not dmed",
         "hasnt dm'd",
         "hasn't dm'd",
+        "have not dm'd",
+        "have not dmed",
+        "haven't dm'd",
+        "havent dmed",
         "no dm",
         "no direct message",
         "no message",
@@ -879,6 +1028,12 @@
         "asked if im free next saturday",
         "asked if i'm free",
         "asked if im free",
+        "asked if i am free",
+        "asked if i am free friday",
+        "asked it im free",
+        "asked it im free friday",
+        "asked it i am free",
+        "asked it i am free friday",
         "asked if i wanted to grab dinner",
         "grab dinner after work",
         "asked me to be his girlfriend",
@@ -1026,6 +1181,7 @@
         "has been overwhelming",
         "overwhelming",
         "work was crazy",
+        "work is crazy",
         "work crazy",
         "busy with work",
         "swamped with work"
@@ -1101,6 +1257,8 @@
         "dinner date for friday",
         "proper dinner date",
         "for friday",
+        "free friday",
+        "am free friday",
         "booked us a table",
         "booked us a table for 8pm",
         "table for 8pm",
@@ -1300,6 +1458,85 @@
         "they stopped replying again",
         "it was just friendliness"
       ]
+    },
+    {
+      "id": "ex_no_contact_context",
+      "type": "weak_evidence",
+      "defaultWeight": 26,
+      "patterns": [
+        "my ex",
+        "after no contact",
+        "no contact"
+      ]
+    },
+    {
+      "id": "evening_reply_pattern",
+      "type": "context_modifier",
+      "defaultWeight": -8,
+      "patterns": [
+        "faster during the evening",
+        "replies a bit faster during the evening",
+        "replies faster during the evening",
+        "faster in the evening"
+      ]
+    },
+    {
+      "id": "low_information_gibberish",
+      "type": "context_modifier",
+      "defaultWeight": 0,
+      "patterns": [
+        "gibberish",
+        "jhsad",
+        "hsdjhs",
+        "jhsadjh"
+      ]
+    },
+    {
+      "id": "follow_back_without_dm",
+      "type": "weak_evidence",
+      "defaultWeight": 26,
+      "patterns": [
+        "followed back quickly",
+        "followed back but has not dm'd",
+        "followed back but hasnt dmed",
+        "followed back but hasn't dmed",
+        "followed back but has not dmed",
+        "followed back quickly but have not dm'd"
+      ]
+    },
+    {
+      "id": "friendship_one_sided_planning",
+      "type": "weak_evidence",
+      "defaultWeight": 28,
+      "patterns": [
+        "my friend always lets me choose the plan",
+        "always lets me choose the plan",
+        "lets me choose the plan",
+        "always makes me choose the plan",
+        "i always choose the plan",
+        "i always plan everything"
+      ]
+    },
+    {
+      "id": "first_date_crying",
+      "type": "context_modifier",
+      "defaultWeight": 0,
+      "patterns": [
+        "cried on the first date",
+        "cried during the first date",
+        "cried at the first date"
+      ]
+    },
+    {
+      "id": "stopped_texting_duration",
+      "type": "weak_evidence",
+      "defaultWeight": 32,
+      "patterns": [
+        "stopped texting me after",
+        "stopped texting after",
+        "after 12 days",
+        "after twelve days"
+      ]
     }
   ],
   "signalNeutralizers": [
@@ -1487,6 +1724,349 @@
       ]
     },
     {
+      "id": "story_like_delayed_reply",
+      "category": "romance",
+      "priority": 86,
+      "requiredSignalIds": [
+        "single_low_signal",
+        "social_media_overread",
+        "delayed_reply"
+      ],
+      "excludedSignalIds": [
+        "no_concrete_followup",
+        "ghosted_history",
+        "stale_social_media_signal",
+        "low_effort_reengagement"
+      ],
+      "scoreFloor": 68,
+      "scoreCeiling": 74,
+      "explanationTemplates": [
+        "A story like plus a late reply is a signal, but it is still crumbs unless there is follow-through.",
+        "The story like and the nine-hour reply are worth noticing. They are not enough to turn timing into a whole plot."
+      ],
+      "nextMoveTemplates": [
+        "Reply normally if you want, but do not build a plot from timing alone.",
+        "Watch whether the conversation gets clearer before treating this as meaningful."
+      ]
+    },
+    {
+      "id": "dinner_interest_no_followthrough",
+      "category": "romance",
+      "priority": 88,
+      "requiredSignalIds": [
+        "verbal_dinner_interest",
+        "availability_question",
+        "stopped_replying_after_availability"
+      ],
+      "scoreFloor": 58,
+      "scoreCeiling": 66,
+      "explanationTemplates": [
+        "The dinner interest is real evidence, but disappearing when it was time to pick a date weakens it.",
+        "Saying yes to dinner matters. Stopping when availability comes up is the part that keeps this from being solid."
+      ],
+      "nextMoveTemplates": [
+        "Send one clean follow-up if you want, then stop chasing the idea.",
+        "Wait for her to offer an actual time before treating the dinner interest as a plan."
+      ]
+    },
+    {
+      "id": "clear_negative_action_closure",
+      "priority": 95,
+      "requiredSignalIds": [
+        "clear_negative_action"
+      ],
+      "scoreFloor": 24,
+      "scoreCeiling": 36,
+      "explanationTemplates": [
+        "That is concrete negative action. The part to stop analyzing is the why, not whether the signal is clear.",
+        "This is not a subtle clue. The boundary is clear, even if the reason feels unfinished."
+      ],
+      "nextMoveTemplates": [
+        "Do not investigate the reason. Treat the boundary as closure and leave it alone.",
+        "Respect the closure signal and do not try to reopen the case."
+      ]
+    },
+    {
+      "id": "follow_back_no_dm",
+      "category": "romance",
+      "priority": 84,
+      "requiredSignalIds": [
+        "follow_back_without_dm",
+        "no_dm_signal"
+      ],
+      "scoreFloor": 66,
+      "scoreCeiling": 70,
+      "explanationTemplates": [
+        "A quick follow-back is app courtesy. Not DMing afterward is the part that keeps this from becoming effort.",
+        "Following back opens the door a crack; no message means nobody walked through it."
+      ],
+      "nextMoveTemplates": [
+        "Wait for an actual DM before building the story.",
+        "Do not upgrade a follow-back into interest until there are words."
+      ]
+    },
+    {
+      "id": "dangling_friday_check",
+      "category": "romance",
+      "priority": 86,
+      "requiredSignalIds": [
+        "direct_action",
+        "no_response_after_match"
+      ],
+      "scoreFloor": 72,
+      "scoreCeiling": 78,
+      "explanationTemplates": [
+        "Asking if you are free is a door crack, not a plan. Going quiet afterward is the part that matters.",
+        "\"Are you free Friday\" sounds promising until the follow-through disappears. A question is not logistics."
+      ],
+      "nextMoveTemplates": [
+        "Do not chase the unfinished plan. If they mean Friday, they can finish the sentence.",
+        "Wait for an actual time and place before upgrading this to a date."
+      ]
+    },
+    {
+      "id": "booked_dinner_dry_reply",
+      "category": "romance",
+      "priority": 86,
+      "requiredSignalIds": [
+        "booked_logistics",
+        "dry_text_anxiety"
+      ],
+      "scoreFloor": 24,
+      "scoreCeiling": 30,
+      "explanationTemplates": [
+        "Booked dinner is stronger evidence than one dry reply. The logistics are real; today's tone is not a cancellation notice.",
+        "A dry text after booking dinner is a tiny weather change, not a verdict. The plan still matters more."
+      ],
+      "nextMoveTemplates": [
+        "Keep the dinner plan and stop auditing one dry message.",
+        "Let the reservation count more than today's texting tone."
+      ]
+    },
+    {
+      "id": "heart_emoji_no_plans",
+      "category": "romance",
+      "priority": 85,
+      "requiredSignalIds": [
+        "heart_emoji_signal",
+        "no_concrete_followup"
+      ],
+      "scoreFloor": 74,
+      "scoreCeiling": 80,
+      "explanationTemplates": [
+        "A heart emoji is decoration, not effort. Without plans, it is a sticker pretending to be evidence.",
+        "The heart emoji is doing too much unpaid labor here. No plans means the case is still mostly air."
+      ],
+      "nextMoveTemplates": [
+        "Wait for a plan, not punctuation with feelings.",
+        "Do not let an emoji do the job of actual effort."
+      ]
+    },
+    {
+      "id": "misses_me_no_plans",
+      "category": "romance",
+      "priority": 86,
+      "requiredSignalIds": [
+        "late_night_intimacy",
+        "no_concrete_followup"
+      ],
+      "scoreFloor": 88,
+      "scoreCeiling": 92,
+      "explanationTemplates": [
+        "\"Misses me\" is language. Never planning anything is the behavior. The behavior is louder.",
+        "Saying they miss you while never making plans is affection with no legs. Do not carry it for them."
+      ],
+      "nextMoveTemplates": [
+        "Require a real plan before treating the words like progress.",
+        "Let plans, not nostalgia, decide how seriously to take this."
+      ]
+    },
+    {
+      "id": "ex_story_view_no_contact",
+      "category": "romance",
+      "priority": 85,
+      "requiredSignalIds": [
+        "ex_no_contact_context",
+        "social_media_overread"
+      ],
+      "scoreFloor": 90,
+      "scoreCeiling": 94,
+      "explanationTemplates": [
+        "An ex watching your story after no contact is not a comeback. It is curiosity with Wi-Fi.",
+        "Story views from an ex are not closure, interest, or a secret apology. They are a thumb with history."
+      ],
+      "nextMoveTemplates": [
+        "Do nothing until they use actual words.",
+        "Do not reopen the archive for a story view."
+      ]
+    },
+    {
+      "id": "daytime_slow_evening_faster",
+      "category": "romance",
+      "priority": 84,
+      "requiredSignalIds": [
+        "delayed_reply",
+        "evening_reply_pattern"
+      ],
+      "scoreFloor": 46,
+      "scoreCeiling": 52,
+      "explanationTemplates": [
+        "Eight-hour daytime replies are slow, but faster evening replies sound like schedule, not a secret verdict.",
+        "This looks more like availability changing after work than a hidden message about you."
+      ],
+      "nextMoveTemplates": [
+        "Watch the pattern for a few days before turning reply timing into a plot.",
+        "Give it time and look for consistent effort, not one daytime delay."
+      ]
+    },
+    {
+      "id": "low_information_gibberish_prompt",
+      "priority": 100,
+      "requiredSignalIds": [
+        "low_information_gibberish"
+      ],
+      "scoreFloor": 50,
+      "scoreCeiling": 55,
+      "explanationTemplates": [
+        "This is not a case yet. The evidence is keyboard fog with a name attached.",
+        "I need actual social facts before judging. Right now this is mostly syllables in a trench coat."
+      ],
+      "nextMoveTemplates": [
+        "Add what happened, who did what, and what you think it means.",
+        "Rewrite this with one clear event and one clear question."
+      ]
+    },
+    {
+      "id": "first_date_crying_context",
+      "category": "romance",
+      "priority": 84,
+      "requiredSignalIds": [
+        "first_date_crying"
+      ],
+      "scoreFloor": 62,
+      "scoreCeiling": 68,
+      "explanationTemplates": [
+        "Crying on a first date is a lot of context, but it is not a complete verdict by itself.",
+        "A first-date cry means something happened. It does not automatically mean romance is doomed or guaranteed."
+      ],
+      "nextMoveTemplates": [
+        "Look at what caused it and what happened after, then judge the pattern.",
+        "Do not decide the whole case from one emotional spike."
+      ]
+    },
+    {
+      "id": "stopped_texting_after_days",
+      "category": "romance",
+      "priority": 84,
+      "requiredSignalIds": [
+        "stopped_texting_duration"
+      ],
+      "scoreFloor": 88,
+      "scoreCeiling": 92,
+      "explanationTemplates": [
+        "If he stopped texting, the evidence is not hidden. It is absent and wearing a giant sign.",
+        "Twelve days of texting ending in silence is a pattern break, not a puzzle with a romantic answer."
+      ],
+      "nextMoveTemplates": [
+        "Do not chase silence. Let him restart the conversation if he wants one.",
+        "Treat the stop as information unless he comes back with actual effort."
+      ]
+    },
+    {
+      "id": "posting_stories_message_avoidance",
+      "category": "romance",
+      "priority": 83,
+      "requiredSignalIds": [
+        "message_avoidance",
+        "social_media_overread"
+      ],
+      "scoreFloor": 66,
+      "scoreCeiling": 68,
+      "explanationTemplates": [
+        "Posting stories while dodging your message is app activity, not effort. The receipt that matters is the unopened text.",
+        "They have enough battery for stories but not enough clarity for your message. That is a signal, just not the romantic one you want."
+      ],
+      "nextMoveTemplates": [
+        "Do not let their story activity outrank whether they actually reply.",
+        "Wait for a real response before turning app behavior into a plot."
+      ]
+    },
+    {
+      "id": "repeated_work_excuse_for_plans",
+      "category": "romance",
+      "priority": -1,
+      "requiredSignalIds": [
+        "unavailable_in_person",
+        "external_reason_context"
+      ],
+      "scoreFloor": 80,
+      "scoreCeiling": 84,
+      "explanationTemplates": [
+        "Work being crazy once is context. Work being crazy every time you suggest drinks is a pattern.",
+        "The issue is not that work is busy; it is that every plan attempt hits the same wall."
+      ],
+      "nextMoveTemplates": [
+        "Stop translating excuses. Wait for them to suggest a real time.",
+        "Let them offer the next concrete plan instead of negotiating with their calendar."
+      ]
+    },
+    {
+      "id": "friendship_nice_in_person_dry_text",
+      "category": "friendship",
+      "priority": 85,
+      "requiredSignalIds": [
+        "friendliness_misread_as_interest",
+        "dry_text_anxiety"
+      ],
+      "scoreFloor": 52,
+      "scoreCeiling": 58,
+      "explanationTemplates": [
+        "Nice in person and dry over text is a mismatch, not proof the friendship is fake.",
+        "Some people are warmer face-to-face than on their phone. Notice it, but do not turn dry texting into a friendship verdict."
+      ],
+      "nextMoveTemplates": [
+        "Judge the friendship by repeated effort, not text moisture alone.",
+        "Look for whether they still show up in person before calling this a problem."
+      ]
+    },
+    {
+      "id": "meeting_joke_politeness",
+      "priority": 86,
+      "requiredSignalIds": [
+        "one_off_event",
+        "coincidence_marker"
+      ],
+      "scoreFloor": 48,
+      "scoreCeiling": 55,
+      "explanationTemplates": [
+        "Laughing at a joke in a meeting is normal social lubrication, not a secret confession.",
+        "A meeting laugh means the joke landed. It does not automatically mean the person did."
+      ],
+      "nextMoveTemplates": [
+        "Let one laugh stay one laugh unless there is actual follow-up.",
+        "Wait for direct effort outside the meeting before making this bigger."
+      ]
+    },
+    {
+      "id": "disappeared_low_effort_reentry",
+      "category": "romance",
+      "priority": 85,
+      "requiredSignalIds": [
+        "ghosted_history",
+        "low_effort_reengagement"
+      ],
+      "scoreFloor": 82,
+      "scoreCeiling": 85,
+      "explanationTemplates": [
+        "\"Long time no see\" after disappearing is not repair. It is a low-effort re-entry with no accountability.",
+        "Disappearing and returning with casual nostalgia is not effort. It is checking whether the door still opens."
+      ],
+      "nextMoveTemplates": [
+        "Require an explanation and a real plan before re-engaging.",
+        "Do not reward a comeback that arrives without accountability."
+      ]
+    },
+    {
       "id": "digital_crumbs_no_followup",
       "category": "romance",
       "requiredSignalIds": [
@@ -1546,6 +2126,7 @@
     {
       "id": "zombie_breadcrumb_after_ghosting",
       "category": "romance",
+      "priority": 86,
       "requiredSignalIds": [
         "ghosted_history",
         "low_effort_reengagement",
@@ -1755,6 +2336,46 @@
       "nextMoveTemplates": [
         "Take the repair at face value and make the plan.",
         "Respond to the actual follow-up instead of retrying the panic spiral."
+      ]
+    },
+    {
+      "id": "friendship_apology_followup",
+      "category": "friendship",
+      "priority": 89,
+      "requiredSignalIds": [
+        "delayed_reply",
+        "apology_repair",
+        "direct_action"
+      ],
+      "scoreFloor": 22,
+      "scoreCeiling": 25,
+      "explanationTemplates": [
+        "They apologized for the delay and offered a plan. That is repair, not abandonment.",
+        "An apology plus asking to hang this weekend is concrete repair, not a mystery to decode."
+      ],
+      "nextMoveTemplates": [
+        "Take the repair at face value and make the plan.",
+        "Respond to the actual follow-up instead of retrying the panic spiral."
+      ]
+    },
+    {
+      "id": "friendship_apology_with_context",
+      "category": "friendship",
+      "priority": 86,
+      "requiredSignalIds": [
+        "best_friend_context",
+        "apology_repair",
+        "external_reason_context"
+      ],
+      "scoreFloor": 28,
+      "scoreCeiling": 36,
+      "explanationTemplates": [
+        "That apology and explanation are real context, not a secret attack. Work being overwhelming is boring, but believable.",
+        "A best friend saying sorry and naming work as the reason is normal repair context, not evidence of hidden hostility."
+      ],
+      "nextMoveTemplates": [
+        "Accept the apology once, then watch whether their effort improves.",
+        "Let the explanation count, and judge the friendship by what happens next."
       ]
     },
     {
@@ -1982,6 +2603,7 @@
     {
       "id": "office_crowd_control",
       "category": "social",
+      "priority": 80,
       "requiredSignalIds": [
         "group_invite_context",
         "direct_action"
@@ -1995,6 +2617,43 @@
       "nextMoveTemplates": [
         "Go if it sounds fun, but do not treat a mass invite like a secret message.",
         "Eat the cake. Retire the exclusivity theory."
+      ]
+    },
+    {
+      "id": "friendship_one_sided_planning",
+      "category": "friendship",
+      "priority": 84,
+      "requiredSignalIds": [
+        "friendship_one_sided_planning"
+      ],
+      "scoreFloor": 64,
+      "scoreCeiling": 70,
+      "explanationTemplates": [
+        "Always letting you choose the plan is uneven, but it is not enough by itself to declare the friendship fake.",
+        "One-sided planning is a real pattern to notice. It still needs more evidence before becoming a full friendship verdict."
+      ],
+      "nextMoveTemplates": [
+        "Ask them to pick the next plan and see whether they actually do.",
+        "Look for whether they initiate effort, not just whether they accept your plans."
+      ]
+    },
+    {
+      "id": "office_mass_invite_overread",
+      "category": "social",
+      "priority": 1,
+      "requiredSignalIds": [
+        "group_invite_context",
+        "assumption_without_action"
+      ],
+      "scoreFloor": 88,
+      "scoreCeiling": 92,
+      "explanationTemplates": [
+        "Inviting the whole office is not a coded personal invitation. It is a mass invite with your theory stapled on.",
+        "The whole office being invited is the evidence. Thinking it was secretly for you is where the case leaves the sidewalk."
+      ],
+      "nextMoveTemplates": [
+        "Go if you want to go, but do not treat a group invite like a private signal.",
+        "Keep the office invite in the group-invite category where it belongs."
       ]
     }
   ],

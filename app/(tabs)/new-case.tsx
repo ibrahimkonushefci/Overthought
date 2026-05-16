@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { ArrowLeft, Sparkles } from 'lucide-react-native';
 import type { CaseCategory } from '../../src/types/shared';
 import { caseRepository } from '../../src/features/cases/repositories/caseRepository';
+import { pickExamplePrompts } from '../../src/features/cases/examplePrompts';
 import { getCaseId } from '../../src/features/cases/types';
 import { CategoryPill } from '../../src/features/cases/components/CategoryPill';
 import { Button } from '../../src/shared/ui/Button';
@@ -13,12 +14,6 @@ import { colors, radii, spacing, typography } from '../../src/shared/theme/token
 import { useGuestStore } from '../../src/store/guestStore';
 
 const categories: CaseCategory[] = ['romance', 'friendship', 'social', 'general'];
-const examples = [
-  "She liked my story but replied after 9 hours.",
-  "He said we should hang out sometime but did not set a date.",
-  "My friend suddenly started texting more this week.",
-  "They watched my story but did not react.",
-];
 const ANALYZING_DELAY_MS = 2000;
 
 function wait(milliseconds: number) {
@@ -36,6 +31,7 @@ export default function NewCaseRoute() {
   const [inputText, setInputText] = useState(draft);
   const [category, setCategory] = useState<CaseCategory>(preferredCategory);
   const [loading, setLoading] = useState(false);
+  const [examples, setExamples] = useState(() => pickExamplePrompts(4));
 
   const submit = async () => {
     const trimmed = inputText.trim();
@@ -52,6 +48,7 @@ export default function NewCaseRoute() {
       const record = await caseRepository.createCase({ inputText: trimmed, category });
       setCaseDraft('');
       setInputText('');
+      setExamples(pickExamplePrompts(4));
       await minimumAnalyzingTime;
       router.replace(`/case/${getCaseId(record)}?fromAnalysis=1`);
     } catch (error) {

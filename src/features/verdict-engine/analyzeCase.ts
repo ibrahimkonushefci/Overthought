@@ -1,4 +1,5 @@
 import { buildExplanationText, buildNextMoveText, inferConfidenceLevel } from './copy';
+import { extractSemanticFacts, findSemanticScenarioOverride } from './facts';
 import { clampNumber, buildHaystack } from './normalize';
 import { matchSignal } from './patterns';
 import type {
@@ -67,7 +68,8 @@ function findScenarioOverride(
     .filter(
       (scenario) =>
       (!scenario.category || scenario.category === category) &&
-      hasEverySignal(scenario.requiredSignalIds, signalIds),
+      hasEverySignal(scenario.requiredSignalIds, signalIds) &&
+      !(scenario.excludedSignalIds ?? []).some((signalId) => signalIds.has(signalId)),
     )
     .sort((left, right) => (right.priority ?? 0) - (left.priority ?? 0))[0];
 }
@@ -88,6 +90,50 @@ function applyScenarioBounds(score: number, scenario?: ScenarioOverride): number
   }
 
   return adjustedScore;
+}
+
+function applyGenericFallbackGuard(
+  score: number,
+  category: Category,
+  scenario?: ScenarioOverride,
+): number {
+  if (scenario || score < 71) {
+    return score;
+  }
+
+  if (category === 'friendship') {
+    return Math.min(score, 68);
+  }
+
+  return Math.min(score, 70);
+}
+
+function shouldUseGenericFallbackCopy(score: number, scenario?: ScenarioOverride): boolean {
+  return !scenario && score >= 71;
+}
+
+function shouldUseSemanticScenario(
+  semanticScenario?: ScenarioOverride,
+  configuredScenario?: ScenarioOverride,
+): boolean {
+  if (!semanticScenario) {
+    return false;
+  }
+
+  if (!configuredScenario) {
+    return true;
+  }
+
+  return (
+    (semanticScenario.priority ?? 0) > (configuredScenario.priority ?? 0) &&
+    [
+      'canceled_plan_then_conflicting_post',
+      'friendship_conflict_deflection_silence',
+      'repeated_odd_gesture',
+      'soft_invite_no_followthrough',
+      'workplace_mixed_performance_signal',
+    ].includes(semanticScenario.id)
+  );
 }
 
 function buildSyntheticSignal(
@@ -119,8 +165,23 @@ function applyBlankSlateRule(
 ): TriggeredSignal[] {
   const wordCount = normalizedInput.split(' ').filter(Boolean).length;
   const hasDirectAction = matchedSignals.some((signal) => signal.id === 'direct_action');
+  const blocksBlankSlate = matchedSignals.some((signal) =>
+    [
+      'dry_text_anxiety',
+      'explicit_rejection',
+      'external_reason_context',
+      'friendliness_misread_as_interest',
+      'ghosted_history',
+      'clear_negative_action',
+      'low_effort_reengagement',
+      'low_reciprocity_friendship',
+      'no_concrete_followup',
+      'stopped_replying_after_availability',
+      'unavailable_in_person',
+    ].includes(signal.id),
+  );
 
-  if (wordCount === 0 || wordCount >= 15 || hasDirectAction) {
+  if (wordCount === 0 || wordCount >= 15 || hasDirectAction || blocksBlankSlate) {
     return matchedSignals;
   }
 
@@ -156,7 +217,15 @@ export function analyzeCase(
   input: CaseAnalysisInput,
   options: { includeDebug?: boolean } = {},
 ): CaseAnalysisResult {
-  const { normalizedInput, normalizedUpdate } = buildHaystack(input.inputText, input.updateText);
+  const { normalizedInput, normalizedUpdate, combined } = buildHaystack(
+    input.inputText,
+    input.updateText,
+  );
+  const semanticFacts = extractSemanticFacts({
+    normalizedInput,
+    normalizedUpdate,
+    category: input.category,
+  });
 
   const matchedSignals: TriggeredSignal[] = config.signals
     .map((signal) => {
@@ -222,16 +291,32 @@ export function analyzeCase(
   const rawScore =
     config.baseScore + weakEvidenceDelta + positiveEvidenceDelta + contextModifierDelta;
 
-  const scenarioOverride = findScenarioOverride(
+  const configuredScenarioOverride = findScenarioOverride(
     config.scenarioOverrides,
     input.category,
     weightedSignals,
   );
+  const semanticScenarioOverride = findSemanticScenarioOverride(semanticFacts, input.category);
+  const scenarioOverride = shouldUseSemanticScenario(
+    semanticScenarioOverride,
+    configuredScenarioOverride,
+  )
+    ? semanticScenarioOverride
+    : configuredScenarioOverride ?? semanticScenarioOverride;
 
   const scenarioAdjustedScore = applyScenarioBounds(rawScore, scenarioOverride);
+  const genericFallbackApplied = shouldUseGenericFallbackCopy(
+    scenarioAdjustedScore,
+    scenarioOverride,
+  );
+  const fallbackGuardedScore = applyGenericFallbackGuard(
+    scenarioAdjustedScore,
+    input.category,
+    scenarioOverride,
+  );
 
   const delusionScore = clampNumber(
-    Math.round(scenarioAdjustedScore),
+    Math.round(fallbackGuardedScore),
     config.scoreClamp.min,
     config.scoreClamp.max,
   );
@@ -247,8 +332,7 @@ export function analyzeCase(
   const dominantSignalId = topSignals[0]?.id;
   const scoreSeed = [
     input.category,
-    input.inputText,
-    input.updateText ?? '',
+    combined,
     topSignals.map((signal) => signal.id).join('|'),
     String(delusionScore),
   ].join('|');
@@ -265,6 +349,8 @@ export function analyzeCase(
     topSignals,
     scenarioOverride,
     previousScoreDelta,
+    genericFallbackApplied,
+    semanticFacts,
   });
 
   const nextMoveText = buildNextMoveText({
@@ -273,9 +359,17 @@ export function analyzeCase(
     config,
     scenarioOverride,
     dominantSignalId,
+    genericFallbackApplied,
+    semanticFacts,
   });
 
-  const confidenceLevel = inferConfidenceLevel(topSignals, delusionScore);
+  const inferredConfidenceLevel = inferConfidenceLevel(topSignals, delusionScore);
+  const confidenceLevel =
+    genericFallbackApplied && !scenarioOverride
+      ? semanticFacts.ids.length >= 3
+        ? 'medium'
+        : 'low'
+      : inferredConfidenceLevel;
 
   const result: CaseAnalysisResult = {
     verdictLabel,
@@ -298,6 +392,7 @@ export function analyzeCase(
       previousScoreDelta,
       dominantSignalId,
       scenarioOverrideId: scenarioOverride?.id,
+      semanticFacts,
       matchedSignals: weightedSignals,
     };
   }

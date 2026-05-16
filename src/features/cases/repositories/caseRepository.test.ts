@@ -227,3 +227,31 @@ describe('caseRepository authenticated sync behavior', () => {
     expect(builder.is).toHaveBeenCalledWith('deleted_at', null);
   });
 });
+
+describe('caseRepository guest outcome behavior', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    useGuestStore.getState().clearAllLocalData();
+    useAuthStore.getState().setGuest();
+  });
+
+  afterEach(() => {
+    useGuestStore.getState().clearAllLocalData();
+    useAuthStore.getState().resetSession();
+  });
+
+  it('persists outcome locally without changing verdict fields', async () => {
+    useGuestStore.getState().addCase(guestCase('local-case-1'));
+    const before = useGuestStore.getState().cases[0];
+
+    await caseRepository.updateOutcome('local-case-1', 'wrong');
+
+    const after = useGuestStore.getState().cases[0];
+    expect(after.outcomeStatus).toBe('wrong');
+    expect(after.verdictLabel).toBe(before.verdictLabel);
+    expect(after.delusionScore).toBe(before.delusionScore);
+    expect(after.explanationText).toBe(before.explanationText);
+    expect(after.nextMoveText).toBe(before.nextMoveText);
+    expect(mockSupabase.from).not.toHaveBeenCalled();
+  });
+});

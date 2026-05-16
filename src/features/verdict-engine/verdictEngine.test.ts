@@ -1,5 +1,6 @@
 import { analyzeCase, verdictConfig } from './index';
-import type { Category } from './types';
+import { normalizeText } from './normalize';
+import type { Category, SemanticFactId } from './types';
 import { getVerdictDisplayLabel, verdictLabels } from '../../shared/utils/verdict';
 
 interface GoldenCase {
@@ -17,6 +18,7 @@ interface GoldenCase {
   explanationPattern: RegExp;
   forbiddenExplanationPattern?: RegExp;
   expectedScenarioId?: string;
+  expectedFactIds?: SemanticFactId[];
 }
 
 const goldenCases: GoldenCase[] = [
@@ -189,10 +191,12 @@ const goldenCases: GoldenCase[] = [
     name: 'The Promotion Lunch',
     category: 'general',
     inputText: 'My manager bought me lunch to talk about my promotion.',
-    minScore: 90,
-    maxScore: 100,
-    verdictLabel: 'full_clown_territory',
-    explanationPattern: /corporate card, not a courtship/i,
+    minScore: 38,
+    maxScore: 55,
+    verdictLabel: 'mild_delusion',
+    explanationPattern: /workplace ambiguity|promise|timeline|formal follow-through|promotion/i,
+    forbiddenExplanationPattern: /courtship|flirting|corporate card|iced latte/i,
+    expectedScenarioId: 'workplace_mixed_performance_signal',
   },
   {
     name: 'The Actions vs Words',
@@ -573,7 +577,8 @@ const goldenCases: GoldenCase[] = [
     minScore: 60,
     maxScore: 70,
     verdictLabel: 'mild_delusion',
-    explanationPattern: /not baseless|not sturdy|case has a pulse|signals exist|disguise|whole narrative|delayed reply|courtroom drama/i,
+    explanationPattern: /posting stories|dodging your message|unopened text|battery for stories|clarity for your message/i,
+    expectedScenarioId: 'posting_stories_message_avoidance',
   },
   {
     name: 'Social Media Context Variant',
@@ -583,7 +588,8 @@ const goldenCases: GoldenCase[] = [
     minScore: 60,
     maxScore: 70,
     verdictLabel: 'mild_delusion',
-    explanationPattern: /not baseless|not sturdy|case has a pulse|signals exist|disguise|whole narrative|delayed reply|courtroom drama/i,
+    explanationPattern: /posting stories|dodging your message|unopened text|battery for stories|clarity for your message/i,
+    expectedScenarioId: 'posting_stories_message_avoidance',
   },
   {
     name: 'Friendship Birthday Invite',
@@ -650,6 +656,381 @@ const goldenCases: GoldenCase[] = [
     explanationPattern: /stale like|digital archaeology|watching stories without DMing|surveillance-adjacent|not a plan/i,
     expectedScenarioId: 'deep_scroll_no_dm',
   },
+  {
+    name: 'Dangling Friday Check',
+    category: 'romance',
+    inputText: 'They asked if I am free Friday and then went quiet.',
+    minScore: 72,
+    maxScore: 78,
+    verdictLabel: 'dangerous_overthinking',
+    explanationPattern: /door crack|not a plan|going quiet|are you free friday|follow-through disappears|not logistics/i,
+    expectedScenarioId: 'dangling_friday_check',
+  },
+  {
+    name: 'Heart Emoji No Plans',
+    category: 'romance',
+    inputText: 'She sent a heart emoji but has not made plans.',
+    minScore: 74,
+    maxScore: 80,
+    verdictLabel: 'dangerous_overthinking',
+    explanationPattern: /heart emoji|decoration|not effort|without plans|sticker|mostly air/i,
+    expectedScenarioId: 'heart_emoji_no_plans',
+  },
+  {
+    name: 'Ex Story View After No Contact',
+    category: 'romance',
+    inputText: 'My ex watched my story twice after no contact.',
+    minScore: 90,
+    maxScore: 94,
+    verdictLabel: 'full_clown_territory',
+    explanationPattern: /ex watching your story|not a comeback|curiosity with wi-fi|not closure|thumb with history/i,
+    expectedScenarioId: 'ex_story_view_no_contact',
+  },
+  {
+    name: 'Daytime Slow Evening Faster',
+    category: 'romance',
+    inputText: 'She takes 8 hours to reply during the day but replies a bit faster during the evening.',
+    minScore: 46,
+    maxScore: 52,
+    verdictLabel: 'mild_delusion',
+    explanationPattern: /eight-hour daytime replies|schedule|availability changing after work|hidden message/i,
+    expectedScenarioId: 'daytime_slow_evening_faster',
+  },
+  {
+    name: 'Low Information Gibberish',
+    category: 'romance',
+    inputText: 'Gibberish message jhsadjhkdsaijh Busch hsdjhs',
+    minScore: 50,
+    maxScore: 55,
+    verdictLabel: 'mild_delusion',
+    explanationPattern: /not a case yet|keyboard fog|actual social facts|syllables/i,
+    expectedScenarioId: 'low_information_gibberish_prompt',
+  },
+  {
+    name: 'First Date Crying Context',
+    category: 'romance',
+    inputText: 'She cried on the first date.',
+    minScore: 62,
+    maxScore: 68,
+    verdictLabel: 'mild_delusion',
+    explanationPattern: /crying on a first date|not a complete verdict|first-date cry|does not automatically/i,
+    expectedScenarioId: 'first_date_crying_context',
+  },
+  {
+    name: 'Stopped Texting After Days',
+    category: 'romance',
+    inputText: 'He stopped texting me after 12 days.',
+    minScore: 88,
+    maxScore: 92,
+    verdictLabel: 'full_clown_territory',
+    explanationPattern: /stopped texting|evidence is not hidden|twelve days|ending in silence|pattern break/i,
+    expectedScenarioId: 'stopped_texting_after_days',
+  },
+  {
+    name: 'Dangling Friday Typo Tolerance',
+    category: 'romance',
+    inputText: 'They asked it im free Friday and then went quiet',
+    minScore: 72,
+    maxScore: 78,
+    verdictLabel: 'dangerous_overthinking',
+    explanationPattern: /door crack|not a plan|going quiet|are you free friday|follow-through disappears|not logistics/i,
+    expectedScenarioId: 'dangling_friday_check',
+  },
+  {
+    name: 'Whole Office Invite Overread',
+    category: 'social',
+    inputText: 'He invited the whole office, but I think it was for me.',
+    minScore: 88,
+    maxScore: 92,
+    verdictLabel: 'full_clown_territory',
+    explanationPattern: /whole office|mass invite|secretly for you|group invite|private signal/i,
+    expectedScenarioId: 'office_mass_invite_overread',
+  },
+  {
+    name: 'Booked Dinner Dry Reply',
+    category: 'romance',
+    inputText: 'She booked dinner but replied dry today.',
+    minScore: 24,
+    maxScore: 30,
+    verdictLabel: 'slight_reach',
+    explanationPattern: /booked dinner|dry reply|logistics|tone|plan still matters|reservation/i,
+    expectedScenarioId: 'booked_dinner_dry_reply',
+  },
+  {
+    name: 'Misses Me But Never Plans',
+    category: 'romance',
+    inputText: 'He says he misses me but never plans anything.',
+    minScore: 88,
+    maxScore: 92,
+    verdictLabel: 'full_clown_territory',
+    explanationPattern: /misses me|never planning|never making plans|behavior|words|progress/i,
+    expectedScenarioId: 'misses_me_no_plans',
+  },
+  {
+    name: 'Fire Emoji After Ghosting',
+    category: 'romance',
+    inputText: 'He sent a fire emoji after ghosting me for a month.',
+    minScore: 80,
+    maxScore: 88,
+    verdictLabel: 'dangerous_overthinking',
+    explanationPattern: /fire emoji|ghosting|romantic revival|door is still unlocked/i,
+    expectedScenarioId: 'zombie_breadcrumb_after_ghosting',
+  },
+  {
+    name: 'Follow Back No DM',
+    category: 'romance',
+    inputText: "They followed back quickly but have not DM'd.",
+    minScore: 66,
+    maxScore: 70,
+    verdictLabel: 'mild_delusion',
+    explanationPattern: /follow-back|not DMing|no message|actual DM|words/i,
+    expectedScenarioId: 'follow_back_no_dm',
+  },
+  {
+    name: 'Friend Always Lets Me Choose Plan',
+    category: 'friendship',
+    inputText: 'My friend always lets me choose the plan.',
+    minScore: 64,
+    maxScore: 70,
+    verdictLabel: 'mild_delusion',
+    explanationPattern: /always letting you choose|one-sided planning|friendship verdict|pick the next plan|initiate effort/i,
+    expectedScenarioId: 'friendship_one_sided_planning',
+  },
+  {
+    name: 'Repeated Work Excuse For Drinks',
+    category: 'romance',
+    inputText: 'He said work is crazy every time I suggest drinks',
+    minScore: 80,
+    maxScore: 84,
+    verdictLabel: 'dangerous_overthinking',
+    explanationPattern: /work being crazy|every time|suggest drinks|same wall|real time|calendar/i,
+    expectedScenarioId: 'repeated_work_excuse_for_plans',
+  },
+  {
+    name: 'Friend Nice In Person Dry Text',
+    category: 'friendship',
+    inputText: 'My friend is nice in person but dry over text.',
+    minScore: 52,
+    maxScore: 58,
+    verdictLabel: 'mild_delusion',
+    explanationPattern: /nice in person|dry over text|face-to-face|phone|friendship verdict|text moisture/i,
+    expectedScenarioId: 'friendship_nice_in_person_dry_text',
+  },
+  {
+    name: 'Meeting Joke Politeness',
+    category: 'romance',
+    inputText: 'They laughed at my joke in a meeting.',
+    minScore: 48,
+    maxScore: 55,
+    verdictLabel: 'mild_delusion',
+    explanationPattern: /laughing at a joke|meeting|normal social|joke landed|outside the meeting/i,
+    expectedScenarioId: 'meeting_joke_politeness',
+  },
+  {
+    name: 'Disappeared Long Time No See',
+    category: 'romance',
+    inputText: 'They said long time no see after disappearing.',
+    minScore: 82,
+    maxScore: 85,
+    verdictLabel: 'dangerous_overthinking',
+    explanationPattern: /long time no see|disappearing|low-effort re-entry|casual nostalgia|accountability/i,
+    expectedScenarioId: 'disappeared_low_effort_reentry',
+  },
+  {
+    name: 'Dinner Interest No Followthrough',
+    category: 'romance',
+    inputText:
+      'She said I am down for a dinner date but stopped replying after like 2 days when I asked when she is free',
+    minScore: 58,
+    maxScore: 66,
+    verdictLabel: 'mild_delusion',
+    explanationPattern: /dinner interest|real evidence|pick a date|availability|stopping|actual time|one clean follow-up/i,
+    expectedScenarioId: 'dinner_interest_no_followthrough',
+  },
+  {
+    name: 'Story Like Delayed Reply',
+    category: 'romance',
+    inputText: 'She liked my story but replied after 9 hours.',
+    minScore: 68,
+    maxScore: 74,
+    verdictLabel: 'dangerous_overthinking',
+    explanationPattern: /story like|late reply|nine-hour reply|crumbs|follow-through|timing/i,
+    forbiddenExplanationPattern: /match|reengagement|blank slate/i,
+    expectedScenarioId: 'story_like_delayed_reply',
+  },
+  {
+    name: 'Best Friend Apology Context',
+    category: 'friendship',
+    inputText: 'My best friend said sorry and explained work was overwhelming',
+    minScore: 28,
+    maxScore: 36,
+    verdictLabel: 'slight_reach',
+    explanationPattern: /apology|real context|secret attack|work being overwhelming|believable|effort improves|hidden hostility/i,
+    expectedScenarioId: 'friendship_apology_with_context',
+  },
+  {
+    name: 'Blocked Closure',
+    category: 'romance',
+    inputText: 'She blocked me after 10 days of talking without any reason',
+    minScore: 24,
+    maxScore: 36,
+    verdictLabel: 'slight_reach',
+    explanationPattern: /blocking|blocked|concrete action|clear boundary|why|closure|leave it alone/i,
+    forbiddenExplanationPattern: /blank slate|conclusion without enough action|dramatic verdict/i,
+    expectedScenarioId: 'clear_negative_action_closure',
+  },
+  {
+    name: 'Apology Weekend Plan Positive Control',
+    category: 'friendship',
+    inputText: 'She apologized for the delay and asked to hang this weekend.',
+    minScore: 22,
+    maxScore: 25,
+    verdictLabel: 'slight_reach',
+    explanationPattern: /apologized|delay|offered a plan|repair|not abandonment|asked to hang out this weekend/i,
+    expectedScenarioId: 'friendship_apology_followup',
+  },
+  {
+    name: 'Manager Dinner Power Context',
+    category: 'romance',
+    inputText: 'My manager invited me for dinner',
+    minScore: 48,
+    maxScore: 55,
+    verdictLabel: 'mild_delusion',
+    explanationPattern: /manager|dinner|concrete action|power-context|normal romance|sensitive/i,
+    expectedScenarioId: 'work_power_invitation',
+    expectedFactIds: ['hasWorkPowerContext', 'hasInvitation', 'hasDinnerContext'],
+  },
+  {
+    name: 'Late Night Friend Invite',
+    category: 'friendship',
+    inputText: 'My friend asked me to hang out at 11pm?',
+    minScore: 48,
+    maxScore: 58,
+    verdictLabel: 'mild_delusion',
+    explanationPattern: /11pm|late-night|hangout|invite|confession|friendship|ambiguous|normal-time/i,
+    expectedScenarioId: 'late_night_friend_invite',
+    expectedFactIds: ['hasFriendContext', 'hasInvitation', 'hasLateNightTiming'],
+  },
+  {
+    name: 'Restaurant Stranger Eye Contact',
+    category: 'romance',
+    inputText: 'A guy made eye contact with me like 50% of the time while I was in the restaurant',
+    minScore: 64,
+    maxScore: 70,
+    verdictLabel: 'mild_delusion',
+    explanationPattern: /eye contact|public setting|vibes|approach|conversation|repeated effort/i,
+    expectedScenarioId: 'stranger_eye_contact',
+    expectedFactIds: ['hasEyeContact', 'hasStrangerSignal'],
+  },
+  {
+    name: 'Late Night Reentry After Silence',
+    category: 'romance',
+    inputText: 'He left me on read for a full week and then replied at 1am',
+    minScore: 78,
+    maxScore: 84,
+    verdictLabel: 'dangerous_overthinking',
+    explanationPattern: /week|silence|1am|re-entry|consistency|low-effort|daytime effort/i,
+    expectedScenarioId: 'late_night_reentry_after_silence',
+    expectedFactIds: ['hasGhosting', 'hasDelayedReply', 'hasLateNightReply'],
+  },
+  {
+    name: 'Mixed Consistency Text And In Person',
+    category: 'romance',
+    inputText:
+      "My situationship is very inconsistent, one day he texts me, the next day he doesn't. He is nice in person tho but very bad at texting",
+    minScore: 71,
+    maxScore: 76,
+    verdictLabel: 'dangerous_overthinking',
+    explanationPattern: /mixed-signal|nice in person|inconsistent texting|bad texting|pattern|stable|uneven/i,
+    expectedScenarioId: 'mixed_consistency_text_inperson',
+    expectedFactIds: ['hasMixedConsistency', 'hasInPersonPositive', 'hasTextingNegative'],
+  },
+  {
+    name: 'Delivered Story View',
+    category: 'romance',
+    inputText: 'He left my text on Delivered for 12 hours, but he just viewed my Instagram story',
+    minScore: 65,
+    maxScore: 78,
+    verdictLabel: 'dangerous_overthinking',
+    explanationPattern: /active enough|online|direct reply|actual response|social activity/i,
+    forbiddenExplanationPattern: /strongest signal is a weak signal|match|reengagement/i,
+    expectedScenarioId: 'active_on_social_but_not_replying',
+    expectedFactIds: ['hasDeliveredNoReply', 'hasActiveOnSocial', 'hasSocialMediaSignal'],
+  },
+  {
+    name: 'Canceled Plan Conflicting Post',
+    category: 'friendship',
+    inputText:
+      'My friend canceled our dinner plans because she was tired, but then posted a picture at a bar with someone else',
+    minScore: 56,
+    maxScore: 70,
+    verdictLabel: 'mild_delusion',
+    explanationPattern: /canceling|excuse|social|shaky|canceled plan|post|mismatch/i,
+    forbiddenExplanationPattern: /strongest signal is a weak signal/i,
+    expectedScenarioId: 'canceled_plan_then_conflicting_post',
+    expectedFactIds: ['hasCanceledPlan', 'hasExcuse', 'hasContradictorySocialPost'],
+  },
+  {
+    name: 'Repeated Odd Neighbor Gesture',
+    category: 'general',
+    inputText:
+      'My neighbor keeps returning my stray cat but leaves a single unpeeled orange on my porch every time he does it',
+    minScore: 45,
+    maxScore: 62,
+    verdictLabel: 'mild_delusion',
+    explanationPattern: /repeated behavior|odd object|weird|unusual|direct explanation|lore/i,
+    forbiddenExplanationPattern: /strongest signal is a weak signal/i,
+    expectedScenarioId: 'repeated_odd_gesture',
+    expectedFactIds: ['hasRepeatedBehavior', 'hasOddGiftOrObject', 'hasNeighborContext'],
+  },
+  {
+    name: 'Workplace Mixed Performance Signal',
+    category: 'general',
+    inputText:
+      "My boss gave me a highly critical performance review in front of the entire team. But then he pulled me aside afterward, apologized for being harsh, and told me in secret that I'm actually the only person he trusts to take over his role next year. I don't know if I'm being quietly fired or groomed for a promotion.",
+    minScore: 38,
+    maxScore: 55,
+    verdictLabel: 'mild_delusion',
+    explanationPattern: /mixed work signals|workplace ambiguity|paperwork|concrete follow-through|clear next step/i,
+    forbiddenExplanationPattern: /flirt|courtship|coffee|corporate card|iced latte/i,
+    expectedScenarioId: 'workplace_mixed_performance_signal',
+    expectedFactIds: [
+      'hasFormalWorkAmbiguity',
+      'hasWorkCriticism',
+      'hasPrivateReassurance',
+      'hasPromotionSignal',
+    ],
+  },
+  {
+    name: 'Friendship Conflict Deflection Silence',
+    category: 'friendship',
+    inputText:
+      "My best friend of five years completely ignored me at my own birthday dinner to talk to her new work friends. When I gently brought it up the next day, she started crying, said I was being unsupportive of her trying to network, and made me apologize to her. She hasn't texted me since.",
+    minScore: 34,
+    maxScore: 52,
+    verdictLabel: 'mild_delusion',
+    explanationPattern: /not inventing|ignored|important moment|flipped|silence|friendship issue|deflection/i,
+    forbiddenExplanationPattern: /strongest signal is a weak signal/i,
+    expectedScenarioId: 'friendship_conflict_deflection_silence',
+    expectedFactIds: [
+      'hasIgnoredImportantEvent',
+      'hasDeflection',
+      'hasUserForcedToApologize',
+      'hasNoFollowThrough',
+    ],
+  },
+  {
+    name: 'Late Night Friend Invite Hangout Alias',
+    category: 'friendship',
+    inputText: 'My friend just asked me to hangout at 11pm?',
+    minScore: 48,
+    maxScore: 58,
+    verdictLabel: 'mild_delusion',
+    explanationPattern: /11pm|late-night|plans|friendship|ambiguous|normal-time/i,
+    forbiddenExplanationPattern: /strongest signal is a weak signal/i,
+    expectedScenarioId: 'late_night_friend_invite',
+    expectedFactIds: ['hasFriendContext', 'hasInvitation', 'hasLateNightTiming'],
+  },
 ];
 
 const goldenResults: Array<{
@@ -671,7 +1052,11 @@ describe('verdict engine golden cases', () => {
         category: goldenCase.category,
         inputText: goldenCase.inputText,
       },
-      { includeDebug: Boolean(goldenCase.expectedScenarioId) },
+      {
+        includeDebug: Boolean(
+          goldenCase.expectedScenarioId || goldenCase.expectedFactIds?.length,
+        ),
+      },
     );
 
     goldenResults.push({
@@ -693,6 +1078,10 @@ describe('verdict engine golden cases', () => {
     if (goldenCase.expectedScenarioId) {
       expect(result.debug?.scenarioOverrideId).toBe(goldenCase.expectedScenarioId);
     }
+
+    goldenCase.expectedFactIds?.forEach((factId) => {
+      expect(result.debug?.semanticFacts.ids).toContain(factId);
+    });
   });
 });
 
@@ -713,5 +1102,252 @@ describe('verdict display labels', () => {
       'Delulu Level: Federal',
       'Case Has Left Reality',
     ]).toContain(first);
+  });
+});
+
+describe('category scoring calibration', () => {
+  it('applies category overrides for friendliness reads', () => {
+    const inputText =
+      'They smiled at me a lot, helped me with homework, and answered politely when I asked for advice.';
+
+    const romance = analyzeCase(verdictConfig, { category: 'romance', inputText }, { includeDebug: true });
+    const friendship = analyzeCase(verdictConfig, { category: 'friendship', inputText }, { includeDebug: true });
+
+    expect(
+      romance.debug?.matchedSignals.find((signal) => signal.id === 'friendliness_misread_as_interest')?.weightApplied,
+    ).toBe(16);
+    expect(
+      friendship.debug?.matchedSignals.find((signal) => signal.id === 'friendliness_misread_as_interest')?.weightApplied,
+    ).toBe(10);
+    expect(friendship.delusionScore).toBeLessThan(romance.delusionScore);
+  });
+
+  it('keeps direct action strongest in romance compared with social reads', () => {
+    const inputText = 'They asked if I wanted to hang out this weekend and made plans for Saturday.';
+
+    const romance = analyzeCase(verdictConfig, { category: 'romance', inputText }, { includeDebug: true });
+    const social = analyzeCase(verdictConfig, { category: 'social', inputText }, { includeDebug: true });
+
+    expect(romance.debug?.matchedSignals.find((signal) => signal.id === 'direct_action')?.weightApplied).toBe(-32);
+    expect(social.debug?.matchedSignals.find((signal) => signal.id === 'direct_action')?.weightApplied).toBe(-16);
+    expect(romance.delusionScore).toBeLessThan(social.delusionScore);
+  });
+
+  it('keeps social-media signals category-sensitive without changing the canonical verdict contract', () => {
+    const inputText = 'They liked my story, watched all my stories, and sent a heart emoji, but there is no message yet.';
+
+    const romance = analyzeCase(verdictConfig, { category: 'romance', inputText }, { includeDebug: true });
+    const friendship = analyzeCase(verdictConfig, { category: 'friendship', inputText }, { includeDebug: true });
+    const social = analyzeCase(verdictConfig, { category: 'social', inputText }, { includeDebug: true });
+
+    expect(
+      romance.debug?.matchedSignals.find((signal) => signal.id === 'social_media_overread')?.weightApplied,
+    ).toBe(18);
+    expect(
+      friendship.debug?.matchedSignals.find((signal) => signal.id === 'social_media_overread')?.weightApplied,
+    ).toBe(14);
+    expect(
+      social.debug?.matchedSignals.find((signal) => signal.id === 'social_media_overread')?.weightApplied,
+    ).toBe(20);
+    [romance, friendship, social].forEach((result) => {
+      expect(result.delusionScore).toEqual(expect.any(Number));
+      expect(result.explanationText).toEqual(expect.any(String));
+      expect(result.nextMoveText).toEqual(expect.any(String));
+      expect(result.verdictVersion).toBe(1);
+    });
+  });
+});
+
+describe('verdict engine fallback generalization', () => {
+  it('does not turn unmatched high-risk signals into full-clown generic copy', () => {
+    const result = analyzeCase(
+      verdictConfig,
+      {
+        category: 'romance',
+        inputText: 'They stood near me, smiled once, and maybe looked at me in a meeting.',
+      },
+      { includeDebug: true },
+    );
+
+    expect(result.debug?.scenarioOverrideId).toBeUndefined();
+    expect(result.delusionScore).toBeLessThanOrEqual(70);
+    expect(result.verdictLabel).not.toBe('full_clown_territory');
+    expect(result.explanationText).not.toMatch(
+      /fake mustache|wedding cake|theory is louder|confidence is doing push-ups/i,
+    );
+    expect(result.explanationText).toMatch(
+      /strongest signal|worth noticing|provisional|concrete behavior|doing most of the work/i,
+    );
+  });
+
+  it('keeps clear negative-action closure copy action-neutral when the input is not a block', () => {
+    const result = analyzeCase(
+      verdictConfig,
+      {
+        category: 'romance',
+        inputText: 'She unfollowed me after 10 days of talking without any reason',
+      },
+      { includeDebug: true },
+    );
+
+    expect(result.debug?.scenarioOverrideId).toBe('clear_negative_action_closure');
+    expect(result.explanationText).toMatch(/concrete negative action|boundary|reason/i);
+    expect(result.nextMoveText).toMatch(/boundary|closure|closure signal/i);
+    expect(`${result.explanationText} ${result.nextMoveText}`).not.toMatch(/\bblock(?:ed|ing)?\b/i);
+  });
+});
+
+describe('verdict engine normalization equivalence', () => {
+  it('treats I am, I’m, Im, and i’m dinner-interest variants as the same case', () => {
+    const inputVariants = [
+      'She said I am down for a dinner date but stopped replying after like 2 days when I asked when she is free',
+      "She said I'm down for a dinner date but stopped replying after like 2 days when I asked when she is free",
+      'She said Im down for a dinner date but stopped replying after like 2 days when I asked when she is free',
+      'She said i’m down for a dinner date but stopped replying after like 2 days when I asked when she is free',
+    ];
+    const normalizedVariants = inputVariants.map(normalizeText);
+
+    expect(new Set(normalizedVariants).size).toBe(1);
+
+    const results = inputVariants.map((inputText) =>
+      analyzeCase(
+        verdictConfig,
+        {
+          category: 'romance',
+          inputText,
+        },
+        { includeDebug: true },
+      ),
+    );
+    const firstResult = results[0];
+
+    results.forEach((result) => {
+      expect(result.debug?.scenarioOverrideId).toBe('dinner_interest_no_followthrough');
+      expect(result.delusionScore).toBe(firstResult.delusionScore);
+      expect(result.verdictLabel).toBe(firstResult.verdictLabel);
+      expect(result.explanationText).toBe(firstResult.explanationText);
+      expect(result.nextMoveText).toBe(firstResult.nextMoveText);
+    });
+  });
+
+  it('keeps dinner no-follow-through wording variants in the same semantic family', () => {
+    const inputVariants = [
+      'She said im down for a dinner date but stopped replying after 2 days when I asked if she is free',
+      'She said im down for a dinner date but stopped replying like after 2 days when I asked when she is free',
+      'She said Im down for a dinner date but stopped replying after like 2 days when I asked when she is free',
+    ];
+
+    const results = inputVariants.map((inputText) =>
+      analyzeCase(
+        verdictConfig,
+        {
+          category: 'romance',
+          inputText,
+        },
+        { includeDebug: true },
+      ),
+    );
+
+    results.forEach((result) => {
+      expect(result.debug?.scenarioOverrideId).toBe('dinner_interest_no_followthrough');
+      expect(result.debug?.semanticFacts.ids).toEqual(
+        expect.arrayContaining([
+          'hasInvitation',
+          'hasDinnerContext',
+          'hasNoFollowThrough',
+          'hasQuestionForAvailability',
+        ]),
+      );
+      expect(result.delusionScore).toBeGreaterThanOrEqual(58);
+      expect(result.delusionScore).toBeLessThanOrEqual(66);
+      expect(result.explanationText).toMatch(/dinner interest|real evidence|pick a date|weakens/i);
+      expect(result.nextMoveText).toMatch(/one clean follow-up|actual time|leave it there/i);
+    });
+  });
+});
+
+describe('semantic facts evaluation set', () => {
+  const evaluationCases: Array<{
+    category: Category;
+    inputText: string;
+    expectedPattern: RegExp;
+    expectedScenarioId?: string;
+  }> = [
+    {
+      category: 'romance',
+      inputText: 'She keeps liking my stories but never replies to my actual messages.',
+      expectedPattern: /online|direct reply|social activity|actual response/i,
+      expectedScenarioId: 'active_on_social_but_not_replying',
+    },
+    {
+      category: 'romance',
+      inputText: "He replied 'haha' after two days but keeps watching every story.",
+      expectedPattern: /online|direct reply|social activity|actual response/i,
+      expectedScenarioId: 'active_on_social_but_not_replying',
+    },
+    {
+      category: 'romance',
+      inputText: 'She said we should hang out sometime but ignored me when I asked what day.',
+      expectedPattern: /invite|day|silence|timing|follow-through/i,
+      expectedScenarioId: 'soft_invite_no_followthrough',
+    },
+    {
+      category: 'romance',
+      inputText: 'He texts me only after midnight but never makes real plans.',
+      expectedPattern: /late-night|after-midnight|real plans|low-effort|daytime effort/i,
+      expectedScenarioId: 'late_night_texting_no_plans',
+    },
+    {
+      category: 'friendship',
+      inputText: 'My friend said she was too tired to meet but then went out with other people.',
+      expectedPattern: /excuse|social|shaky|canceled plan|mismatch|suspicious/i,
+      expectedScenarioId: 'canceled_plan_then_conflicting_post',
+    },
+    {
+      category: 'social',
+      inputText: 'A girl at the gym keeps looking at me but never says anything.',
+      expectedPattern: /eye contact|public setting|vibes|approach|conversation/i,
+      expectedScenarioId: 'stranger_eye_contact',
+    },
+    {
+      category: 'general',
+      inputText: 'My boss praised me privately but criticized me in the meeting.',
+      expectedPattern: /workplace ambiguity|private reassurance|clear timeline|formal follow-through/i,
+      expectedScenarioId: 'workplace_mixed_performance_signal',
+    },
+    {
+      category: 'general',
+      inputText: 'My manager invited me for coffee after giving me extra work.',
+      expectedPattern: /workplace ambiguity|promise|clear timeline|formal follow-through/i,
+      expectedScenarioId: 'workplace_mixed_performance_signal',
+    },
+    {
+      category: 'general',
+      inputText: 'My boss said I have potential but gave me no raise or promotion.',
+      expectedPattern: /workplace ambiguity|promise|clear timeline|formal follow-through/i,
+      expectedScenarioId: 'workplace_mixed_performance_signal',
+    },
+    {
+      category: 'general',
+      inputText: 'A person keeps returning my cat with weird little gifts.',
+      expectedPattern: /repeated behavior|odd object|unusual|direct explanation|lore/i,
+      expectedScenarioId: 'repeated_odd_gesture',
+    },
+  ];
+
+  it.each(evaluationCases)('routes broader semantic prompt: $inputText', (evaluationCase) => {
+    const result = analyzeCase(
+      verdictConfig,
+      {
+        category: evaluationCase.category,
+        inputText: evaluationCase.inputText,
+      },
+      { includeDebug: true },
+    );
+
+    expect(result.debug?.scenarioOverrideId).toBe(evaluationCase.expectedScenarioId);
+    expect(result.explanationText).toMatch(evaluationCase.expectedPattern);
+    expect(result.explanationText).not.toMatch(/strongest signal is a weak signal/i);
+    expect(result.delusionScore).toBeLessThanOrEqual(85);
   });
 });
