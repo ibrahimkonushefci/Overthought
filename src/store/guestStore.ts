@@ -1,6 +1,12 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import type { CaseCategory, GuestCaseLocal, GuestCaseUpdateLocal, OutcomeStatus } from '../types/shared';
+import type {
+  CaseAiVerdictSnapshot,
+  CaseCategory,
+  GuestCaseLocal,
+  GuestCaseUpdateLocal,
+  OutcomeStatus,
+} from '../types/shared';
 import { nowIso } from '../shared/utils/date';
 import { createId } from '../shared/utils/id';
 import { zustandMmkvStorage } from '../storage/mmkv';
@@ -13,16 +19,19 @@ interface DraftState {
 
 interface GuestState {
   localGuestId: string | null;
+  guestAiKey: string | null;
   cases: GuestCaseLocal[];
   drafts: DraftState;
   migratedCaseMap: Record<string, string>;
   migrationPromptByUserId: Record<string, 'skipped' | 'completed'>;
   ensureGuestSession: () => string;
+  ensureGuestAiKey: () => string;
   setCaseDraft: (caseText: string) => void;
   setPreferredCategory: (category: CaseCategory) => void;
   setUpdateDraft: (caseId: string, updateText: string) => void;
   addCase: (record: GuestCaseLocal) => void;
   replaceCase: (record: GuestCaseLocal) => void;
+  attachAiVerdict: (caseId: string, aiVerdict: CaseAiVerdictSnapshot) => void;
   addUpdate: (caseId: string, update: GuestCaseUpdateLocal) => void;
   updateOutcome: (caseId: string, outcomeStatus: OutcomeStatus) => void;
   archiveCase: (caseId: string) => void;
@@ -45,6 +54,7 @@ export const useGuestStore = create<GuestState>()(
   persist(
     (set, get) => ({
       localGuestId: null,
+      guestAiKey: null,
       cases: [],
       drafts: initialDrafts,
       migratedCaseMap: {},
@@ -59,6 +69,17 @@ export const useGuestStore = create<GuestState>()(
         const localGuestId = createId('guest');
         set({ localGuestId });
         return localGuestId;
+      },
+      ensureGuestAiKey: () => {
+        const existing = get().guestAiKey;
+
+        if (existing) {
+          return existing;
+        }
+
+        const guestAiKey = createId('guest_ai');
+        set({ guestAiKey });
+        return guestAiKey;
       },
       setCaseDraft: (caseText) => {
         set((state) => ({ drafts: { ...state.drafts, caseText } }));
@@ -86,6 +107,14 @@ export const useGuestStore = create<GuestState>()(
       replaceCase: (record) => {
         set((state) => ({
           cases: state.cases.map((item) => (item.localId === record.localId ? record : item)),
+        }));
+      },
+      attachAiVerdict: (caseId, aiVerdict) => {
+        const timestamp = nowIso();
+        set((state) => ({
+          cases: state.cases.map((item) =>
+            item.localId === caseId ? { ...item, aiVerdict, updatedAt: timestamp } : item,
+          ),
         }));
       },
       addUpdate: (caseId, update) => {
@@ -168,6 +197,7 @@ export const useGuestStore = create<GuestState>()(
       clearGuestSessionData: () => {
         set((state) => ({
           localGuestId: null,
+          guestAiKey: null,
           cases: [],
           drafts: initialDrafts,
           migratedCaseMap: {},
@@ -182,6 +212,7 @@ export const useGuestStore = create<GuestState>()(
       clearAllLocalData: () => {
         set({
           localGuestId: null,
+          guestAiKey: null,
           cases: [],
           drafts: initialDrafts,
           migratedCaseMap: {},
@@ -194,6 +225,7 @@ export const useGuestStore = create<GuestState>()(
       storage: createJSONStorage(() => zustandMmkvStorage),
       partialize: (state) => ({
         localGuestId: state.localGuestId,
+        guestAiKey: state.guestAiKey,
         cases: state.cases,
         drafts: state.drafts,
         migratedCaseMap: state.migratedCaseMap,

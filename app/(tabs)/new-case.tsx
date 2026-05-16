@@ -3,6 +3,7 @@ import { ActivityIndicator, Alert, Pressable, StyleSheet, TextInput, View } from
 import { useRouter } from 'expo-router';
 import { ArrowLeft, Sparkles } from 'lucide-react-native';
 import type { CaseCategory } from '../../src/types/shared';
+import { aiVerdictService } from '../../src/features/ai-verdict/aiVerdictService';
 import { caseRepository } from '../../src/features/cases/repositories/caseRepository';
 import { pickExamplePrompts } from '../../src/features/cases/examplePrompts';
 import { getCaseId } from '../../src/features/cases/types';
@@ -11,6 +12,7 @@ import { Button } from '../../src/shared/ui/Button';
 import { AppText } from '../../src/shared/ui/Text';
 import { Screen } from '../../src/shared/ui/Screen';
 import { colors, radii, spacing, typography } from '../../src/shared/theme/tokens';
+import { useAuthStore } from '../../src/store/authStore';
 import { useGuestStore } from '../../src/store/guestStore';
 
 const categories: CaseCategory[] = ['romance', 'friendship', 'social', 'general'];
@@ -28,6 +30,7 @@ export default function NewCaseRoute() {
   const preferredCategory = useGuestStore((state) => state.drafts.preferredCategory);
   const setCaseDraft = useGuestStore((state) => state.setCaseDraft);
   const setPreferredCategory = useGuestStore((state) => state.setPreferredCategory);
+  const sessionMode = useAuthStore((state) => state.sessionMode);
   const [inputText, setInputText] = useState(draft);
   const [category, setCategory] = useState<CaseCategory>(preferredCategory);
   const [loading, setLoading] = useState(false);
@@ -46,10 +49,11 @@ export default function NewCaseRoute() {
 
     try {
       const record = await caseRepository.createCase({ inputText: trimmed, category });
+      const aiVerdictRequest = aiVerdictService.requestForCase(record);
       setCaseDraft('');
       setInputText('');
       setExamples(pickExamplePrompts(4));
-      await minimumAnalyzingTime;
+      await Promise.all([minimumAnalyzingTime, aiVerdictRequest]);
       router.replace(`/case/${getCaseId(record)}?fromAnalysis=1`);
     } catch (error) {
       Alert.alert('Could not save the case', error instanceof Error ? error.message : 'Try again.');
@@ -64,10 +68,10 @@ export default function NewCaseRoute() {
         <View style={styles.analyzingScreen}>
           <ActivityIndicator color={colors.brand.pink} size="large" />
           <AppText variant="display" center style={styles.analyzingTitle}>
-            Analyzing...
+            Getting verdict...
           </AppText>
           <AppText variant="subtitle" center style={styles.analyzingSubtitle}>
-            Working the magic. Judging respectfully.
+            Trying AI first. Basic verdict is ready if AI is unavailable.
           </AppText>
         </View>
       </Screen>
@@ -89,6 +93,14 @@ export default function NewCaseRoute() {
       <AppText variant="subtitle" style={styles.subtitle}>
         1-3 sentences. No essays. We will judge accordingly.
       </AppText>
+      <View style={styles.aiAccessNote}>
+        <Sparkles color={colors.text.secondary} size={15} strokeWidth={2.5} />
+        <AppText variant="meta" color={colors.text.secondary} style={styles.aiAccessText}>
+          {sessionMode === 'authenticated'
+            ? 'AI verdicts run first when available: 2 free per day. Basic verdict is the fallback.'
+            : 'Guest trial includes 2 free AI verdicts. Sign in later for 2 AI verdicts per day.'}
+        </AppText>
+      </View>
 
       <View style={styles.categoryRow}>
         {categories.map((item) => (
@@ -193,6 +205,24 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: spacing.sm,
     marginTop: spacing.lg,
+  },
+  aiAccessNote: {
+    alignItems: 'center',
+    backgroundColor: colors.bg.surface,
+    borderColor: colors.ui.border,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+  },
+  aiAccessText: {
+    flex: 1,
+    fontFamily: typography.family.bodyMedium,
+    fontSize: 12,
+    lineHeight: 17,
   },
   inputWrap: {
     backgroundColor: colors.bg.surface,

@@ -3,6 +3,7 @@ import { ActivityIndicator, Alert, Animated, Modal, Pressable, Share, StyleSheet
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import ViewShot from 'react-native-view-shot';
+import Svg, { Circle } from 'react-native-svg';
 import {
   ArrowLeft,
   ArrowUpRight,
@@ -17,9 +18,16 @@ import {
   X,
 } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
-import type { DeepReadResponse, OutcomeStatus } from '../../../../src/types/shared';
+import type {
+  AnalysisOutput,
+  AiVerdictRequestState,
+  DeepReadAccessState,
+  DeepReadResponse,
+  OutcomeStatus,
+} from '../../../../src/types/shared';
 import { caseRepository } from '../../../../src/features/cases/repositories/caseRepository';
 import { caseUpdateRepository } from '../../../../src/features/cases/repositories/caseUpdateRepository';
+import { aiVerdictService } from '../../../../src/features/ai-verdict/aiVerdictService';
 import { deepReadService } from '../../../../src/features/deep-read/deepReadService';
 import type { CaseEntity, CaseUpdateEntity } from '../../../../src/features/cases/types';
 import { getCaseId, isGuestCase } from '../../../../src/features/cases/types';
@@ -35,9 +43,12 @@ import {
   categoryIcons,
   categoryLabels,
   getVerdictDisplayLabel,
+  scoreColor,
+  verdictIcons,
   verdictLabels,
 } from '../../../../src/shared/utils/verdict';
 import { relativeTime } from '../../../../src/shared/utils/date';
+import { useAiVerdictStore } from '../../../../src/store/aiVerdictStore';
 
 const detailScrollByCaseId = new Map<string, number>();
 const caseDetailBackground = '#FBF9F2';
@@ -53,9 +64,13 @@ export default function CaseDetailRoute() {
   const [deepReadStatus, setDeepReadStatus] = useState<DeepReadStatus>('idle');
   const [deepReadResult, setDeepReadResult] = useState<Extract<DeepReadResponse, { ok: true }> | null>(null);
   const [deepReadMessage, setDeepReadMessage] = useState<string | null>(null);
+  const [deepReadFailureAccess, setDeepReadFailureAccess] = useState<DeepReadAccessState | null>(null);
   const [sharePreviewVisible, setSharePreviewVisible] = useState(false);
   const [shareInProgress, setShareInProgress] = useState(false);
+  const aiVerdictsByCaseId = useAiVerdictStore((state) => state.byCaseId);
+  const aiVerdictRequestsByCaseId = useAiVerdictStore((state) => state.requestByCaseId);
   const shareCardRef = useRef<ViewShot | null>(null);
+  const deepReadRequestInFlightRef = useRef(false);
   const shouldPresentNewResult = fromAnalysis === '1';
   const [shouldRunResultIntro, setShouldRunResultIntro] = useState(shouldPresentNewResult);
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -84,6 +99,7 @@ export default function CaseDetailRoute() {
     setDeepReadStatus('idle');
     setDeepReadResult(null);
     setDeepReadMessage(null);
+    setDeepReadFailureAccess(null);
     setShouldRunResultIntro(shouldPresentNewResult);
   }, [id]);
 
@@ -96,6 +112,20 @@ export default function CaseDetailRoute() {
       void refresh();
     }, [refresh]),
   );
+
+  useEffect(() => {
+    if (!record) {
+      return;
+    }
+
+    const currentCaseId = getCaseId(record);
+
+    if (isGuestCase(record) || aiVerdictsByCaseId[currentCaseId]) {
+      return;
+    }
+
+    void aiVerdictService.loadStoredVerdictForCase(record);
+  }, [aiVerdictsByCaseId, record]);
 
   const resultPresentationKey = shouldRunResultIntro
     ? record
@@ -144,9 +174,31 @@ export default function CaseDetailRoute() {
     );
   }
 
+  const caseId = getCaseId(record);
+  const aiVerdict = aiVerdictsByCaseId[caseId] ?? (isGuestCase(record) ? record.aiVerdict : undefined);
+  const aiVerdictRequest = aiVerdictRequestsByCaseId[caseId];
+  const aiVerdictLoading = aiVerdictRequest?.status === 'loading';
+  const localVerdict = {
+    verdictLabel: record.verdictLabel,
+    delusionScore: record.delusionScore,
+    explanationText: record.explanationText,
+    nextMoveText: record.nextMoveText,
+    verdictVersion: record.verdictVersion,
+  };
+  const visibleVerdict = !aiVerdictLoading && aiVerdict ? aiVerdict.verdict : localVerdict;
+  const verdictSource = aiVerdictLoading
+    ? 'loading'
+    : aiVerdict
+      ? aiVerdict.cache.source === 'cache'
+        ? 'cache'
+        : 'ai'
+      : 'basic';
+  const isAiVerdictVisible = verdictSource === 'ai' || verdictSource === 'cache';
+  const shouldShowDeepRead =
+    !isAiVerdictVisible && (verdictSource === 'basic' || deepReadStatus === 'loading' || deepReadStatus === 'ready');
   const heroDisplayLabel = getVerdictDisplayLabel(
-    record.verdictLabel,
-    `${getCaseId(record)}|${record.inputText}|${record.delusionScore}`,
+    visibleVerdict.verdictLabel,
+    `${caseId}|${record.inputText}|${visibleVerdict.delusionScore}`,
   );
   const displayCaseId = formatDisplayCaseId(getCaseId(record));
   const deepReadShare = deepReadStatus === 'ready' ? deepReadResult?.deepRead : null;
@@ -155,17 +207,17 @@ export default function CaseDetailRoute() {
     title: heroDisplayLabel,
     caseDisplayId: displayCaseId,
     category: record.category,
-    verdictLabel: record.verdictLabel,
-    delusionScore: record.delusionScore,
-    explanationText: record.explanationText,
-    nextMoveText: record.nextMoveText,
+    verdictLabel: visibleVerdict.verdictLabel,
+    delusionScore: visibleVerdict.delusionScore,
+    explanationText: visibleVerdict.explanationText,
+    nextMoveText: visibleVerdict.nextMoveText,
     deepReadRoastLine: deepReadShare?.roastLine,
     deepReadTakeaway: deepReadShare?.whatToDoNext,
     appName: 'Overthought',
   };
   const shareMessage = deepReadShare
     ? `Overthought Deep Read: ${deepReadShare.roastLine} ${deepReadShare.whatToDoNext}`
-    : `Overthought verdict: ${verdictLabels[record.verdictLabel]} (${record.delusionScore}/100). ${record.nextMoveText}`;
+    : `Overthought verdict: ${verdictLabels[visibleVerdict.verdictLabel]} (${visibleVerdict.delusionScore}/100). ${visibleVerdict.nextMoveText}`;
 
   const shareTextFallback = async () => {
     await Share.share({
@@ -235,40 +287,48 @@ export default function CaseDetailRoute() {
   };
 
   const requestDeepRead = async () => {
-    if (!record || deepReadStatus === 'loading') {
+    if (!record || deepReadStatus === 'loading' || deepReadRequestInFlightRef.current) {
       return;
     }
 
+    deepReadRequestInFlightRef.current = true;
     setDeepReadStatus('loading');
     setDeepReadMessage(null);
+    setDeepReadFailureAccess(null);
 
-    const result = await deepReadService.requestCaseDeepRead(getCaseId(record));
+    try {
+      const result = await deepReadService.requestCaseDeepRead(getCaseId(record));
 
-    if (result.ok) {
-      setDeepReadResult(result);
-      setDeepReadStatus('ready');
-      return;
+      if (result.ok) {
+        setDeepReadResult(result);
+        setDeepReadFailureAccess(null);
+        setDeepReadStatus('ready');
+        return;
+      }
+
+      setDeepReadResult(null);
+      setDeepReadMessage(result.message);
+      setDeepReadFailureAccess(result.access ?? null);
+
+      if (result.code === 'not_authenticated') {
+        setDeepReadStatus('not_authenticated');
+        return;
+      }
+
+      if (result.code === 'quota_exceeded') {
+        setDeepReadStatus('quota');
+        return;
+      }
+
+      if (result.code === 'fair_use_exceeded') {
+        setDeepReadStatus('fair_use');
+        return;
+      }
+
+      setDeepReadStatus('error');
+    } finally {
+      deepReadRequestInFlightRef.current = false;
     }
-
-    setDeepReadResult(null);
-    setDeepReadMessage(result.message);
-
-    if (result.code === 'not_authenticated') {
-      setDeepReadStatus('not_authenticated');
-      return;
-    }
-
-    if (result.code === 'quota_exceeded') {
-      setDeepReadStatus('quota');
-      return;
-    }
-
-    if (result.code === 'fair_use_exceeded') {
-      setDeepReadStatus('fair_use');
-      return;
-    }
-
-    setDeepReadStatus('error');
   };
 
   return (
@@ -298,41 +358,61 @@ export default function CaseDetailRoute() {
           </Pressable>
         </View>
 
-        <ScorePanel
-          caseId={getCaseId(record)}
-          score={record.delusionScore}
-          verdictLabel={record.verdictLabel}
-          displayLabel={heroDisplayLabel}
-          readText={record.explanationText}
-          nextMoveText={record.nextMoveText}
-        />
-
-        <View style={styles.deepRead}>
-          <View style={styles.deepHeader}>
-            <View style={styles.deepTitleRow}>
-              <AppText variant="title" color={colors.text.onBrand} style={styles.deepTitle}>
-                Deep Read
-              </AppText>
-              <View style={styles.aiBadge}>
-                <Sparkles color={colors.text.onAccent} size={14} strokeWidth={2.8} />
-                <AppText variant="eyebrow" color={colors.text.onAccent} style={styles.aiBadgeText}>
-                  AI
-                </AppText>
-              </View>
-            </View>
-            <RemainingReads remaining={deepReadResult?.access.remaining ?? null} />
-          </View>
-          <AppText variant="subtitle" color="rgba(255, 255, 255, 0.72)" style={styles.deepSubtitle}>
-            The version your group chat would actually send.
-          </AppText>
-          <DeepReadContent
-            status={deepReadStatus}
-            result={deepReadResult}
-            message={deepReadMessage}
-            onRequest={() => void requestDeepRead()}
-            onSignIn={() => router.push('/auth')}
+        {isAiVerdictVisible ? (
+          <AiVerdictPremiumCard
+            verdict={visibleVerdict}
+            displayLabel={heroDisplayLabel}
+            caseDisplayId={displayCaseId}
+            remainingLabel={aiVerdictAccessLabel(aiVerdict?.access ?? aiVerdictRequest?.access, isGuestCase(record))}
           />
-        </View>
+        ) : (
+          <>
+            <AiVerdictStatusStrip
+              source={verdictSource}
+              requestState={aiVerdictRequest}
+              access={aiVerdict?.access ?? aiVerdictRequest?.access}
+              isGuest={isGuestCase(record)}
+            />
+            <ScorePanel
+              caseId={caseId}
+              score={visibleVerdict.delusionScore}
+              verdictLabel={visibleVerdict.verdictLabel}
+              displayLabel={heroDisplayLabel}
+              readText={visibleVerdict.explanationText}
+              nextMoveText={visibleVerdict.nextMoveText}
+            />
+          </>
+        )}
+
+        {shouldShowDeepRead ? (
+          <View style={styles.deepRead}>
+            <View style={styles.deepHeader}>
+              <View style={styles.deepTitleRow}>
+                <AppText variant="title" color={colors.text.onBrand} style={styles.deepTitle}>
+                  Deep Read
+                </AppText>
+                <View style={styles.aiBadge}>
+                  <Sparkles color={colors.text.onAccent} size={14} strokeWidth={2.8} />
+                  <AppText variant="eyebrow" color={colors.text.onAccent} style={styles.aiBadgeText}>
+                    AI
+                  </AppText>
+                </View>
+              </View>
+              <RemainingReads remaining={deepReadResult?.access.remaining ?? null} />
+            </View>
+            <AppText variant="subtitle" color="rgba(255, 255, 255, 0.72)" style={styles.deepSubtitle}>
+              Extra context after a basic verdict: what is happening, what you are overreading, and what to do next.
+            </AppText>
+            <DeepReadContent
+              status={deepReadStatus}
+              result={deepReadResult}
+              message={deepReadMessage}
+              failureAccess={deepReadFailureAccess}
+              onRequest={() => void requestDeepRead()}
+              onSignIn={() => router.push('/auth')}
+            />
+          </View>
+        ) : null}
 
         <View style={styles.caseFileSection}>
           <CaseFileDivider />
@@ -468,16 +548,267 @@ function formatDisplayCaseId(caseId: string): string {
   return suffix ? `OT-${suffix}` : 'OT';
 }
 
+type AiVerdictDisplaySource = 'loading' | 'ai' | 'cache' | 'basic';
+
+function accessCopy({
+  requestState,
+  isGuest,
+}: {
+  requestState: AiVerdictRequestState | undefined;
+  isGuest: boolean;
+}): string {
+  const access = requestState?.access;
+
+  if (!access) {
+    return isGuest ? '2 free AI verdicts' : '2 AI verdicts/day';
+  }
+
+  if (access.accessTier === 'guest') {
+    return `${access.remaining} of ${access.limit} free AI verdicts left`;
+  }
+
+  return `${access.remaining} of ${access.limit} AI verdicts left today`;
+}
+
+function aiVerdictStatusText({
+  source,
+  requestState,
+  isGuest,
+}: {
+  source: AiVerdictDisplaySource;
+  requestState?: AiVerdictRequestState;
+  isGuest: boolean;
+}) {
+  if (source === 'loading') {
+    return {
+      label: 'AI verdict loading...',
+      body: `Showing a basic preview while AI writes the final verdict. If AI succeeds, this result will update. ${accessCopy({ requestState, isGuest })}.`,
+      loading: true,
+      tone: 'loading' as const,
+    };
+  }
+
+  if (source === 'ai' || source === 'cache') {
+    return {
+      label: 'AI verdict',
+      body:
+        source === 'cache'
+          ? requestState?.message ?? `Cached result. ${accessCopy({ requestState, isGuest })}.`
+          : `${accessCopy({ requestState, isGuest })}.`,
+      loading: false,
+      tone: 'ai' as const,
+    };
+  }
+
+  if (!requestState || requestState.status === 'idle') {
+    return {
+      label: 'Basic verdict',
+      body: isGuest ? 'AI verdict available for the first 2 guest cases.' : 'AI verdict available 2 times per day.',
+      loading: false,
+      tone: 'basic' as const,
+    };
+  }
+
+  const quotaExceededMessage =
+    requestState.status === 'quota_exceeded' && requestState.access?.accessTier === 'guest'
+      ? requestState.access.reason === 'guest_lifetime_limit'
+        ? "You've used your free guest AI verdicts. Sign in for daily AI verdicts."
+        : "You've used today's guest AI verdicts. Showing basic verdict."
+      : "You've used today's free AI verdicts. Showing basic verdict.";
+
+  const fallbackMessageByStatus: Partial<Record<AiVerdictRequestState['status'], string>> = {
+    quota_exceeded: quotaExceededMessage,
+    ip_daily_cap_exceeded: 'AI verdicts are temporarily limited. Showing basic verdict.',
+    global_daily_cap_exceeded: 'AI verdicts are temporarily limited. Showing basic verdict.',
+    ai_failed: 'AI could not load. Showing basic verdict.',
+    ai_timeout: 'AI timed out. Showing basic verdict.',
+    unauthenticated: 'Sign in to use AI verdicts. Showing basic verdict.',
+    guest_key_required: 'Guest AI access could not start. Showing basic verdict.',
+    invalid_ai_response: 'AI returned an invalid result. Showing basic verdict.',
+    case_not_found: 'AI could not find this case. Showing basic verdict.',
+    fair_use_exceeded: 'AI is temporarily limited for fair use. Showing basic verdict.',
+    cache_write_failed: 'AI could not save the result. Showing basic verdict.',
+    unknown: 'AI is unavailable right now. Showing basic verdict.',
+  };
+
+  return {
+    label: 'Basic verdict',
+    body: fallbackMessageByStatus[requestState.status] ?? requestState.message ?? 'Showing basic verdict.',
+    loading: false,
+    tone: 'basic' as const,
+  };
+}
+
+function AiVerdictStatusStrip({
+  source,
+  requestState,
+  access,
+  isGuest,
+}: {
+  source: AiVerdictDisplaySource;
+  requestState?: AiVerdictRequestState;
+  access?: AiVerdictRequestState['access'];
+  isGuest: boolean;
+}) {
+  const statusText = aiVerdictStatusText({
+    source,
+    requestState: requestState ?? (access ? { status: 'idle', access, updatedAt: '' } : undefined),
+    isGuest,
+  });
+
+  return (
+    <View style={[styles.aiVerdictStatus, statusText.tone === 'ai' && styles.aiVerdictStatusReady]}>
+      <View style={styles.aiVerdictStatusHeader}>
+        <View style={[styles.aiVerdictStatusBadge, statusText.tone === 'ai' && styles.aiVerdictStatusBadgeReady]}>
+          {statusText.loading ? (
+            <ActivityIndicator color={colors.text.secondary} size="small" />
+          ) : (
+            <Sparkles
+              color={statusText.tone === 'ai' ? colors.text.onAccent : colors.text.secondary}
+              size={13}
+              strokeWidth={2.6}
+            />
+          )}
+          <AppText
+            variant="eyebrow"
+            color={statusText.tone === 'ai' ? colors.text.onAccent : colors.text.secondary}
+            style={styles.aiVerdictStatusLabel}
+          >
+            {statusText.label}
+          </AppText>
+        </View>
+      </View>
+      <AppText variant="meta" color={colors.text.secondary} style={styles.aiVerdictStatusBody}>
+        {statusText.body}
+      </AppText>
+    </View>
+  );
+}
+
+function aiVerdictAccessLabel(access: AiVerdictRequestState['access'] | undefined, isGuest: boolean): string {
+  if (!access) {
+    return isGuest ? '2 free' : '2/day';
+  }
+
+  if (access.accessTier === 'guest') {
+    return `${access.remaining} left`;
+  }
+
+  return `${access.remaining} left today`;
+}
+
+function AiVerdictPremiumCard({
+  verdict,
+  displayLabel,
+  caseDisplayId,
+  remainingLabel,
+}: {
+  verdict: AnalysisOutput;
+  displayLabel: string;
+  caseDisplayId: string;
+  remainingLabel: string;
+}) {
+  const stroke = scoreColor(verdict.delusionScore);
+  const circumference = 2 * Math.PI * 44;
+  const offset = circumference - (verdict.delusionScore / 100) * circumference;
+
+  return (
+    <View style={styles.aiPremiumCard}>
+      <View style={styles.deepHeader}>
+        <View style={styles.deepTitleRow}>
+          <AppText variant="title" color={colors.text.onBrand} style={styles.deepTitle}>
+            AI Verdict
+          </AppText>
+          <View style={styles.aiBadge}>
+            <Sparkles color={colors.text.onAccent} size={14} strokeWidth={2.8} />
+            <AppText variant="eyebrow" color={colors.text.onAccent} style={styles.aiBadgeText}>
+              AI
+            </AppText>
+          </View>
+        </View>
+        <AppText variant="eyebrow" color="rgba(255, 255, 255, 0.58)" style={styles.remainingReads}>
+          {remainingLabel}
+        </AppText>
+      </View>
+
+      <View style={styles.aiPremiumHero}>
+        <View style={styles.aiPremiumRingWrap}>
+          <Svg width={112} height={112} viewBox="0 0 112 112">
+            <Circle cx="56" cy="56" r="44" stroke="rgba(255, 255, 255, 0.14)" strokeWidth="10" fill="none" />
+            <Circle
+              cx="56"
+              cy="56"
+              r="44"
+              stroke={stroke}
+              strokeWidth="10"
+              fill="none"
+              strokeLinecap="round"
+              strokeDasharray={`${circumference} ${circumference}`}
+              strokeDashoffset={offset}
+              rotation="-90"
+              origin="56, 56"
+            />
+          </Svg>
+          <View style={styles.aiPremiumScoreCenter}>
+            <AppText variant="display" color={stroke} center style={styles.aiPremiumScore}>
+              {verdict.delusionScore}
+            </AppText>
+            <AppText variant="eyebrow" color="rgba(255, 255, 255, 0.72)" center style={styles.aiPremiumScoreLabel}>
+              Delusion
+            </AppText>
+          </View>
+        </View>
+
+        <View style={styles.aiPremiumHeroCopy}>
+          <View style={styles.aiPremiumVerdictPill}>
+            <AppText variant="eyebrow" color={colors.text.onBrand} style={styles.aiPremiumVerdictPillText} numberOfLines={1}>
+              {verdictIcons[verdict.verdictLabel]} {verdictLabels[verdict.verdictLabel]}
+            </AppText>
+          </View>
+          <AppText variant="display" color={colors.text.onBrand} style={styles.aiPremiumTitle} numberOfLines={3}>
+            {displayLabel}
+          </AppText>
+          <AppText variant="eyebrow" color="rgba(255, 255, 255, 0.62)" style={styles.aiPremiumCaseId} numberOfLines={1}>
+            Case {caseDisplayId}
+          </AppText>
+        </View>
+      </View>
+
+      <View style={styles.groupChatRead}>
+        <View style={styles.groupChatBadge}>
+          <AppText variant="eyebrow" color={colors.text.onAccent} style={styles.groupChatBadgeText}>
+            The Read
+          </AppText>
+        </View>
+        <AppText variant="title" color={colors.text.onBrand} style={styles.groupChatText}>
+          {verdict.explanationText}
+        </AppText>
+      </View>
+
+      <AppText variant="eyebrow" color={colors.accent.lime} style={styles.deepTakeawayLabel}>
+        Do this →
+      </AppText>
+      <View style={styles.roastLine}>
+        <AppText variant="body" color={colors.text.onAccent} style={styles.roastLineText}>
+          {verdict.nextMoveText}
+        </AppText>
+      </View>
+    </View>
+  );
+}
+
 function DeepReadContent({
   status,
   result,
   message,
+  failureAccess,
   onRequest,
   onSignIn,
 }: {
   status: DeepReadStatus;
   result: Extract<DeepReadResponse, { ok: true }> | null;
   message: string | null;
+  failureAccess: DeepReadAccessState | null;
   onRequest: () => void;
   onSignIn: () => void;
 }) {
@@ -541,16 +872,21 @@ function DeepReadContent({
   if (status === 'not_authenticated') {
     return (
       <View style={styles.deepStateStack}>
-        <DeepReadStateText text="Sign in to use Deep Read. The local verdict still works either way." />
+        <DeepReadStateText text="Sign in to use Deep Read. AI verdicts and Deep Reads use separate limits." />
         <DeepReadButton label="Sign in" onPress={onSignIn} />
       </View>
     );
   }
 
   if (status === 'quota') {
+    const quotaCopy =
+      failureAccess?.limit === null || failureAccess?.limit === undefined
+        ? "You've used today's free Deep Reads."
+        : `You've used today's free Deep Reads (${failureAccess.remaining} of ${failureAccess.limit} left).`;
+
     return (
       <View style={styles.deepStateStack}>
-        <DeepReadStateText text="You've used today's free Deep Reads. Local verdicts still work unlimited." />
+        <DeepReadStateText text={`${quotaCopy} AI verdict quota is separate; your verdict above is unchanged.`} />
       </View>
     );
   }
@@ -558,7 +894,7 @@ function DeepReadContent({
   if (status === 'fair_use') {
     return (
       <View style={styles.deepStateStack}>
-        <DeepReadStateText text="Deep Read is temporarily limited for fair use. Your local verdict is still available." />
+        <DeepReadStateText text="Deep Read is temporarily limited for fair use. AI verdict quota is separate; your verdict above is unchanged." />
         <DeepReadButton label="Try again" onPress={onRequest} />
       </View>
     );
@@ -567,8 +903,8 @@ function DeepReadContent({
   if (status === 'error') {
     return (
       <View style={styles.deepStateStack}>
-        <DeepReadStateText text={message ?? "Deep Read couldn't load. Your local verdict is unchanged."} />
-        <DeepReadStateText text="Your local verdict is unchanged." compact />
+        <DeepReadStateText text={message ?? "Deep Read couldn't load. Your verdict above is unchanged."} />
+        <DeepReadStateText text="AI verdict and Deep Read are separate." compact />
         <DeepReadButton label="Try again" onPress={onRequest} />
       </View>
     );
@@ -778,6 +1114,118 @@ const styles = StyleSheet.create({
     shadowOpacity: 1,
     shadowRadius: 0,
     elevation: 4,
+  },
+  aiPremiumCard: {
+    backgroundColor: '#090910',
+    borderColor: '#090910',
+    borderRadius: radii.xl,
+    borderWidth: 2,
+    gap: spacing.md,
+    padding: spacing.lg,
+    shadowColor: '#090910',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 1,
+    shadowRadius: 0,
+    elevation: 4,
+  },
+  aiPremiumHero: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.lg,
+    marginTop: spacing.xs,
+  },
+  aiPremiumRingWrap: {
+    alignItems: 'center',
+    height: 112,
+    justifyContent: 'center',
+    width: 112,
+  },
+  aiPremiumScoreCenter: {
+    alignItems: 'center',
+    position: 'absolute',
+  },
+  aiPremiumScore: {
+    fontFamily: typography.family.displayBold,
+    fontSize: 38,
+    lineHeight: 41,
+  },
+  aiPremiumScoreLabel: {
+    fontFamily: typography.family.displaySemiBold,
+    fontSize: 8,
+    letterSpacing: 1,
+    lineHeight: 11,
+  },
+  aiPremiumHeroCopy: {
+    flex: 1,
+    gap: spacing.xs,
+    minWidth: 0,
+  },
+  aiPremiumVerdictPill: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#171720',
+    borderRadius: radii.pill,
+    maxWidth: '100%',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+  },
+  aiPremiumVerdictPillText: {
+    fontFamily: typography.family.displayBold,
+    fontSize: 8,
+    letterSpacing: 1.4,
+    lineHeight: 12,
+  },
+  aiPremiumTitle: {
+    fontFamily: typography.family.displayBold,
+    fontSize: 20,
+    lineHeight: 25,
+  },
+  aiPremiumCaseId: {
+    fontFamily: typography.family.displayBold,
+    fontSize: 8,
+    letterSpacing: 1.8,
+    lineHeight: 12,
+  },
+  aiVerdictStatus: {
+    backgroundColor: colors.bg.surface,
+    borderColor: colors.ui.border,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    gap: spacing.xs,
+    marginBottom: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+  },
+  aiVerdictStatusReady: {
+    borderColor: colors.accent.lime,
+  },
+  aiVerdictStatusHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  aiVerdictStatusBadge: {
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: colors.bg.muted,
+    borderRadius: radii.pill,
+    flexDirection: 'row',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 4,
+  },
+  aiVerdictStatusBadgeReady: {
+    backgroundColor: colors.accent.lime,
+  },
+  aiVerdictStatusLabel: {
+    fontFamily: typography.family.displayBold,
+    fontSize: 9,
+    letterSpacing: 1.1,
+    lineHeight: 12,
+  },
+  aiVerdictStatusBody: {
+    fontFamily: typography.family.bodyMedium,
+    fontSize: 12,
+    lineHeight: 17,
   },
   deepHeader: {
     alignItems: 'center',

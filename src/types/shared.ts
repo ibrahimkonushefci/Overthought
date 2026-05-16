@@ -27,6 +27,21 @@ export type DeepReadFailureCode =
   | 'invalid_ai_response'
   | 'cache_write_failed'
   | 'unknown';
+export type AiVerdictAccessTier = 'guest' | 'free' | 'premium';
+export type AiVerdictUsageStatus = 'reserved' | 'succeeded' | 'failed' | 'expired';
+export type AiVerdictFailureCode =
+  | 'not_authenticated'
+  | 'case_not_found'
+  | 'guest_key_required'
+  | 'global_daily_cap_exceeded'
+  | 'ip_daily_cap_exceeded'
+  | 'quota_exceeded'
+  | 'fair_use_exceeded'
+  | 'ai_timeout'
+  | 'ai_failed'
+  | 'invalid_ai_response'
+  | 'cache_write_failed'
+  | 'unknown';
 
 export interface Profile {
   id: UUID;
@@ -101,6 +116,69 @@ export interface DeepReadAccessState {
   reason?: 'guest_used' | 'daily_limit' | 'fair_use' | 'not_authenticated' | 'not_configured';
 }
 
+export interface AiVerdictOutput extends AnalysisOutput {
+  source: 'ai';
+}
+
+export interface AiVerdictCacheMetadata {
+  id: UUID | string;
+  source: 'cache' | 'generated';
+  targetFingerprint: string;
+  modelProvider: string;
+  modelName: string;
+  modelVersion: string | null;
+  promptVersion: number;
+  responseSchemaVersion: number;
+  createdAt: string;
+}
+
+export interface AiVerdictAccessState {
+  accessTier: AiVerdictAccessTier;
+  allowed: boolean;
+  used: number;
+  remaining: number;
+  limit: number;
+  quotaScope: 'daily' | 'lifetime';
+  quotaBucket: string | null;
+  reason?: 'guest_lifetime_limit' | 'daily_limit' | 'fair_use' | 'global_daily_cap' | 'ip_daily_cap';
+}
+
+export type AiVerdictRequestStatus =
+  | 'idle'
+  | 'loading'
+  | 'success'
+  | 'cache'
+  | 'quota_exceeded'
+  | 'ip_daily_cap_exceeded'
+  | 'global_daily_cap_exceeded'
+  | 'ai_failed'
+  | 'ai_timeout'
+  | 'unauthenticated'
+  | 'guest_key_required'
+  | 'case_not_found'
+  | 'fair_use_exceeded'
+  | 'invalid_ai_response'
+  | 'cache_write_failed'
+  | 'unknown';
+
+export interface AiVerdictRequestState {
+  status: AiVerdictRequestStatus;
+  code?: AiVerdictFailureCode;
+  message?: string;
+  access?: AiVerdictAccessState;
+  localFallback?: AnalysisOutput;
+  httpStatus?: number;
+  updatedAt: string;
+}
+
+export interface CaseAiVerdictSnapshot {
+  verdict: AiVerdictOutput;
+  localFallback: AnalysisOutput;
+  cache: AiVerdictCacheMetadata;
+  access?: AiVerdictAccessState;
+  updatedAt: string;
+}
+
 export interface AnalysisOutput {
   verdictLabel: VerdictLabel;
   delusionScore: number;
@@ -122,6 +200,7 @@ export interface CaseRecord extends AnalysisOutput {
   updatedAt: string;
   archivedAt: string | null;
   deletedAt: string | null;
+  aiVerdict?: CaseAiVerdictSnapshot;
 }
 
 export interface CaseUpdateRecord {
@@ -224,6 +303,44 @@ export type DeepReadResponse =
       code: DeepReadFailureCode;
       message: string;
       access?: DeepReadAccessState;
+    };
+
+export type AiVerdictRequest =
+  | {
+      target: {
+        targetType: 'case';
+        caseId: UUID | string;
+      };
+    }
+  | {
+      guestKey: string;
+      target: {
+        targetType: 'guest_case';
+        guestCaseId: string;
+        category: CaseCategory;
+        inputText: string;
+        localVerdictLabel: VerdictLabel;
+        localDelusionScore: number;
+        localExplanationText: string;
+        localNextMoveText: string;
+        localVerdictVersion: number;
+      };
+    };
+
+export type AiVerdictResponse =
+  | {
+      ok: true;
+      verdict: AiVerdictOutput;
+      localFallback: AnalysisOutput;
+      cache: AiVerdictCacheMetadata;
+      access: AiVerdictAccessState;
+    }
+  | {
+      ok: false;
+      code: AiVerdictFailureCode;
+      message: string;
+      access?: AiVerdictAccessState;
+      localFallback?: AnalysisOutput;
     };
 
 export interface GuestMigrationPayload {
