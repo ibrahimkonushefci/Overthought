@@ -258,6 +258,28 @@ describe('aiVerdictService', () => {
     });
   });
 
+  it('stores timeout failures so the result screen can fall back to Basic Verdict', async () => {
+    useAuthStore.getState().setGuest();
+    const record = guestCase();
+    useGuestStore.getState().addCase(record);
+    global.fetch = jest.fn(async () => {
+      throw new DOMException('The operation was aborted.', 'AbortError');
+    }) as unknown as typeof fetch;
+
+    const result = await aiVerdictService.requestForCase(record);
+
+    expect(result).toEqual({
+      ok: false,
+      code: 'ai_timeout',
+      message: 'AI verdict timed out. Showing basic verdict.',
+    });
+    expect(useGuestStore.getState().cases[0].aiVerdict).toBeUndefined();
+    expect(useAiVerdictStore.getState().requestByCaseId['local-case-1']).toMatchObject({
+      status: 'ai_timeout',
+      code: 'ai_timeout',
+    });
+  });
+
   it('stores structured AI quota failures for the result screen', async () => {
     useAuthStore.getState().setGuest();
     const record = guestCase();

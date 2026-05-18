@@ -76,6 +76,12 @@ function safeUnavailableFailure(): Extract<AiVerdictResponse, { ok: false }> {
   return failure('unknown', 'AI verdict is unavailable right now.');
 }
 
+const AI_VERDICT_CLIENT_TIMEOUT_MS = 15_000;
+
+function isAbortError(error: unknown): boolean {
+  return Boolean(error && typeof error === 'object' && (error as { name?: unknown }).name === 'AbortError');
+}
+
 function isAnalysisOutput(value: unknown): value is AnalysisOutput {
   if (!value || typeof value !== 'object') {
     return false;
@@ -297,18 +303,29 @@ function snapshotFromStoredRow(row: StoredAiVerdictRow): CaseAiVerdictSnapshot {
   };
 }
 
-function logAiVerdictDiagnostic(caseId: string, response: AiVerdictResponse, httpStatus?: number) {
-  if (process.env.NODE_ENV === 'test' || env.appVariant === 'production') {
+function logAiVerdictDiagnostic(
+  caseId: string,
+  response: AiVerdictResponse,
+  diagnostic: {
+    httpStatus?: number;
+    elapsedMs?: number;
+    timedOut?: boolean;
+  } = {},
+) {
+  if (process.env.NODE_ENV === 'test') {
     return;
   }
 
   console.info('[ai-verdict] response', {
     caseId,
-    httpStatus: httpStatus ?? null,
+    httpStatus: diagnostic.httpStatus ?? null,
+    elapsedMs: diagnostic.elapsedMs ?? null,
+    timedOut: diagnostic.timedOut ?? false,
     ok: response.ok,
     code: response.ok ? null : response.code,
     cacheSource: response.ok ? response.cache.source : null,
     access: response.ok ? response.access : response.access ?? null,
+    fallbackReason: response.ok ? null : response.code,
   });
 }
 
@@ -336,14 +353,20 @@ async function authenticatedHeaders(): Promise<Record<string, string> | null> {
 async function invokeAiVerdict(
   body: AiVerdictRequest,
   authHeaders: Record<string, string> = {},
-): Promise<{ response: AiVerdictResponse; httpStatus?: number }> {
+): Promise<{ response: AiVerdictResponse; httpStatus?: number; elapsedMs: number; timedOut: boolean }> {
+  const startedAt = Date.now();
+
   if (!hasSupabaseEnv()) {
-    return { response: safeUnavailableFailure() };
+    return { response: safeUnavailableFailure(), elapsedMs: Date.now() - startedAt, timedOut: false };
   }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), AI_VERDICT_CLIENT_TIMEOUT_MS);
 
   try {
     const result = await fetch(functionUrl(), {
       method: 'POST',
+      signal: controller.signal,
       headers: {
         apikey: env.supabaseAnonKey,
         'Content-Type': 'application/json',
@@ -354,15 +377,24 @@ async function invokeAiVerdict(
     const parsed = (await result.json().catch(() => null)) as unknown;
 
     if (isValidAiVerdictResponse(parsed)) {
-      return { response: parsed, httpStatus: result.status };
+      return { response: parsed, httpStatus: result.status, elapsedMs: Date.now() - startedAt, timedOut: false };
     }
 
     return {
       response: failure('invalid_ai_response', 'AI verdict returned an invalid response.'),
       httpStatus: result.status,
+      elapsedMs: Date.now() - startedAt,
+      timedOut: false,
     };
-  } catch {
-    return { response: safeUnavailableFailure() };
+  } catch (error) {
+    const timedOut = isAbortError(error);
+    return {
+      response: timedOut ? failure('ai_timeout', 'AI verdict timed out. Showing basic verdict.') : safeUnavailableFailure(),
+      elapsedMs: Date.now() - startedAt,
+      timedOut,
+    };
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
@@ -439,8 +471,8 @@ export const aiVerdictService = {
 
       if (isGuestCase(record)) {
         aiStore.setRequestState(record.localId, loadingState());
-        const { response, httpStatus } = await invokeAiVerdict(guestRequest(record));
-        logAiVerdictDiagnostic(record.localId, response, httpStatus);
+        const { response, httpStatus, elapsedMs, timedOut } = await invokeAiVerdict(guestRequest(record));
+        logAiVerdictDiagnostic(record.localId, response, { httpStatus, elapsedMs, timedOut });
 
         if (response.ok) {
           const snapshot = snapshotFromSuccess(response);
@@ -469,8 +501,8 @@ export const aiVerdictService = {
         return response;
       }
 
-      const { response, httpStatus } = await invokeAiVerdict(authenticatedRequest(caseId), headers);
-      logAiVerdictDiagnostic(caseId, response, httpStatus);
+      const { response, httpStatus, elapsedMs, timedOut } = await invokeAiVerdict(authenticatedRequest(caseId), headers);
+      logAiVerdictDiagnostic(caseId, response, { httpStatus, elapsedMs, timedOut });
 
       if (response.ok) {
         useAiVerdictStore.getState().setAiVerdict(caseId, snapshotFromSuccess(response));

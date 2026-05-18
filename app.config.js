@@ -22,8 +22,23 @@ if (enableGoogleAuth) {
   }
 }
 
-module.exports = () => {
-  const baseExpo = base.expo;
+module.exports = ({ config }) => {
+  const baseExpo = {
+    ...config,
+    ...base.expo,
+    ios: {
+      ...config.ios,
+      ...base.expo.ios,
+    },
+    android: {
+      ...config.android,
+      ...base.expo.android,
+    },
+    extra: {
+      ...config.extra,
+      ...base.expo.extra,
+    },
+  };
   const plugins = (baseExpo.plugins || []).filter((plugin) => {
     const pluginName = Array.isArray(plugin) ? plugin[0] : plugin;
     return pluginName !== '@react-native-google-signin/google-signin';
@@ -46,6 +61,7 @@ module.exports = () => {
         'expo-apple-authentication',
         'expo-web-browser',
         'expo-sharing',
+        'expo-font',
         [
           '@react-native-google-signin/google-signin',
           {

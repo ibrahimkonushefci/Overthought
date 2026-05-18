@@ -194,8 +194,14 @@ export default function CaseDetailRoute() {
         : 'ai'
       : 'basic';
   const isAiVerdictVisible = verdictSource === 'ai' || verdictSource === 'cache';
+  const aiVerdictQuotaLocked =
+    aiVerdictRequest?.status === 'quota_exceeded' ||
+    aiVerdictRequest?.status === 'fair_use_exceeded' ||
+    aiVerdictRequest?.status === 'ip_daily_cap_exceeded' ||
+    aiVerdictRequest?.status === 'global_daily_cap_exceeded';
   const shouldShowDeepRead =
-    !isAiVerdictVisible && (verdictSource === 'basic' || deepReadStatus === 'loading' || deepReadStatus === 'ready');
+    !isAiVerdictVisible &&
+    (verdictSource === 'basic' || deepReadStatus === 'loading' || deepReadStatus === 'ready' || aiVerdictQuotaLocked);
   const heroDisplayLabel = getVerdictDisplayLabel(
     visibleVerdict.verdictLabel,
     `${caseId}|${record.inputText}|${visibleVerdict.delusionScore}`,
@@ -211,6 +217,7 @@ export default function CaseDetailRoute() {
     delusionScore: visibleVerdict.delusionScore,
     explanationText: visibleVerdict.explanationText,
     nextMoveText: visibleVerdict.nextMoveText,
+    variant: isAiVerdictVisible ? 'ai' : 'basic',
     deepReadRoastLine: deepReadShare?.roastLine,
     deepReadTakeaway: deepReadShare?.whatToDoNext,
     appName: 'Overthought',
@@ -404,6 +411,7 @@ export default function CaseDetailRoute() {
               Extra context after a basic verdict: what is happening, what you are overreading, and what to do next.
             </AppText>
             <DeepReadContent
+              locked={aiVerdictQuotaLocked}
               status={deepReadStatus}
               result={deepReadResult}
               message={deepReadMessage}
@@ -708,9 +716,27 @@ function AiVerdictPremiumCard({
   caseDisplayId: string;
   remainingLabel: string;
 }) {
+  const [openSection, setOpenSection] = useState<AiVerdictInsightKey>('whatsHappening');
   const stroke = scoreColor(verdict.delusionScore);
   const circumference = 2 * Math.PI * 44;
   const offset = circumference - (verdict.delusionScore / 100) * circumference;
+  const sections: AiVerdictInsightSection[] = [
+    {
+      key: 'whatsHappening',
+      label: "What's happening",
+      body: verdict.explanationText,
+    },
+    {
+      key: 'youreOverreading',
+      label: "You're overreading",
+      body: 'The story around the evidence may be louder than the evidence itself.',
+    },
+    {
+      key: 'whatMatters',
+      label: 'What matters',
+      body: 'Concrete actions, direct words, and follow-through matter more than the spiral.',
+    },
+  ];
 
   return (
     <View style={styles.aiPremiumCard}>
@@ -730,6 +756,10 @@ function AiVerdictPremiumCard({
           {remainingLabel}
         </AppText>
       </View>
+
+      <AppText variant="subtitle" color="rgba(255, 255, 255, 0.72)" style={styles.deepSubtitle}>
+        The version your group chat would actually send.
+      </AppText>
 
       <View style={styles.aiPremiumHero}>
         <View style={styles.aiPremiumRingWrap}>
@@ -785,6 +815,17 @@ function AiVerdictPremiumCard({
         </AppText>
       </View>
 
+      <View style={styles.deepSections}>
+        {sections.map((section) => (
+          <AiVerdictInsightRow
+            key={section.key}
+            section={section}
+            expanded={openSection === section.key}
+            onPress={() => setOpenSection((current) => (current === section.key ? 'none' : section.key))}
+          />
+        ))}
+      </View>
+
       <AppText variant="eyebrow" color={colors.accent.lime} style={styles.deepTakeawayLabel}>
         Do this →
       </AppText>
@@ -797,7 +838,44 @@ function AiVerdictPremiumCard({
   );
 }
 
+type AiVerdictInsightKey = 'none' | 'whatsHappening' | 'youreOverreading' | 'whatMatters';
+
+interface AiVerdictInsightSection {
+  key: Exclude<AiVerdictInsightKey, 'none'>;
+  label: string;
+  body: string;
+}
+
+function AiVerdictInsightRow({
+  section,
+  expanded,
+  onPress,
+}: {
+  section: AiVerdictInsightSection;
+  expanded: boolean;
+  onPress: () => void;
+}) {
+  const Icon = expanded ? ChevronUp : ChevronDown;
+
+  return (
+    <View style={styles.deepSection}>
+      <Pressable accessibilityRole="button" accessibilityState={{ expanded }} onPress={onPress} style={styles.deepSectionHeader}>
+        <AppText variant="eyebrow" color="rgba(255, 255, 255, 0.62)" style={styles.deepFieldLabel}>
+          {section.label}
+        </AppText>
+        <Icon color="rgba(255, 255, 255, 0.62)" size={18} strokeWidth={2.2} />
+      </Pressable>
+      {expanded ? (
+        <AppText variant="body" color={colors.text.onBrand} style={styles.deepFieldBody}>
+          {section.body}
+        </AppText>
+      ) : null}
+    </View>
+  );
+}
+
 function DeepReadContent({
+  locked,
   status,
   result,
   message,
@@ -805,6 +883,7 @@ function DeepReadContent({
   onRequest,
   onSignIn,
 }: {
+  locked?: boolean;
   status: DeepReadStatus;
   result: Extract<DeepReadResponse, { ok: true }> | null;
   message: string | null;
@@ -813,6 +892,14 @@ function DeepReadContent({
   onSignIn: () => void;
 }) {
   const [openSection, setOpenSection] = useState<DeepReadSectionKey>('whatsActuallyHappening');
+
+  if (locked) {
+    return (
+      <View style={styles.deepStateStack}>
+        <DeepReadStateText text="AI reads are used up for now. Your basic verdict is still available." />
+      </View>
+    );
+  }
 
   if (status === 'ready' && result) {
     const sections: DeepReadSection[] = [
@@ -1523,7 +1610,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   sharePreviewScale: {
-    transform: [{ scale: 0.9 }],
+    transform: [{ scale: 0.96 }],
   },
   shareHiddenCapture: {
     left: -10000,

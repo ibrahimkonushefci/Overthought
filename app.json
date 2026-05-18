@@ -6,14 +6,12 @@
     "version": "0.1.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
     "assetBundlePatterns": [
       "**/*"
     ],
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.ibrahim.overthought",
-      "newArchEnabled": true
+      "bundleIdentifier": "com.ibrahim.overthought"
     },
     "plugins": [
       "expo-router",

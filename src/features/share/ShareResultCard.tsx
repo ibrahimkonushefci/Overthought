@@ -11,16 +11,18 @@ export function ShareResultCard({ payload }: { payload: ShareCardPayload }) {
   const circumference = 2 * Math.PI * 46;
   const offset = circumference - (payload.delusionScore / 100) * circumference;
   const isDeepRead = payload.mode === 'deep_read' && payload.deepReadRoastLine && payload.deepReadTakeaway;
+  const isAiResult = payload.mode === 'result' && payload.variant === 'ai';
+  const isDark = Boolean(isDeepRead || isAiResult);
 
   return (
     <LinearGradient
-      colors={isDeepRead ? ['#090910', '#111119', '#090910'] : gradients.result}
+      colors={isDark ? ['#090910', '#111119', '#090910'] : gradients.result}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
-      style={[styles.card, isDeepRead && styles.deepCard]}
+      style={[styles.card, isDark && styles.deepCard]}
     >
       <View style={styles.header}>
-        <AppText variant="eyebrow" style={[styles.brand, isDeepRead && styles.deepMutedText]}>
+        <AppText variant="eyebrow" style={[styles.brand, isDark && styles.deepMutedText]}>
           Overthought
         </AppText>
         <View style={styles.categoryPill}>
@@ -33,7 +35,14 @@ export function ShareResultCard({ payload }: { payload: ShareCardPayload }) {
       <View style={styles.heroRow}>
         <View style={styles.ringWrap}>
           <Svg width={122} height={122} viewBox="0 0 116 116">
-            <Circle cx="58" cy="58" r="46" stroke={colors.bg.muted} strokeWidth="10" fill="none" />
+            <Circle
+              cx="58"
+              cy="58"
+              r="46"
+              stroke={isDark ? 'rgba(255, 255, 255, 0.14)' : colors.bg.muted}
+              strokeWidth="10"
+              fill="none"
+            />
             <Circle
               cx="58"
               cy="58"
@@ -52,7 +61,7 @@ export function ShareResultCard({ payload }: { payload: ShareCardPayload }) {
             <AppText variant="display" color={stroke} center style={styles.score}>
               {payload.delusionScore}
             </AppText>
-            <AppText variant="eyebrow" center style={[styles.scoreLabel, isDeepRead && styles.deepMutedText]}>
+            <AppText variant="eyebrow" center style={[styles.scoreLabel, isDark && styles.deepMutedText]}>
               Delusion
             </AppText>
           </View>
@@ -64,16 +73,16 @@ export function ShareResultCard({ payload }: { payload: ShareCardPayload }) {
               {verdictIcons[payload.verdictLabel]} {verdictLabels[payload.verdictLabel]}
             </AppText>
           </View>
-          <AppText variant="title" color={isDeepRead ? colors.text.onBrand : colors.text.primary} style={styles.title} numberOfLines={3}>
+          <AppText variant="title" color={isDark ? colors.text.onBrand : colors.text.primary} style={styles.title} numberOfLines={3}>
             {payload.title}
           </AppText>
-          <AppText variant="eyebrow" style={[styles.caseId, isDeepRead && styles.deepMutedText]} numberOfLines={1}>
+          <AppText variant="eyebrow" style={[styles.caseId, isDark && styles.deepMutedText]} numberOfLines={1}>
             Case {payload.caseDisplayId}
           </AppText>
         </View>
       </View>
 
-      {isDeepRead ? (
+      {isDeepRead || isAiResult ? (
         <>
           <View style={styles.groupChatRead}>
             <View style={styles.groupChatBadge}>
@@ -81,8 +90,13 @@ export function ShareResultCard({ payload }: { payload: ShareCardPayload }) {
                 Group Chat Read
               </AppText>
             </View>
-            <AppText variant="title" color={colors.text.onBrand} style={styles.groupChatText} numberOfLines={5}>
-              {payload.deepReadRoastLine}
+            <AppText
+              variant="title"
+              color={colors.text.onBrand}
+              style={[styles.groupChatText, isDark && styles.darkGroupChatText]}
+              numberOfLines={isAiResult ? 4 : 5}
+            >
+              {isDeepRead ? payload.deepReadRoastLine : payload.explanationText}
             </AppText>
           </View>
 
@@ -91,8 +105,13 @@ export function ShareResultCard({ payload }: { payload: ShareCardPayload }) {
               Do this →
             </AppText>
             <View style={styles.deepTakeaway}>
-              <AppText variant="title" color={colors.text.onAccent} style={styles.deepTakeawayText} numberOfLines={5}>
-                {payload.deepReadTakeaway}
+              <AppText
+                variant="title"
+                color={colors.text.onAccent}
+                style={[styles.deepTakeawayText, isDark && styles.darkDeepTakeawayText]}
+                numberOfLines={isAiResult ? 4 : 5}
+              >
+                {isDeepRead ? payload.deepReadTakeaway : payload.nextMoveText}
               </AppText>
             </View>
           </View>
@@ -125,7 +144,7 @@ export function ShareResultCard({ payload }: { payload: ShareCardPayload }) {
       )}
 
       <View style={styles.footer}>
-        <AppText variant="eyebrow" style={[styles.footerText, isDeepRead && styles.deepMutedText]}>
+        <AppText variant="eyebrow" style={[styles.footerText, isDark && styles.deepMutedText]}>
           {payload.appName}
         </AppText>
       </View>
@@ -331,6 +350,10 @@ const styles = StyleSheet.create({
     fontSize: 20,
     lineHeight: 27,
   },
+  darkGroupChatText: {
+    fontSize: 18,
+    lineHeight: 24,
+  },
   deepTakeawayBlock: {
     gap: spacing.sm,
   },
@@ -350,5 +373,9 @@ const styles = StyleSheet.create({
     fontFamily: typography.family.displayBold,
     fontSize: 17,
     lineHeight: 23,
+  },
+  darkDeepTakeawayText: {
+    fontSize: 15,
+    lineHeight: 21,
   },
 });

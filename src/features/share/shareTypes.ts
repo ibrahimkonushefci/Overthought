@@ -2,6 +2,7 @@ import type { CaseCategory, VerdictLabel } from '../../types/shared';
 
 export interface ShareCardPayload {
   mode: 'result' | 'deep_read';
+  variant?: 'basic' | 'ai';
   title: string;
   caseDisplayId: string;
   category: CaseCategory;

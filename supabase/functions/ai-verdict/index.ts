@@ -25,6 +25,40 @@ const GUEST_DAILY_LIMIT = 2;
 const GUEST_IP_DAILY_LIMIT = 10;
 const GLOBAL_DAILY_LIMIT = 100;
 
+function positiveIntegerEnv(name: string, fallback: number): number {
+  const raw = Deno.env.get(name)?.trim();
+
+  if (!raw) {
+    return fallback;
+  }
+
+  const parsed = Number(raw);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function aiVerdictConfig() {
+  return {
+    signedInFreeDailyLimit: positiveIntegerEnv('AI_VERDICT_SIGNED_IN_FREE_DAILY_LIMIT', SIGNED_IN_FREE_DAILY_LIMIT),
+    guestLifetimeLimit: positiveIntegerEnv('AI_VERDICT_GUEST_LIFETIME_LIMIT', GUEST_LIFETIME_LIMIT),
+    guestDailyLimit: positiveIntegerEnv('AI_VERDICT_GUEST_DAILY_LIMIT', GUEST_DAILY_LIMIT),
+    guestIpDailyLimit: positiveIntegerEnv('AI_VERDICT_GUEST_IP_DAILY_LIMIT', GUEST_IP_DAILY_LIMIT),
+    globalDailyLimit: positiveIntegerEnv('AI_VERDICT_GLOBAL_DAILY_LIMIT', GLOBAL_DAILY_LIMIT),
+    premiumDailyLimit: positiveIntegerEnv('AI_VERDICT_PREMIUM_DAILY_LIMIT', 50),
+  };
+}
+
+function logAiVerdictOutcome(result: { status: number; body: { ok: boolean; code?: string; cache?: { source: string }; access?: { accessTier: string; reason?: string } } }) {
+  console.info('[ai-verdict] outcome', {
+    status: result.status,
+    ok: result.body.ok,
+    code: result.body.ok ? null : result.body.code ?? null,
+    cacheSource: result.body.ok ? result.body.cache?.source ?? null : null,
+    accessTier: result.body.access?.accessTier ?? null,
+    quotaReason: result.body.access?.reason ?? null,
+    fallbackReason: result.body.ok ? null : result.body.code ?? null,
+  });
+}
+
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -136,6 +170,7 @@ Deno.serve(async (request) => {
   const authClient = createClient(supabaseUrl, anonKey);
   const adminClient = createClient(supabaseUrl, serviceRoleKey);
   const token = bearerToken(request);
+  const config = aiVerdictConfig();
 
   const result = await handleAiVerdictRequest(
     token,
@@ -145,11 +180,11 @@ Deno.serve(async (request) => {
       modelName: MODEL_NAME,
       promptVersion: PROMPT_VERSION,
       responseSchemaVersion: RESPONSE_SCHEMA_VERSION,
-      signedInFreeDailyLimit: SIGNED_IN_FREE_DAILY_LIMIT,
-      guestLifetimeLimit: GUEST_LIFETIME_LIMIT,
-      guestDailyLimit: GUEST_DAILY_LIMIT,
-      guestIpDailyLimit: GUEST_IP_DAILY_LIMIT,
-      globalDailyLimit: GLOBAL_DAILY_LIMIT,
+      signedInFreeDailyLimit: config.signedInFreeDailyLimit,
+      guestLifetimeLimit: config.guestLifetimeLimit,
+      guestDailyLimit: config.guestDailyLimit,
+      guestIpDailyLimit: config.guestIpDailyLimit,
+      globalDailyLimit: config.globalDailyLimit,
       data: {
         async authenticate(authToken) {
           const { data, error } = await authClient.auth.getUser(authToken);
@@ -412,6 +447,8 @@ Deno.serve(async (request) => {
     },
     { ipAddress: forwardedIp(request) },
   );
+
+  logAiVerdictOutcome(result);
 
   return json(result.body, result.status);
 });

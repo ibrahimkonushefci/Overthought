@@ -69,3 +69,21 @@ When implementing v1:
 - keep migration retry-safe
 - avoid introducing extra backend dependencies for analysis
 - avoid overbuilding the share system in the first pass
+
+## 6. AI Verdict release-hardening note
+
+The current AI-first verdict flow supersedes the original "local-only analysis" rule for the main visible result, while preserving the local verdict as fallback.
+
+`ai-verdict` Edge Function secrets:
+- `SUPABASE_URL`
+- `SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `GEMINI_API_KEY`
+
+Optional `ai-verdict` quota cap environment variables:
+- `AI_VERDICT_SIGNED_IN_FREE_DAILY_LIMIT` defaults to `2`
+- `AI_VERDICT_GUEST_LIFETIME_LIMIT` defaults to `2`
+- `AI_VERDICT_GUEST_DAILY_LIMIT` defaults to `2`
+- `AI_VERDICT_GUEST_IP_DAILY_LIMIT` defaults to `10`
+- `AI_VERDICT_GLOBAL_DAILY_LIMIT` defaults to `100`
+- `AI_VERDICT_PREMIUM_DAILY_LIMIT` defaults to `50` as a placeholder only; premium AI branching is not implemented yet
