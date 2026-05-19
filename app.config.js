@@ -1,5 +1,3 @@
-const base = require('./app.json');
-
 const enableGoogleAuth = process.env.EXPO_PUBLIC_ENABLE_GOOGLE_AUTH === 'true';
 const googleIosUrlScheme = process.env.EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME;
 const fallbackGoogleIosUrlScheme = 'com.googleusercontent.apps.overthought-placeholder';
@@ -22,38 +20,70 @@ if (enableGoogleAuth) {
   }
 }
 
+const baseExpo = {
+  name: 'Overthought',
+  slug: 'overthought',
+  scheme: 'overthought',
+  version: '0.1.0',
+  orientation: 'portrait',
+  userInterfaceStyle: 'light',
+  assetBundlePatterns: ['**/*'],
+  ios: {
+    supportsTablet: false,
+    bundleIdentifier: 'com.ibrahim.overthought',
+  },
+  plugins: [
+    'expo-router',
+    [
+      'expo-dev-client',
+      {
+        launchMode: 'most-recent',
+      },
+    ],
+  ],
+  android: {
+    package: 'com.ibrahim.overthought',
+  },
+  extra: {
+    router: {},
+    eas: {
+      projectId: 'de992f0f-c45d-43ca-8655-b8428d4a9e5f',
+    },
+  },
+};
+
 module.exports = ({ config }) => {
-  const baseExpo = {
+  const expo = {
     ...config,
-    ...base.expo,
+    ...baseExpo,
     ios: {
       ...config.ios,
-      ...base.expo.ios,
+      ...baseExpo.ios,
     },
     android: {
       ...config.android,
-      ...base.expo.android,
+      ...baseExpo.android,
     },
     extra: {
       ...config.extra,
-      ...base.expo.extra,
+      ...baseExpo.extra,
     },
   };
-  const plugins = (baseExpo.plugins || []).filter((plugin) => {
+  const plugins = (expo.plugins || []).filter((plugin) => {
     const pluginName = Array.isArray(plugin) ? plugin[0] : plugin;
     return pluginName !== '@react-native-google-signin/google-signin';
   });
 
   return {
     expo: {
-      ...baseExpo,
+      ...expo,
       ios: {
-        ...baseExpo.ios,
+        ...expo.ios,
         bundleIdentifier: isProduction ? 'com.ibrahim.overthought' : 'com.ibrahim.overthought.dev',
         usesAppleSignIn: true,
       },
       extra: {
-        ...baseExpo.extra,
+        ...expo.extra,
         appVariant,
       },
       plugins: [
