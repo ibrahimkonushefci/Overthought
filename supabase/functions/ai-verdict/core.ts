@@ -208,6 +208,7 @@ export type AiVerdictUsageReservationResult =
 
 export interface AiVerdictDataAdapter {
   authenticate: (token: string) => Promise<string | null>;
+  getAuthenticatedAccessTier: (userId: string) => Promise<Extract<AiVerdictAccessTier, 'free' | 'premium'>>;
   getOwnedActiveCase: (userId: string, caseId: string) => Promise<CaseRow | null>;
   getCachedVerdict: (input: AiVerdictCacheLookupInput) => Promise<AiVerdictStoredRow | null>;
   getCachedGuestVerdict: (input: GuestAiVerdictCacheLookupInput) => Promise<AiVerdictStoredRow | null>;
@@ -241,6 +242,7 @@ export interface AiVerdictHandlerDeps {
   promptVersion?: number;
   responseSchemaVersion?: number;
   signedInFreeDailyLimit?: number;
+  premiumDailyLimit?: number;
   guestLifetimeLimit?: number;
   guestDailyLimit?: number;
   guestIpDailyLimit?: number;
@@ -558,6 +560,7 @@ async function handleAuthenticatedRequest(
     promptVersion: number;
     responseSchemaVersion: number;
     signedInFreeDailyLimit: number;
+    premiumDailyLimit: number;
     guestLifetimeLimit: number;
     guestDailyLimit: number;
     guestIpDailyLimit: number;
@@ -589,6 +592,8 @@ async function handleAuthenticatedRequest(
 
     const localFallback = localFallbackFromCase(caseRow);
     const targetFingerprint = await fingerprintCase(caseRow, runtime.hash);
+    const accessTier = await deps.data.getAuthenticatedAccessTier(userId);
+    const primaryLimit = accessTier === 'premium' ? runtime.premiumDailyLimit : runtime.signedInFreeDailyLimit;
     const lookupInput: AiVerdictCacheLookupInput = {
       userId,
       caseId: caseRow.id,
@@ -604,20 +609,20 @@ async function handleAuthenticatedRequest(
     if (cached) {
       const access = await deps.data.getUsageAccess({
         userId,
-        accessTier: 'free',
+        accessTier,
         quotaBucket: runtime.quotaBucket,
         quotaScope: 'daily',
-        limit: runtime.signedInFreeDailyLimit,
+        limit: primaryLimit,
       });
       return responseFromRow(cached, 'cache', localFallback, access);
     }
 
     const reservation = await deps.data.reserveUsage({
       userId,
-      accessTier: 'free',
+      accessTier,
       targetFingerprint,
       quotaBucket: runtime.quotaBucket,
-      primaryLimit: runtime.signedInFreeDailyLimit,
+      primaryLimit,
       guestLifetimeLimit: runtime.guestLifetimeLimit,
       guestDailyLimit: runtime.guestDailyLimit,
       ipDailyLimit: runtime.guestIpDailyLimit,
@@ -645,6 +650,7 @@ async function handleAuthenticatedRequest(
         providerResult.code,
         messageForFailure(providerResult.code),
         localFallback,
+        reservation.access,
       );
     }
 
@@ -711,6 +717,7 @@ async function handleGuestRequest(
     promptVersion: number;
     responseSchemaVersion: number;
     signedInFreeDailyLimit: number;
+    premiumDailyLimit: number;
     guestLifetimeLimit: number;
     guestDailyLimit: number;
     guestIpDailyLimit: number;
@@ -799,6 +806,7 @@ async function handleGuestRequest(
         providerResult.code,
         messageForFailure(providerResult.code),
         localFallback,
+        reservation.access,
       );
     }
 
@@ -867,6 +875,7 @@ export async function handleAiVerdictRequest(
     promptVersion: deps.promptVersion ?? PROMPT_VERSION,
     responseSchemaVersion: deps.responseSchemaVersion ?? RESPONSE_SCHEMA_VERSION,
     signedInFreeDailyLimit: deps.signedInFreeDailyLimit ?? SIGNED_IN_FREE_DAILY_LIMIT,
+    premiumDailyLimit: deps.premiumDailyLimit ?? 50,
     guestLifetimeLimit: deps.guestLifetimeLimit ?? GUEST_LIFETIME_LIMIT,
     guestDailyLimit: deps.guestDailyLimit ?? GUEST_DAILY_LIMIT,
     guestIpDailyLimit: deps.guestIpDailyLimit ?? GUEST_IP_DAILY_LIMIT,
@@ -898,12 +907,38 @@ interface GeminiGenerateContentResponse {
   modelVersion?: string;
 }
 
+type GeminiInvalidResponseReason =
+  | 'response_json_parse_failed'
+  | 'missing_text'
+  | 'invalid_json'
+  | 'schema_validation_failed';
+
 interface GeminiErrorResponse {
   error?: {
     code?: number;
     message?: string;
     status?: string;
   };
+}
+
+function logGeminiProviderDiagnostic(
+  event: string,
+  details: {
+    attempt: number;
+    maxAttempts: number;
+    modelName: string;
+    status?: number;
+    retrying?: boolean;
+    reason?: GeminiInvalidResponseReason;
+    finishReason?: string | null;
+    candidateCount?: number;
+    partCount?: number;
+    textLength?: number | null;
+    errorCode?: number | null;
+    errorStatus?: string | null;
+  },
+) {
+  console.info('[ai-verdict] provider', { event, ...details });
 }
 
 function geminiUrl(apiKey: string, modelName = MODEL_NAME): string {
@@ -1001,6 +1036,7 @@ function aiVerdictJsonSchema() {
       },
     },
     required: ['verdictLabel', 'delusionScore', 'explanationText', 'nextMoveText', 'verdictVersion'],
+    propertyOrdering: ['verdictLabel', 'delusionScore', 'explanationText', 'nextMoveText', 'verdictVersion'],
   };
 }
 
@@ -1111,29 +1147,60 @@ function sanitizeAiVerdictOutput(value: AiVerdictOutput): AiVerdictOutput {
   };
 }
 
-function isValidAiVerdictOutput(value: unknown): value is AiVerdictOutput {
+function integerFromUnknown(value: unknown): number | null {
+  if (Number.isInteger(value)) {
+    return Number(value);
+  }
+
+  if (typeof value === 'string' && /^-?\d+$/.test(value.trim())) {
+    const parsed = Number(value.trim());
+    return Number.isInteger(parsed) ? parsed : null;
+  }
+
+  return null;
+}
+
+function coerceAiVerdictOutput(value: unknown): AiVerdictOutput | null {
   if (!value || typeof value !== 'object') {
-    return false;
+    return null;
   }
 
   const output = value as Record<string, unknown>;
+  const delusionScore = integerFromUnknown(output.delusionScore);
+  const verdictVersion = output.verdictVersion === undefined ? 1 : integerFromUnknown(output.verdictVersion);
 
-  return (
-    typeof output.verdictLabel === 'string' &&
-    VERDICT_LABELS.has(output.verdictLabel as VerdictLabel) &&
-    Number.isInteger(output.delusionScore) &&
-    Number(output.delusionScore) >= 0 &&
-    Number(output.delusionScore) <= 100 &&
-    typeof output.explanationText === 'string' &&
-    output.explanationText.trim().length > 0 &&
-    typeof output.nextMoveText === 'string' &&
-    output.nextMoveText.trim().length > 0 &&
-    Number.isInteger(output.verdictVersion) &&
-    Number(output.verdictVersion) >= 1
-  );
+  if (
+    typeof output.verdictLabel !== 'string' ||
+    !VERDICT_LABELS.has(output.verdictLabel as VerdictLabel) ||
+    delusionScore === null ||
+    delusionScore < 0 ||
+    delusionScore > 100 ||
+    typeof output.explanationText !== 'string' ||
+    output.explanationText.trim().length === 0 ||
+    typeof output.nextMoveText !== 'string' ||
+    output.nextMoveText.trim().length === 0 ||
+    verdictVersion === null ||
+    verdictVersion < 1
+  ) {
+    return null;
+  }
+
+  return {
+    verdictLabel: output.verdictLabel as VerdictLabel,
+    delusionScore,
+    explanationText: output.explanationText,
+    nextMoveText: output.nextMoveText,
+    verdictVersion,
+  };
 }
 
-function parseAiVerdictJson(value: string): AiVerdictProviderResult {
+function isValidAiVerdictOutput(value: unknown): value is AiVerdictOutput {
+  return coerceAiVerdictOutput(value) !== null;
+}
+
+function parseAiVerdictJson(
+  value: string,
+): Extract<AiVerdictProviderResult, { ok: true }> | { ok: false; code: 'invalid_ai_response'; reason: GeminiInvalidResponseReason } {
   const trimmed = value.trim();
   const directParse = parseUnknownJson(trimmed);
   let parsed: unknown;
@@ -1144,26 +1211,28 @@ function parseAiVerdictJson(value: string): AiVerdictProviderResult {
     const extracted = extractJsonObjectText(trimmed);
 
     if (!extracted) {
-      return { ok: false, code: 'invalid_ai_response' };
+      return { ok: false, code: 'invalid_ai_response', reason: 'invalid_json' };
     }
 
     const extractedParse = parseUnknownJson(extracted);
 
     if (!extractedParse.ok) {
-      return { ok: false, code: 'invalid_ai_response' };
+      return { ok: false, code: 'invalid_ai_response', reason: 'invalid_json' };
     }
 
     parsed = extractedParse.parsed;
   }
 
-  if (!isValidAiVerdictOutput(parsed)) {
-    return { ok: false, code: 'invalid_ai_response' };
+  const coerced = coerceAiVerdictOutput(parsed);
+
+  if (!coerced) {
+    return { ok: false, code: 'invalid_ai_response', reason: 'schema_validation_failed' };
   }
 
-  const sanitized = sanitizeAiVerdictOutput(parsed);
+  const sanitized = sanitizeAiVerdictOutput(coerced);
 
   if (!isValidAiVerdictOutput(sanitized)) {
-    return { ok: false, code: 'invalid_ai_response' };
+    return { ok: false, code: 'invalid_ai_response', reason: 'schema_validation_failed' };
   }
 
   return {
@@ -1186,6 +1255,34 @@ export async function generateAiVerdictWithGemini(
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), GEMINI_TIMEOUT_MS);
     const strictJsonOnly = attempt > 1;
+    const retryInvalidResponse = async (
+      reason: GeminiInvalidResponseReason,
+      metadata: {
+        finishReason?: string | null;
+        candidateCount?: number;
+        partCount?: number;
+        textLength?: number | null;
+      } = {},
+    ): Promise<AiVerdictProviderResult | null> => {
+      const retrying = attempt < GEMINI_MAX_ATTEMPTS;
+
+      logGeminiProviderDiagnostic('invalid_response', {
+        attempt,
+        maxAttempts: GEMINI_MAX_ATTEMPTS,
+        modelName,
+        reason,
+        retrying,
+        ...metadata,
+      });
+
+      if (retrying) {
+        clearTimeout(timeout);
+        await wait(GEMINI_RETRY_DELAY_MS);
+        return null;
+      }
+
+      return { ok: false, code: 'invalid_ai_response' };
+    };
 
     try {
       const response = await fetch(geminiUrl(apiKey, modelName), {
@@ -1204,9 +1301,9 @@ export async function generateAiVerdictWithGemini(
           generationConfig: {
             temperature: 0.55,
             topP: 0.9,
-            maxOutputTokens: 1024,
+            maxOutputTokens: 2048,
             responseMimeType: 'application/json',
-            responseJsonSchema: aiVerdictJsonSchema(),
+            responseSchema: aiVerdictJsonSchema(),
           },
         }),
       });
@@ -1220,6 +1317,15 @@ export async function generateAiVerdictWithGemini(
         );
 
         if (retryable && attempt < GEMINI_MAX_ATTEMPTS) {
+          logGeminiProviderDiagnostic('http_retry', {
+            attempt,
+            maxAttempts: GEMINI_MAX_ATTEMPTS,
+            modelName,
+            status: response.status,
+            errorCode: providerError.errorCode,
+            errorStatus: providerError.errorStatus,
+            retrying: true,
+          });
           clearTimeout(timeout);
           await wait(GEMINI_RETRY_DELAY_MS);
           continue;
@@ -1233,25 +1339,50 @@ export async function generateAiVerdictWithGemini(
       try {
         responseJson = (await response.json()) as GeminiGenerateContentResponse;
       } catch {
-        return { ok: false, code: 'invalid_ai_response' };
+        const retryResult = await retryInvalidResponse('response_json_parse_failed');
+
+        if (retryResult === null) {
+          continue;
+        }
+
+        return retryResult;
       }
 
+      const firstCandidate = responseJson.candidates?.[0];
       const text = extractGeminiText(responseJson);
+      const candidateCount = responseJson.candidates?.length ?? 0;
+      const partCount = firstCandidate?.content?.parts?.length ?? 0;
 
       if (!text) {
-        return { ok: false, code: 'invalid_ai_response' };
+        const retryResult = await retryInvalidResponse('missing_text', {
+          finishReason: firstCandidate?.finishReason ?? null,
+          candidateCount,
+          partCount,
+          textLength: null,
+        });
+
+        if (retryResult === null) {
+          continue;
+        }
+
+        return retryResult;
       }
 
       const parsed = parseAiVerdictJson(text);
 
       if (!parsed.ok) {
-        if (attempt < GEMINI_MAX_ATTEMPTS) {
-          clearTimeout(timeout);
-          await wait(GEMINI_RETRY_DELAY_MS);
+        const retryResult = await retryInvalidResponse(parsed.reason, {
+          finishReason: firstCandidate?.finishReason ?? null,
+          candidateCount,
+          partCount,
+          textLength: text.length,
+        });
+
+        if (retryResult === null) {
           continue;
         }
 
-        return parsed;
+        return retryResult;
       }
 
       return {

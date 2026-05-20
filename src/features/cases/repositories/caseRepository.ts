@@ -34,6 +34,20 @@ function supabaseErrorDetails(error: unknown) {
   };
 }
 
+function normalizedSupabaseInsertError(error: unknown): Error {
+  const details = supabaseErrorDetails(error);
+  const normalized = new Error('Unable to save the case right now. Try again.');
+
+  Object.assign(normalized, {
+    code: details.code,
+    supabaseMessage: details.message,
+    details: details.details,
+    hint: details.hint,
+  });
+
+  return normalized;
+}
+
 function logCaseCreateDiagnostic(event: string, details: Record<string, unknown>) {
   console.info(`[case-create] ${event}`, details);
 }
@@ -105,7 +119,7 @@ export const caseRepository = {
           profileLookupError: profileLookup.error ? supabaseErrorDetails(profileLookup.error) : null,
         });
 
-        throw error;
+        throw normalizedSupabaseInsertError(error);
       }
 
       trackEvent('case_saved', { mode: 'authenticated' });

@@ -136,6 +136,8 @@ Before the next TestFlight build that ships Apple and Google sign-in, set the pr
 
 Also confirm external provider setup:
 
+- Supabase Auth redirect URLs include `overthought://auth` and `overthought://reset-password`.
+- Password reset emails should contain `redirect_to=overthought://reset-password`, not a local Metro URL.
 - Apple Developer has Sign in with Apple enabled for `com.ibrahim.overthought`.
 - Supabase Apple provider allows the production bundle ID.
 - Supabase Google provider includes the web, dev iOS, and production iOS client IDs.

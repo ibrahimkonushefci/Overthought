@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Alert, StyleSheet, TextInput, View } from 'react-native';
-import { useRouter } from 'expo-router';
-import { ArrowLeft, Mail } from 'lucide-react-native';
+import { Alert, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { usePathname, useRouter } from 'expo-router';
+import { ArrowLeft, LogIn, UserPlus } from 'lucide-react-native';
 import { authService } from '../../src/features/auth/authService';
 import { env } from '../../src/lib/env';
 import { useAuthStore } from '../../src/store/authStore';
@@ -12,18 +12,21 @@ import { colors, radii, spacing, typography } from '../../src/shared/theme/token
 
 export default function AuthRoute() {
   const router = useRouter();
+  const pathname = usePathname();
   const sessionMode = useAuthStore((state) => state.sessionMode);
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [authMode, setAuthMode] = useState<'sign_in' | 'sign_up'>('sign_in');
   const [emailLoading, setEmailLoading] = useState(false);
   const [appleAvailable, setAppleAvailable] = useState(false);
   const [appleLoading, setAppleLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
   useEffect(() => {
-    if (sessionMode === 'authenticated') {
+    if (sessionMode === 'authenticated' && pathname !== '/reset-password') {
       router.replace('/home');
     }
-  }, [router, sessionMode]);
+  }, [pathname, router, sessionMode]);
 
   useEffect(() => {
     let isMounted = true;
@@ -40,10 +43,23 @@ export default function AuthRoute() {
   }, []);
 
   const submit = async () => {
+    const trimmedEmail = email.trim();
+
+    if (!trimmedEmail.includes('@') || password.length < 8) {
+      Alert.alert('Check your details', 'Use a valid email and a password with at least 8 characters.');
+      return;
+    }
+
     setEmailLoading(true);
-    const result = await authService.signInWithEmail(email.trim());
+    const result =
+      authMode === 'sign_in'
+        ? await authService.signInWithEmailPassword(trimmedEmail, password)
+        : await authService.signUpWithEmailPassword(trimmedEmail, password);
     setEmailLoading(false);
-    Alert.alert(result.ok ? 'Email sent' : 'Email sign-in', result.message ?? 'Try again.');
+
+    if (!result.ok || result.message) {
+      Alert.alert(authMode === 'sign_in' ? 'Email sign-in' : 'Create account', result.message ?? 'Try again.');
+    }
   };
 
   const signInWithGoogle = async () => {
@@ -68,29 +84,84 @@ export default function AuthRoute() {
 
   return (
     <Screen bottomInset={32}>
-      <Button title="Back" variant="ghost" icon={ArrowLeft} onPress={() => router.back()} />
+      <Pressable accessibilityRole="button" onPress={() => router.back()} style={styles.backButton}>
+        <ArrowLeft color={colors.text.primary} size={22} strokeWidth={2.6} />
+        <AppText variant="body" style={styles.backText}>
+          Back
+        </AppText>
+      </Pressable>
       <View style={styles.copy}>
         <AppText variant="eyebrow">Optional login</AppText>
         <AppText variant="display">
           Save your <AppText variant="display" color={colors.brand.pink} style={styles.script}>case file</AppText>.
         </AppText>
-        <AppText variant="subtitle">Email sign-in uses Supabase magic links once credentials are configured.</AppText>
+        <AppText variant="subtitle">Use email and password, or keep judging as a guest.</AppText>
       </View>
-      <TextInput
-        autoCapitalize="none"
-        autoCorrect={false}
-        keyboardType="email-address"
-        onChangeText={setEmail}
-        placeholder="you@example.com"
-        placeholderTextColor={colors.ui.placeholder}
-        style={styles.input}
-        value={email}
-      />
+      <View style={styles.modeSwitch}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityState={{ selected: authMode === 'sign_in' }}
+          onPress={() => setAuthMode('sign_in')}
+          style={[styles.modeButton, authMode === 'sign_in' && styles.modeButtonActive]}
+        >
+          <AppText variant="eyebrow" color={authMode === 'sign_in' ? colors.text.onBrand : colors.text.secondary} style={styles.modeText}>
+            Sign in
+          </AppText>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityState={{ selected: authMode === 'sign_up' }}
+          onPress={() => setAuthMode('sign_up')}
+          style={[styles.modeButton, authMode === 'sign_up' && styles.modeButtonActive]}
+        >
+          <AppText variant="eyebrow" color={authMode === 'sign_up' ? colors.text.onBrand : colors.text.secondary} style={styles.modeText}>
+            Create account
+          </AppText>
+        </Pressable>
+      </View>
+      <View style={styles.form}>
+        <TextInput
+          autoCapitalize="none"
+          autoCorrect={false}
+          autoComplete="email"
+          inputMode="email"
+          keyboardType="email-address"
+          onChangeText={setEmail}
+          placeholder="you@example.com"
+          placeholderTextColor={colors.ui.placeholder}
+          style={styles.input}
+          value={email}
+        />
+        <TextInput
+          autoCapitalize="none"
+          autoCorrect={false}
+          autoComplete={authMode === 'sign_in' ? 'current-password' : 'new-password'}
+          onChangeText={setPassword}
+          placeholder="Password"
+          placeholderTextColor={colors.ui.placeholder}
+          secureTextEntry
+          style={styles.input}
+          textContentType={authMode === 'sign_in' ? 'password' : 'newPassword'}
+          value={password}
+        />
+      </View>
+      {authMode === 'sign_in' ? (
+        <Pressable
+          accessibilityRole="button"
+          disabled={emailLoading || appleLoading || googleLoading}
+          onPress={() => router.push('/forgot-password')}
+          style={styles.forgotButton}
+        >
+          <AppText variant="body" color={colors.text.secondary} style={styles.forgotText}>
+            Forgot password?
+          </AppText>
+        </Pressable>
+      ) : null}
       <Button
-        title="Send magic link"
-        icon={Mail}
+        title={authMode === 'sign_in' ? 'Sign in with email' : 'Create account'}
+        icon={authMode === 'sign_in' ? LogIn : UserPlus}
         loading={emailLoading}
-        disabled={!email.includes('@') || emailLoading || appleLoading || googleLoading}
+        disabled={!email.includes('@') || password.length < 8 || emailLoading || appleLoading || googleLoading}
         onPress={() => void submit()}
       />
       {appleAvailable ? (
@@ -124,6 +195,18 @@ export default function AuthRoute() {
 }
 
 const styles = StyleSheet.create({
+  backButton: {
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    gap: spacing.xs,
+    minHeight: 40,
+    paddingRight: spacing.md,
+  },
+  backText: {
+    fontFamily: typography.family.displaySemiBold,
+    fontSize: 16,
+  },
   copy: {
     gap: spacing.md,
     marginTop: spacing.xl,
@@ -131,6 +214,10 @@ const styles = StyleSheet.create({
   },
   script: {
     fontFamily: typography.family.editorial,
+  },
+  form: {
+    gap: spacing.md,
+    marginBottom: spacing.sm,
   },
   input: {
     backgroundColor: colors.bg.surface,
@@ -140,8 +227,43 @@ const styles = StyleSheet.create({
     color: colors.text.primary,
     fontFamily: typography.family.bodyMedium,
     fontSize: 15,
-    marginBottom: spacing.lg,
-    minHeight: 50,
+    minHeight: 54,
     paddingHorizontal: spacing.lg,
+  },
+  forgotButton: {
+    alignSelf: 'flex-end',
+    marginBottom: spacing.lg,
+    minHeight: 30,
+    paddingLeft: spacing.lg,
+    paddingVertical: spacing.xs,
+  },
+  forgotText: {
+    fontFamily: typography.family.displaySemiBold,
+    fontSize: 14,
+  },
+  modeSwitch: {
+    backgroundColor: colors.bg.surface,
+    borderColor: colors.ui.border,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: spacing.xs,
+    marginBottom: spacing.lg,
+    padding: spacing.xs,
+  },
+  modeButton: {
+    alignItems: 'center',
+    borderRadius: radii.md,
+    flex: 1,
+    minHeight: 42,
+    justifyContent: 'center',
+  },
+  modeButtonActive: {
+    backgroundColor: colors.brand.ink,
+  },
+  modeText: {
+    fontFamily: typography.family.displayBold,
+    fontSize: 10,
+    letterSpacing: 1.4,
   },
 });

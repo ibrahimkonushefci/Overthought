@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { StyleProp, TextStyle } from 'react-native';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { usePathname, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { authService } from '../../src/features/auth/authService';
 import { env } from '../../src/lib/env';
@@ -13,15 +13,16 @@ import { colors, gradients, shadows, spacing, typography } from '../../src/share
 
 export default function WelcomeRoute() {
   const router = useRouter();
+  const pathname = usePathname();
   const sessionMode = useAuthStore((state) => state.sessionMode);
   const [appleAvailable, setAppleAvailable] = useState(false);
   const [appleLoading, setAppleLoading] = useState(false);
 
   useEffect(() => {
-    if (sessionMode === 'authenticated') {
+    if (sessionMode === 'authenticated' && pathname !== '/reset-password') {
       router.replace('/home');
     }
-  }, [router, sessionMode]);
+  }, [pathname, router, sessionMode]);
 
   useEffect(() => {
     let isMounted = true;

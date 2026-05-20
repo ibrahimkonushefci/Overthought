@@ -13,6 +13,7 @@ jest.mock('../../lib/env', () => ({
     supabaseUrl: 'https://example.supabase.co',
     supabaseAnonKey: 'anon-key',
     supabaseRedirectUrl: 'overthought://auth',
+    supabasePasswordResetRedirectUrl: 'overthought://reset-password',
     enableAppleAuth: false,
     googleIosClientId: '',
     googleWebClientId: '',
@@ -60,6 +61,10 @@ jest.mock('../../lib/supabase/client', () => ({
   supabase: {
     auth: {
       signOut: jest.fn(async () => ({ error: null })),
+      signInWithPassword: jest.fn(),
+      signUp: jest.fn(),
+      resetPasswordForEmail: jest.fn(),
+      updateUser: jest.fn(),
       signInWithIdToken: jest.fn(),
       onAuthStateChange: jest.fn(),
       getSession: jest.fn(async () => ({ data: { session: null } })),
@@ -85,6 +90,10 @@ jest.mock('../profile/profileRepository', () => ({
 const mockSupabase = supabase as unknown as {
   auth: {
     signOut: jest.Mock;
+    signInWithPassword: jest.Mock;
+    signUp: jest.Mock;
+    resetPasswordForEmail: jest.Mock;
+    updateUser: jest.Mock;
     signInWithIdToken: jest.Mock;
     onAuthStateChange: jest.Mock;
     getSession: jest.Mock;
@@ -212,6 +221,156 @@ describe('authService.deleteAccount', () => {
 
     expect(useAuthStore.getState().sessionMode).toBe('guest');
     expect(premiumService.handleAuthStateChange).toHaveBeenCalledWith(null);
+  });
+});
+
+describe('authService email password auth', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mutableEnv.enableAppleAuth = false;
+    mutableEnv.enableGoogleAuth = false;
+    mutableEnv.googleWebClientId = '';
+    mutableEnv.googleIosClientId = '';
+    useGuestStore.getState().clearAllLocalData();
+    useAuthStore.getState().resetSession();
+  });
+
+  it('signs in with email and password through Supabase', async () => {
+    mockSupabase.auth.signInWithPassword.mockResolvedValue({
+      data: {
+        session: {
+          user: {
+            id: 'email-user-1',
+            email: 'person@example.com',
+            app_metadata: { provider: 'email' },
+            user_metadata: {},
+          },
+        },
+      },
+      error: null,
+    });
+
+    const result = await authService.signInWithEmailPassword('person@example.com', 'password123');
+
+    expect(result).toEqual({ ok: true });
+    expect(mockSupabase.auth.signInWithPassword).toHaveBeenCalledWith({
+      email: 'person@example.com',
+      password: 'password123',
+    });
+    expect(useAuthStore.getState().sessionMode).toBe('authenticated');
+    expect(useAuthStore.getState().user).toMatchObject({
+      id: 'email-user-1',
+      email: 'person@example.com',
+      provider: 'email',
+    });
+    expect(premiumService.handleAuthStateChange).toHaveBeenCalledWith('email-user-1');
+  });
+
+  it('returns Supabase email password sign-in errors without changing local auth state', async () => {
+    mockSupabase.auth.signInWithPassword.mockResolvedValue({
+      data: { session: null },
+      error: { message: 'Invalid login credentials' },
+    });
+
+    const result = await authService.signInWithEmailPassword('person@example.com', 'password123');
+
+    expect(result).toEqual({ ok: false, message: 'Invalid login credentials' });
+    expect(useAuthStore.getState().sessionMode).toBe('guest');
+    expect(premiumService.handleAuthStateChange).not.toHaveBeenCalled();
+  });
+
+  it('creates an email password account and applies the session when confirmation is not required', async () => {
+    mockSupabase.auth.signUp.mockResolvedValue({
+      data: {
+        session: {
+          user: {
+            id: 'email-user-2',
+            email: 'new@example.com',
+            app_metadata: { provider: 'email' },
+            user_metadata: {},
+          },
+        },
+      },
+      error: null,
+    });
+
+    const result = await authService.signUpWithEmailPassword('new@example.com', 'password123');
+
+    expect(result).toEqual({ ok: true });
+    expect(mockSupabase.auth.signUp).toHaveBeenCalledWith({
+      email: 'new@example.com',
+      password: 'password123',
+      options: {
+        emailRedirectTo: 'overthought://auth',
+      },
+    });
+    expect(useAuthStore.getState().sessionMode).toBe('authenticated');
+    expect(useAuthStore.getState().user?.id).toBe('email-user-2');
+    expect(premiumService.handleAuthStateChange).toHaveBeenCalledWith('email-user-2');
+  });
+
+  it('returns a confirmation message when email password signup needs email confirmation', async () => {
+    mockSupabase.auth.signUp.mockResolvedValue({
+      data: { session: null },
+      error: null,
+    });
+
+    const result = await authService.signUpWithEmailPassword('new@example.com', 'password123');
+
+    expect(result).toEqual({
+      ok: true,
+      message: 'Account created. Check your email to confirm it, then sign in.',
+    });
+    expect(useAuthStore.getState().sessionMode).toBe('guest');
+    expect(premiumService.handleAuthStateChange).not.toHaveBeenCalled();
+  });
+
+  it('requests a password reset email with the dedicated reset redirect', async () => {
+    mockSupabase.auth.resetPasswordForEmail.mockResolvedValue({ data: {}, error: null });
+
+    const result = await authService.requestPasswordReset('person@example.com');
+
+    expect(result).toEqual({
+      ok: true,
+      message: 'Check your email for the password reset link.',
+    });
+    expect(mockSupabase.auth.resetPasswordForEmail).toHaveBeenCalledWith('person@example.com', {
+      redirectTo: 'overthought://reset-password',
+    });
+  });
+
+  it('returns password reset request errors from Supabase', async () => {
+    mockSupabase.auth.resetPasswordForEmail.mockResolvedValue({
+      data: null,
+      error: { message: 'For security purposes, you can only request this once every 60 seconds' },
+    });
+
+    const result = await authService.requestPasswordReset('person@example.com');
+
+    expect(result).toEqual({
+      ok: false,
+      message: 'For security purposes, you can only request this once every 60 seconds',
+    });
+  });
+
+  it('updates the password for a recovery session', async () => {
+    mockSupabase.auth.updateUser.mockResolvedValue({ data: { user: { id: 'email-user-1' } }, error: null });
+
+    const result = await authService.updatePassword('newpassword123');
+
+    expect(result).toEqual({ ok: true, message: 'Password updated.' });
+    expect(mockSupabase.auth.updateUser).toHaveBeenCalledWith({ password: 'newpassword123' });
+  });
+
+  it('returns password update errors from Supabase', async () => {
+    mockSupabase.auth.updateUser.mockResolvedValue({
+      data: { user: null },
+      error: { message: 'Auth session missing' },
+    });
+
+    const result = await authService.updatePassword('newpassword123');
+
+    expect(result).toEqual({ ok: false, message: 'Auth session missing' });
   });
 });
 

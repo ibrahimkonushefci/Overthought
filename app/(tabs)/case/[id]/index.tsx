@@ -52,8 +52,22 @@ import { useAiVerdictStore } from '../../../../src/store/aiVerdictStore';
 
 const detailScrollByCaseId = new Map<string, number>();
 const caseDetailBackground = '#FBF9F2';
+const aiVerdictTimeoutRecoveryDelaysMs = [2_000, 5_000, 10_000];
 
 type DeepReadStatus = 'idle' | 'loading' | 'ready' | 'not_authenticated' | 'quota' | 'fair_use' | 'error';
+const aiVerdictDeepReadLockStatuses = new Set<AiVerdictRequestState['status']>([
+  'quota_exceeded',
+  'fair_use_exceeded',
+  'ip_daily_cap_exceeded',
+  'global_daily_cap_exceeded',
+  'ai_failed',
+  'ai_timeout',
+  'invalid_ai_response',
+  'cache_write_failed',
+  'unknown',
+  'guest_key_required',
+  'case_not_found',
+]);
 
 export default function CaseDetailRoute() {
   const router = useRouter();
@@ -127,6 +141,29 @@ export default function CaseDetailRoute() {
     void aiVerdictService.loadStoredVerdictForCase(record);
   }, [aiVerdictsByCaseId, record]);
 
+  useEffect(() => {
+    if (!record) {
+      return;
+    }
+
+    const currentCaseId = getCaseId(record);
+    const requestState = aiVerdictRequestsByCaseId[currentCaseId];
+
+    if (isGuestCase(record) || aiVerdictsByCaseId[currentCaseId] || requestState?.status !== 'ai_timeout') {
+      return;
+    }
+
+    const timers = aiVerdictTimeoutRecoveryDelaysMs.map((delayMs) =>
+      setTimeout(() => {
+        void aiVerdictService.loadStoredVerdictForCase(record);
+      }, delayMs),
+    );
+
+    return () => {
+      timers.forEach((timer) => clearTimeout(timer));
+    };
+  }, [aiVerdictRequestsByCaseId, aiVerdictsByCaseId, record]);
+
   const resultPresentationKey = shouldRunResultIntro
     ? record
       ? `new-analysis:${getCaseId(record)}`
@@ -194,14 +231,12 @@ export default function CaseDetailRoute() {
         : 'ai'
       : 'basic';
   const isAiVerdictVisible = verdictSource === 'ai' || verdictSource === 'cache';
-  const aiVerdictQuotaLocked =
-    aiVerdictRequest?.status === 'quota_exceeded' ||
-    aiVerdictRequest?.status === 'fair_use_exceeded' ||
-    aiVerdictRequest?.status === 'ip_daily_cap_exceeded' ||
-    aiVerdictRequest?.status === 'global_daily_cap_exceeded';
+  const aiVerdictDeepReadLocked = aiVerdictRequest
+    ? aiVerdictDeepReadLockStatuses.has(aiVerdictRequest.status)
+    : false;
   const shouldShowDeepRead =
     !isAiVerdictVisible &&
-    (verdictSource === 'basic' || deepReadStatus === 'loading' || deepReadStatus === 'ready' || aiVerdictQuotaLocked);
+    (verdictSource === 'basic' || deepReadStatus === 'loading' || deepReadStatus === 'ready' || aiVerdictDeepReadLocked);
   const heroDisplayLabel = getVerdictDisplayLabel(
     visibleVerdict.verdictLabel,
     `${caseId}|${record.inputText}|${visibleVerdict.delusionScore}`,
@@ -411,7 +446,7 @@ export default function CaseDetailRoute() {
               Extra context after a basic verdict: what is happening, what you are overreading, and what to do next.
             </AppText>
             <DeepReadContent
-              locked={aiVerdictQuotaLocked}
+              locked={aiVerdictDeepReadLocked}
               status={deepReadStatus}
               result={deepReadResult}
               message={deepReadMessage}

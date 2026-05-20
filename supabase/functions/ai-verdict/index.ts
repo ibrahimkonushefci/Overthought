@@ -25,6 +25,12 @@ const GUEST_DAILY_LIMIT = 2;
 const GUEST_IP_DAILY_LIMIT = 10;
 const GLOBAL_DAILY_LIMIT = 100;
 
+type EntitlementStatus = 'free' | 'premium' | 'grace_period' | 'expired';
+
+interface PremiumStateRow {
+  entitlement_status: EntitlementStatus;
+}
+
 function positiveIntegerEnv(name: string, fallback: number): number {
   const raw = Deno.env.get(name)?.trim();
 
@@ -181,6 +187,7 @@ Deno.serve(async (request) => {
       promptVersion: PROMPT_VERSION,
       responseSchemaVersion: RESPONSE_SCHEMA_VERSION,
       signedInFreeDailyLimit: config.signedInFreeDailyLimit,
+      premiumDailyLimit: config.premiumDailyLimit,
       guestLifetimeLimit: config.guestLifetimeLimit,
       guestDailyLimit: config.guestDailyLimit,
       guestIpDailyLimit: config.guestIpDailyLimit,
@@ -189,6 +196,15 @@ Deno.serve(async (request) => {
         async authenticate(authToken) {
           const { data, error } = await authClient.auth.getUser(authToken);
           return error || !data.user ? null : data.user.id;
+        },
+        async getAuthenticatedAccessTier(userId) {
+          const { data } = await adminClient
+            .from('premium_states')
+            .select('entitlement_status')
+            .eq('user_id', userId)
+            .maybeSingle();
+          const entitlementStatus = (data as PremiumStateRow | null)?.entitlement_status ?? 'free';
+          return entitlementStatus === 'premium' || entitlementStatus === 'grace_period' ? 'premium' : 'free';
         },
         async getOwnedActiveCase(userId, caseId) {
           const { data, error } = await adminClient

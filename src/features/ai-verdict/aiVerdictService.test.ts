@@ -280,6 +280,80 @@ describe('aiVerdictService', () => {
     });
   });
 
+  it('can replace an authenticated timeout state with a late stored AI verdict', async () => {
+    useAuthStore.getState().setAuthenticated({
+      id: 'user-1',
+      email: 'person@example.com',
+      provider: 'email',
+    });
+    const record = {
+      id: 'remote-case-timeout',
+      userId: 'user-1',
+      title: 'Remote timeout case',
+      category: 'romance' as const,
+      inputText: 'Remote input.',
+      verdictLabel: 'mild_delusion' as const,
+      delusionScore: 61,
+      explanationText: 'Local fallback.',
+      nextMoveText: 'Wait for evidence.',
+      verdictVersion: 1,
+      outcomeStatus: 'unknown' as const,
+      lastAnalyzedAt: '2026-05-16T10:00:00.000Z',
+      createdAt: '2026-05-16T10:00:00.000Z',
+      updatedAt: '2026-05-16T10:00:00.000Z',
+      archivedAt: null,
+      deletedAt: null,
+    };
+    global.fetch = jest.fn(async () => {
+      throw new DOMException('The operation was aborted.', 'AbortError');
+    }) as unknown as typeof fetch;
+
+    await aiVerdictService.requestForCase(record);
+
+    expect(useAiVerdictStore.getState().requestByCaseId['remote-case-timeout']).toMatchObject({
+      status: 'ai_timeout',
+      code: 'ai_timeout',
+    });
+
+    const maybeSingle = jest.fn(async () => ({
+      data: {
+        id: 'late-ai-1',
+        target_fingerprint: 'fingerprint-late',
+        verdict_label: 'dangerous_overthinking',
+        delusion_score: 78,
+        explanation_text: 'Late stored AI read.',
+        next_move_text: 'Use the late stored answer.',
+        verdict_version: 1,
+        local_verdict_label: 'mild_delusion',
+        local_delusion_score: 61,
+        local_explanation_text: 'Local fallback.',
+        local_next_move_text: 'Wait for evidence.',
+        local_verdict_version: 1,
+        model_provider: 'gemini',
+        model_name: 'gemini-2.5-flash',
+        model_version: null,
+        prompt_version: 1,
+        response_schema_version: 1,
+        created_at: '2026-05-16T10:00:10.000Z',
+      },
+      error: null,
+    }));
+    const limit = jest.fn(() => ({ maybeSingle }));
+    const order = jest.fn(() => ({ limit }));
+    const eq = jest.fn(() => ({ order }));
+    const select = jest.fn(() => ({ eq }));
+    mockSupabaseFrom.mockReturnValue({ select });
+
+    const stored = await aiVerdictService.loadStoredVerdictForCase(record);
+
+    expect(stored?.verdict.delusionScore).toBe(78);
+    expect(useAiVerdictStore.getState().byCaseId['remote-case-timeout'].verdict.explanationText).toBe('Late stored AI read.');
+    expect(useAiVerdictStore.getState().requestByCaseId['remote-case-timeout']).toMatchObject({
+      status: 'cache',
+      message: 'Saved AI verdict from your account.',
+    });
+  });
+
   it('stores structured AI quota failures for the result screen', async () => {
     useAuthStore.getState().setGuest();
     const record = guestCase();

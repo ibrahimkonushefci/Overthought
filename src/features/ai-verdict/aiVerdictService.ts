@@ -76,7 +76,7 @@ function safeUnavailableFailure(): Extract<AiVerdictResponse, { ok: false }> {
   return failure('unknown', 'AI verdict is unavailable right now.');
 }
 
-const AI_VERDICT_CLIENT_TIMEOUT_MS = 15_000;
+const AI_VERDICT_CLIENT_TIMEOUT_MS = 30_000;
 
 function isAbortError(error: unknown): boolean {
   return Boolean(error && typeof error === 'object' && (error as { name?: unknown }).name === 'AbortError');

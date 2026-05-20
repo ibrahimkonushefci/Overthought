@@ -86,4 +86,31 @@ Optional `ai-verdict` quota cap environment variables:
 - `AI_VERDICT_GUEST_DAILY_LIMIT` defaults to `2`
 - `AI_VERDICT_GUEST_IP_DAILY_LIMIT` defaults to `10`
 - `AI_VERDICT_GLOBAL_DAILY_LIMIT` defaults to `100`
-- `AI_VERDICT_PREMIUM_DAILY_LIMIT` defaults to `50` as a placeholder only; premium AI branching is not implemented yet
+- `AI_VERDICT_PREMIUM_DAILY_LIMIT` defaults to `50`
+
+### Current release-hardening status
+
+- Premium AI verdict quota is implemented in `ai-verdict`.
+- `ai-verdict` reads `premium_states.entitlement_status` and treats `premium` and `grace_period` as premium access.
+- Signed-in free users get 2 AI verdicts per UTC day.
+- Premium users get the configured premium daily limit, defaulting to 50.
+- Guest users get 2 lifetime AI verdicts per local `guestAiKey`, plus the guest daily, IP daily, and global caps.
+- `Profile -> Delete all data` clears the local `guestAiKey`; this intentionally resets guest AI access for TestFlight/v1.
+- For live hardening later, revisit guest abuse controls if IP/global caps are not enough. Do not preserve a hidden guest identifier after an explicit "Delete all data" action without changing the privacy/product copy.
+- Deep Read is locked after AI Verdict quota/cap exhaustion and after concrete AI Verdict fallback failures so a Basic fallback does not expose an extra AI generation path.
+- A one-off case save error was seen during manual testing but could not be reproduced after retry. Do not chase it unless `[case-create] case_create_supabase_insert_failed` logs show a repeatable cause.
+- `ai-verdict` now retries malformed Gemini response shapes once in strict JSON mode, uses Gemini `responseSchema`, and logs safe provider diagnostics without raw prompt, case text, or raw model output.
+- Failed provider/schema responses remain `status = failed` usage events and do not consume successful AI verdict quota.
+- Gemini AI verdict generation allows up to 2048 output tokens. The client waits up to 30 seconds for `ai-verdict`; if an authenticated request still times out locally, the case detail screen does short delayed stored-verdict checks so a late backend success can replace the Basic fallback instead of wasting visible quota.
+
+## 7. Auth release-hardening note
+
+- Apple sign-in and Google sign-in remain supported.
+- Email auth now uses email/password sign-in and account creation in the app.
+- Forgot password has its own public screen and uses Supabase password recovery with `overthought://reset-password` as the app redirect.
+- The password reset redirect is intentionally hardcoded in the app to avoid local Metro URLs such as `http://localhost:8081` leaking into reset emails.
+- Password recovery links create a temporary Supabase session; public auth screens must not auto-route that session to Home while `/reset-password` is active.
+- Supabase Auth redirect URLs must include `overthought://reset-password` before testing password reset links.
+- Magic-link email is no longer the primary app UI path.
+- If Supabase email confirmation is enabled, email/password sign-up may still require the user to confirm by email before signing in.
+- Email deliverability and confirmation-link polish remain later backlog unless they block manual testing.

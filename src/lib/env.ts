@@ -3,11 +3,14 @@ const appVariant =
     ? 'production'
     : 'development';
 
+export const passwordResetRedirectUrl = 'overthought://reset-password';
+
 export const env = {
   appVariant,
   supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL ?? '',
   supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '',
   supabaseRedirectUrl: process.env.EXPO_PUBLIC_SUPABASE_REDIRECT_URL ?? 'overthought://auth',
+  supabasePasswordResetRedirectUrl: passwordResetRedirectUrl,
   enableAppleAuth: process.env.EXPO_PUBLIC_ENABLE_APPLE_AUTH === 'true',
   googleIosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ?? '',
   googleWebClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? '',

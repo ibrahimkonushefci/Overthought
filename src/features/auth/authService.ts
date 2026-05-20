@@ -277,6 +277,100 @@ export const authService = {
 
     return { ok: true, message: 'Check your email for the sign-in link.' };
   },
+  async signInWithEmailPassword(email: string, password: string): Promise<AuthActionResult> {
+    trackEvent('auth_started', { provider: 'email' });
+
+    if (!supabase) {
+      return {
+        ok: false,
+        message: 'Add Supabase credentials before email sign-in can run.',
+      };
+    }
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      return { ok: false, message: error.message };
+    }
+
+    if (!data.session) {
+      return { ok: false, message: 'Email sign-in did not return a session. Try again.' };
+    }
+
+    await applySession(data.session);
+    return { ok: true };
+  },
+  async signUpWithEmailPassword(email: string, password: string): Promise<AuthActionResult> {
+    trackEvent('auth_started', { provider: 'email' });
+
+    if (!supabase) {
+      return {
+        ok: false,
+        message: 'Add Supabase credentials before email sign-up can run.',
+      };
+    }
+
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: env.supabaseRedirectUrl,
+      },
+    });
+
+    if (error) {
+      return { ok: false, message: error.message };
+    }
+
+    if (data.session) {
+      await applySession(data.session);
+      return { ok: true };
+    }
+
+    return {
+      ok: true,
+      message: 'Account created. Check your email to confirm it, then sign in.',
+    };
+  },
+  async requestPasswordReset(email: string): Promise<AuthActionResult> {
+    trackEvent('auth_started', { provider: 'email' });
+
+    if (!supabase) {
+      return {
+        ok: false,
+        message: 'Add Supabase credentials before password reset can run.',
+      };
+    }
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: env.supabasePasswordResetRedirectUrl,
+    });
+
+    if (error) {
+      return { ok: false, message: error.message };
+    }
+
+    return { ok: true, message: 'Check your email for the password reset link.' };
+  },
+  async updatePassword(password: string): Promise<AuthActionResult> {
+    if (!supabase) {
+      return {
+        ok: false,
+        message: 'Add Supabase credentials before password reset can run.',
+      };
+    }
+
+    const { error } = await supabase.auth.updateUser({ password });
+
+    if (error) {
+      return { ok: false, message: error.message };
+    }
+
+    return { ok: true, message: 'Password updated.' };
+  },
   async signInWithApple(): Promise<AuthActionResult> {
     if (!env.enableAppleAuth) {
       return {

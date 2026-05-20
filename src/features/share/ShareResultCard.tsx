@@ -25,8 +25,8 @@ export function ShareResultCard({ payload }: { payload: ShareCardPayload }) {
         <AppText variant="eyebrow" style={[styles.brand, isDark && styles.deepMutedText]}>
           Overthought
         </AppText>
-        <View style={styles.categoryPill}>
-          <AppText variant="eyebrow" style={styles.categoryText} numberOfLines={1}>
+        <View style={[styles.categoryPill, isDark && styles.darkCategoryPill]}>
+          <AppText variant="eyebrow" style={[styles.categoryText, isDark && styles.darkCategoryText]} numberOfLines={1}>
             {categoryIcons[payload.category]} {categoryLabels[payload.category]}
           </AppText>
         </View>
@@ -34,7 +34,7 @@ export function ShareResultCard({ payload }: { payload: ShareCardPayload }) {
 
       <View style={styles.heroRow}>
         <View style={styles.ringWrap}>
-          <Svg width={122} height={122} viewBox="0 0 116 116">
+          <Svg width={116} height={116} viewBox="0 0 116 116">
             <Circle
               cx="58"
               cy="58"
@@ -94,7 +94,7 @@ export function ShareResultCard({ payload }: { payload: ShareCardPayload }) {
               variant="title"
               color={colors.text.onBrand}
               style={[styles.groupChatText, isDark && styles.darkGroupChatText]}
-              numberOfLines={isAiResult ? 4 : 5}
+              numberOfLines={isAiResult ? 5 : 6}
             >
               {isDeepRead ? payload.deepReadRoastLine : payload.explanationText}
             </AppText>
@@ -109,7 +109,7 @@ export function ShareResultCard({ payload }: { payload: ShareCardPayload }) {
                 variant="title"
                 color={colors.text.onAccent}
                 style={[styles.deepTakeawayText, isDark && styles.darkDeepTakeawayText]}
-                numberOfLines={isAiResult ? 4 : 5}
+                numberOfLines={isAiResult ? 4 : 6}
               >
                 {isDeepRead ? payload.deepReadTakeaway : payload.nextMoveText}
               </AppText>
@@ -158,11 +158,11 @@ const styles = StyleSheet.create({
     borderColor: colors.brand.ink,
     borderRadius: radii.signature,
     borderWidth: 2,
-    gap: spacing.md,
-    height: 520,
+    gap: spacing.lg,
+    height: 590,
     overflow: 'hidden',
-    padding: spacing.xl,
-    width: 320,
+    padding: 26,
+    width: 340,
   },
   deepCard: {
     borderColor: '#090910',
@@ -189,6 +189,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
   },
+  darkCategoryPill: {
+    backgroundColor: 'rgba(255, 255, 255, 0.09)',
+  },
   categoryText: {
     color: colors.text.secondary,
     fontFamily: typography.family.bodyMedium,
@@ -197,16 +200,19 @@ const styles = StyleSheet.create({
     lineHeight: 14,
     textTransform: 'none',
   },
+  darkCategoryText: {
+    color: 'rgba(255, 255, 255, 0.72)',
+  },
   heroRow: {
     alignItems: 'center',
     flexDirection: 'row',
-    gap: spacing.md,
+    gap: spacing.lg,
   },
   ringWrap: {
     alignItems: 'center',
-    height: 122,
+    height: 116,
     justifyContent: 'center',
-    width: 122,
+    width: 116,
   },
   center: {
     alignItems: 'center',
@@ -214,8 +220,8 @@ const styles = StyleSheet.create({
   },
   score: {
     fontFamily: typography.family.displayBold,
-    fontSize: 40,
-    lineHeight: 43,
+    fontSize: 38,
+    lineHeight: 40,
   },
   scoreLabel: {
     fontFamily: typography.family.displaySemiBold,
@@ -244,8 +250,8 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: typography.family.displayBold,
-    fontSize: 19,
-    lineHeight: 23,
+    fontSize: 18,
+    lineHeight: 22,
   },
   caseId: {
     color: colors.text.secondary,
@@ -269,14 +275,14 @@ const styles = StyleSheet.create({
     borderColor: colors.brand.ink,
     borderRadius: radii.lg,
     borderWidth: 2,
-    minHeight: 88,
+    minHeight: 100,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
   },
   readText: {
     fontFamily: typography.family.body,
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 13,
+    lineHeight: 19,
   },
   nextMove: {
     backgroundColor: colors.bg.surface,
@@ -284,7 +290,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.lg,
     borderWidth: 2,
     justifyContent: 'center',
-    minHeight: 92,
+    minHeight: 104,
     overflow: 'hidden',
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.md,
@@ -303,8 +309,8 @@ const styles = StyleSheet.create({
   nextMoveText: {
     color: colors.text.primary,
     fontFamily: typography.family.displayBold,
-    fontSize: 15,
-    lineHeight: 20,
+    fontSize: 14,
+    lineHeight: 19,
   },
   footer: {
     alignItems: 'center',
@@ -325,9 +331,10 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: radii.lg,
     borderWidth: 1,
-    paddingBottom: spacing.lg,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.xl,
+    minHeight: 132,
+    paddingBottom: spacing.xl,
+    paddingHorizontal: spacing.xl,
+    paddingTop: 30,
     position: 'relative',
   },
   groupChatBadge: {
@@ -351,8 +358,8 @@ const styles = StyleSheet.create({
     lineHeight: 27,
   },
   darkGroupChatText: {
-    fontSize: 18,
-    lineHeight: 24,
+    fontSize: 16,
+    lineHeight: 22,
   },
   deepTakeawayBlock: {
     gap: spacing.sm,
@@ -366,7 +373,8 @@ const styles = StyleSheet.create({
   deepTakeaway: {
     backgroundColor: colors.accent.lime,
     borderRadius: radii.lg,
-    paddingHorizontal: spacing.lg,
+    minHeight: 104,
+    paddingHorizontal: spacing.xl,
     paddingVertical: spacing.lg,
   },
   deepTakeawayText: {
@@ -375,7 +383,7 @@ const styles = StyleSheet.create({
     lineHeight: 23,
   },
   darkDeepTakeawayText: {
-    fontSize: 15,
-    lineHeight: 21,
+    fontSize: 14,
+    lineHeight: 20,
   },
 });

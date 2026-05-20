@@ -108,6 +108,7 @@ function createAdapter(overrides: Partial<AiVerdictDataAdapter> = {}) {
     lastGuestInsert: () => InsertGuestAiVerdictInput | null;
   } = {
     authenticate: jest.fn(async () => 'user-1'),
+    getAuthenticatedAccessTier: jest.fn(async () => 'free'),
     getOwnedActiveCase: jest.fn(async () => caseRow()),
     getCachedVerdict: jest.fn(async () => null),
     getCachedGuestVerdict: jest.fn(async () => null),
@@ -236,6 +237,7 @@ function handlerDeps(adapter: AiVerdictDataAdapter, generateVerdict = successPro
     promptVersion: 1,
     responseSchemaVersion: 1,
     signedInFreeDailyLimit: 2,
+    premiumDailyLimit: 50,
     guestLifetimeLimit: 2,
     guestDailyLimit: 2,
     guestIpDailyLimit: 10,
@@ -340,6 +342,130 @@ describe('ai-verdict core authenticated path', () => {
         accessTier: 'free',
         quotaBucket: '2026-05-16',
         primaryLimit: 2,
+      }),
+    );
+    expect(generateVerdict).not.toHaveBeenCalled();
+  });
+
+  it('uses premium daily quota for premium authenticated users', async () => {
+    const adapter = createAdapter({
+      getAuthenticatedAccessTier: jest.fn(async () => 'premium'),
+    });
+
+    const result = await handleAiVerdictRequest('token', authenticatedPayload(), handlerDeps(adapter));
+
+    expect(result.status).toBe(200);
+    expect(adapter.reserveUsage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'user-1',
+        accessTier: 'premium',
+        quotaBucket: '2026-05-16',
+        primaryLimit: 50,
+      }),
+    );
+    expect(result.body.ok).toBe(true);
+    if (result.body.ok) {
+      expect(result.body.access).toMatchObject({
+        accessTier: 'premium',
+        limit: 50,
+        quotaScope: 'daily',
+        quotaBucket: '2026-05-16',
+      });
+    }
+  });
+
+  it('uses premium daily quota for grace-period authenticated users', async () => {
+    const adapter = createAdapter({
+      getAuthenticatedAccessTier: jest.fn(async () => 'premium'),
+    });
+
+    const result = await handleAiVerdictRequest('token', authenticatedPayload(), handlerDeps(adapter));
+
+    expect(result.status).toBe(200);
+    expect(adapter.getAuthenticatedAccessTier).toHaveBeenCalledWith('user-1');
+    expect(adapter.reserveUsage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        accessTier: 'premium',
+        primaryLimit: 50,
+      }),
+    );
+  });
+
+  it('returns premium access state on authenticated cache hits', async () => {
+    const cached = aiVerdictRow();
+    const adapter = createAdapter({
+      getAuthenticatedAccessTier: jest.fn(async () => 'premium'),
+      getCachedVerdict: jest.fn(async () => cached),
+    });
+    const generateVerdict = successProvider();
+
+    const result = await handleAiVerdictRequest('token', authenticatedPayload(), handlerDeps(adapter, generateVerdict));
+
+    expect(result.status).toBe(200);
+    expect(result.body.ok).toBe(true);
+    if (result.body.ok) {
+      expect(result.body.cache.source).toBe('cache');
+      expect(result.body.access).toMatchObject({
+        accessTier: 'premium',
+        limit: 50,
+      });
+    }
+    expect(adapter.getUsageAccess).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'user-1',
+        accessTier: 'premium',
+        limit: 50,
+      }),
+    );
+    expect(adapter.reserveUsage).not.toHaveBeenCalled();
+    expect(generateVerdict).not.toHaveBeenCalled();
+  });
+
+  it('returns fair-use exhaustion when premium authenticated users reach the premium cap', async () => {
+    const adapter = createAdapter({
+      getAuthenticatedAccessTier: jest.fn(async () => 'premium'),
+      reserveUsage: jest.fn(async () =>
+        reservationFailure('fair_use_exceeded', generatedAccess({
+          accessTier: 'premium',
+          allowed: false,
+          used: 50,
+          remaining: 0,
+          limit: 50,
+          reason: 'fair_use',
+        })),
+      ),
+    });
+    const generateVerdict = successProvider();
+
+    const result = await handleAiVerdictRequest('token', authenticatedPayload(), handlerDeps(adapter, generateVerdict));
+
+    expect(result.status).toBe(429);
+    expect(result.body).toEqual({
+      ok: false,
+      code: 'fair_use_exceeded',
+      message: 'AI verdicts are temporarily limited for fair use.',
+      localFallback: {
+        verdictLabel: 'mild_delusion',
+        delusionScore: 61,
+        explanationText: 'The local result says this is thin evidence.',
+        nextMoveText: 'Wait for a concrete plan.',
+        verdictVersion: 1,
+      },
+      access: {
+        accessTier: 'premium',
+        allowed: false,
+        used: 50,
+        remaining: 0,
+        limit: 50,
+        quotaScope: 'daily',
+        quotaBucket: '2026-05-16',
+        reason: 'fair_use',
+      },
+    });
+    expect(adapter.reserveUsage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        accessTier: 'premium',
+        primaryLimit: 50,
       }),
     );
     expect(generateVerdict).not.toHaveBeenCalled();
@@ -574,6 +700,7 @@ describe('ai-verdict provider failures', () => {
       ok: false,
       code: 'invalid_ai_response',
       message: 'AI verdict returned an invalid response.',
+      access: generatedAccess(),
       localFallback: {
         verdictLabel: 'mild_delusion',
         delusionScore: 61,
@@ -644,12 +771,18 @@ describe('ai-verdict provider failures', () => {
 describe('Gemini AI verdict provider', () => {
   const originalFetch = global.fetch;
 
+  beforeEach(() => {
+    jest.spyOn(console, 'info').mockImplementation(() => undefined);
+  });
+
   afterEach(() => {
     global.fetch = originalFetch;
     jest.useRealTimers();
+    jest.restoreAllMocks();
   });
 
   it('maps malformed provider JSON to invalid_ai_response', async () => {
+    jest.useFakeTimers();
     global.fetch = jest.fn(async () => ({
       ok: true,
       json: async () => ({
@@ -663,11 +796,119 @@ describe('Gemini AI verdict provider', () => {
       }),
     })) as unknown as typeof fetch;
 
-    const result = await generateAiVerdictWithGemini({ targetType: 'case', row: caseRow() }, 'api-key');
+    const resultPromise = generateAiVerdictWithGemini({ targetType: 'case', row: caseRow() }, 'api-key');
+    await jest.runOnlyPendingTimersAsync();
+    const result = await resultPromise;
 
     expect(result).toEqual({
       ok: false,
       code: 'invalid_ai_response',
+    });
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+    expect(console.info).toHaveBeenCalledWith(
+      '[ai-verdict] provider',
+      expect.objectContaining({
+        event: 'invalid_response',
+        reason: 'schema_validation_failed',
+        textLength: expect.any(Number),
+      }),
+    );
+  });
+
+  it('retries missing Gemini text once with strict JSON prompt and succeeds', async () => {
+    jest.useFakeTimers();
+    global.fetch = jest
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          candidates: [{ finishReason: 'MAX_TOKENS', content: { parts: [] } }],
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          modelVersion: 'gemini-test-version',
+          candidates: [
+            {
+              finishReason: 'STOP',
+              content: {
+                parts: [
+                  {
+                    text: JSON.stringify({
+                      verdictLabel: 'mild_delusion',
+                      delusionScore: 55,
+                      explanationText: 'This is thin, but not imaginary.',
+                      nextMoveText: 'Wait for a real plan before reacting.',
+                      verdictVersion: 1,
+                    }),
+                  },
+                ],
+              },
+            },
+          ],
+        }),
+      }) as unknown as typeof fetch;
+
+    const resultPromise = generateAiVerdictWithGemini({ targetType: 'case', row: caseRow() }, 'api-key');
+    await jest.runOnlyPendingTimersAsync();
+    const result = await resultPromise;
+
+    expect(result).toEqual({
+      ok: true,
+      verdict: {
+        verdictLabel: 'mild_delusion',
+        delusionScore: 55,
+        explanationText: 'This is thin, but not imaginary.',
+        nextMoveText: 'Wait for a real plan before reacting.',
+        verdictVersion: 1,
+      },
+      modelVersion: 'gemini-test-version',
+    });
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+    const secondBody = JSON.parse((global.fetch as jest.Mock).mock.calls[1][1].body);
+    expect(secondBody.contents[0].parts[0].text).toContain('STRICT RETRY MODE');
+    expect(secondBody.generationConfig.maxOutputTokens).toBe(2048);
+    expect(secondBody.generationConfig.responseSchema).toBeDefined();
+    expect(secondBody.generationConfig.responseJsonSchema).toBeUndefined();
+  });
+
+  it('normalizes safe numeric strings and missing verdictVersion from Gemini JSON', async () => {
+    global.fetch = jest.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        modelVersion: 'gemini-test-version',
+        candidates: [
+          {
+            content: {
+              parts: [
+                {
+                  text: JSON.stringify({
+                    verdictLabel: 'slight_reach',
+                    delusionScore: '34',
+                    explanationText: 'There is a signal, just not a full case.',
+                    nextMoveText: 'Ask once, then let the answer be the answer.',
+                  }),
+                },
+              ],
+            },
+          },
+        ],
+      }),
+    })) as unknown as typeof fetch;
+
+    const result = await generateAiVerdictWithGemini({ targetType: 'case', row: caseRow() }, 'api-key');
+
+    expect(result).toEqual({
+      ok: true,
+      verdict: {
+        verdictLabel: 'slight_reach',
+        delusionScore: 34,
+        explanationText: 'There is a signal, just not a full case.',
+        nextMoveText: 'Ask once, then let the answer be the answer.',
+        verdictVersion: 1,
+      },
+      modelVersion: 'gemini-test-version',
     });
   });
 

@@ -2,6 +2,7 @@ import type { GuestCaseLocal } from '../../../types/shared';
 import { useAuthStore } from '../../../store/authStore';
 import { useGuestStore } from '../../../store/guestStore';
 import { supabase } from '../../../lib/supabase/client';
+import { analysisService } from '../../analysis/analysisService';
 import { caseRepository } from './caseRepository';
 import type { CaseRow } from './caseMappers';
 
@@ -19,6 +20,9 @@ jest.mock('../../analysis/analysisService', () => ({
 
 const mockSupabase = supabase as unknown as {
   from: jest.Mock;
+};
+const mockAnalysisService = analysisService as unknown as {
+  analyzeCase: jest.Mock;
 };
 
 function caseRow(overrides: Partial<CaseRow> = {}): CaseRow {
@@ -127,9 +131,45 @@ function bulkArchiveBuilder() {
   return builder;
 }
 
+function createCaseInsertFailureBuilder(error: Record<string, unknown>) {
+  const builder = {
+    insert: jest.fn(),
+    select: jest.fn(),
+    single: jest.fn(),
+  };
+
+  builder.insert.mockReturnValue(builder);
+  builder.select.mockReturnValue(builder);
+  builder.single.mockResolvedValue({ data: null, error });
+
+  return builder;
+}
+
+function profileLookupBuilder(row: { id: string } | null = { id: 'user-1' }) {
+  const builder = {
+    select: jest.fn(),
+    eq: jest.fn(),
+    maybeSingle: jest.fn(),
+  };
+
+  builder.select.mockReturnValue(builder);
+  builder.eq.mockReturnValue(builder);
+  builder.maybeSingle.mockResolvedValue({ data: row, error: null });
+
+  return builder;
+}
+
 describe('caseRepository authenticated sync behavior', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockAnalysisService.analyzeCase.mockResolvedValue({
+      verdictLabel: 'mild_delusion',
+      delusionScore: 62,
+      explanationText: 'The facts are thin.',
+      nextMoveText: 'Wait for one more signal.',
+      verdictVersion: 1,
+      triggeredSignals: [],
+    });
     useGuestStore.getState().clearAllLocalData();
     useAuthStore.getState().setAuthenticated({
       id: 'user-1',
@@ -225,6 +265,31 @@ describe('caseRepository authenticated sync behavior', () => {
     expect(builder.eq).toHaveBeenCalledWith('user_id', 'user-1');
     expect(builder.is).toHaveBeenCalledWith('archived_at', null);
     expect(builder.is).toHaveBeenCalledWith('deleted_at', null);
+  });
+
+  it('normalizes authenticated case insert failures into Error instances with Supabase details', async () => {
+    const insertError = {
+      code: '23503',
+      message: 'insert or update on table "cases" violates foreign key constraint',
+      details: 'Key is not present in table "profiles".',
+      hint: 'Retry after profile creation.',
+    };
+    const insertBuilder = createCaseInsertFailureBuilder(insertError);
+    const profileBuilder = profileLookupBuilder(null);
+    mockSupabase.from.mockReturnValueOnce(insertBuilder).mockReturnValueOnce(profileBuilder);
+
+    await expect(
+      caseRepository.createCase({
+        inputText: 'They liked my story.',
+        category: 'romance',
+      }),
+    ).rejects.toMatchObject({
+      message: 'Unable to save the case right now. Try again.',
+      code: '23503',
+      supabaseMessage: 'insert or update on table "cases" violates foreign key constraint',
+      details: 'Key is not present in table "profiles".',
+      hint: 'Retry after profile creation.',
+    });
   });
 });
 
