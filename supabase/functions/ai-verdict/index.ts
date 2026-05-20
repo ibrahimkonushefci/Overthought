@@ -17,8 +17,8 @@ import {
 
 const MODEL_PROVIDER = 'gemini';
 const MODEL_NAME = 'gemini-2.5-flash';
-const PROMPT_VERSION = 1;
-const RESPONSE_SCHEMA_VERSION = 1;
+const PROMPT_VERSION = 2;
+const RESPONSE_SCHEMA_VERSION = 2;
 const SIGNED_IN_FREE_DAILY_LIMIT = 2;
 const GUEST_LIFETIME_LIMIT = 2;
 const GUEST_DAILY_LIMIT = 2;
@@ -228,7 +228,7 @@ Deno.serve(async (request) => {
           const { data, error } = await adminClient
             .from('ai_case_verdicts')
             .select(
-              'id,target_fingerprint,verdict_label,delusion_score,explanation_text,next_move_text,verdict_version,local_verdict_label,local_delusion_score,local_explanation_text,local_next_move_text,local_verdict_version,model_provider,model_name,model_version,prompt_version,response_schema_version,created_at',
+              'id,target_fingerprint,verdict_label,delusion_score,display_label,explanation_text,evidence_check_text,overreading_text,what_matters_text,next_move_text,verdict_version,local_verdict_label,local_delusion_score,local_explanation_text,local_next_move_text,local_verdict_version,model_provider,model_name,model_version,prompt_version,response_schema_version,created_at',
             )
             .eq('user_id', input.userId)
             .eq('case_id', input.caseId)
@@ -249,7 +249,7 @@ Deno.serve(async (request) => {
           const { data, error } = await adminClient
             .from('ai_guest_case_verdicts')
             .select(
-              'id,target_fingerprint,verdict_label,delusion_score,explanation_text,next_move_text,verdict_version,local_verdict_label,local_delusion_score,local_explanation_text,local_next_move_text,local_verdict_version,model_provider,model_name,model_version,prompt_version,response_schema_version,created_at',
+              'id,target_fingerprint,verdict_label,delusion_score,display_label,explanation_text,evidence_check_text,overreading_text,what_matters_text,next_move_text,verdict_version,local_verdict_label,local_delusion_score,local_explanation_text,local_next_move_text,local_verdict_version,model_provider,model_name,model_version,prompt_version,response_schema_version,created_at',
             )
             .eq('guest_key_hash', input.guestKeyHash)
             .eq('target_fingerprint', input.targetFingerprint)
@@ -432,7 +432,7 @@ Deno.serve(async (request) => {
             .from('ai_case_verdicts')
             .insert(input)
             .select(
-              'id,target_fingerprint,verdict_label,delusion_score,explanation_text,next_move_text,verdict_version,local_verdict_label,local_delusion_score,local_explanation_text,local_next_move_text,local_verdict_version,model_provider,model_name,model_version,prompt_version,response_schema_version,created_at',
+              'id,target_fingerprint,verdict_label,delusion_score,display_label,explanation_text,evidence_check_text,overreading_text,what_matters_text,next_move_text,verdict_version,local_verdict_label,local_delusion_score,local_explanation_text,local_next_move_text,local_verdict_version,model_provider,model_name,model_version,prompt_version,response_schema_version,created_at',
             )
             .single();
 
@@ -447,7 +447,7 @@ Deno.serve(async (request) => {
             .from('ai_guest_case_verdicts')
             .insert(input)
             .select(
-              'id,target_fingerprint,verdict_label,delusion_score,explanation_text,next_move_text,verdict_version,local_verdict_label,local_delusion_score,local_explanation_text,local_next_move_text,local_verdict_version,model_provider,model_name,model_version,prompt_version,response_schema_version,created_at',
+              'id,target_fingerprint,verdict_label,delusion_score,display_label,explanation_text,evidence_check_text,overreading_text,what_matters_text,next_move_text,verdict_version,local_verdict_label,local_delusion_score,local_explanation_text,local_next_move_text,local_verdict_version,model_provider,model_name,model_version,prompt_version,response_schema_version,created_at',
             )
             .single();
 

@@ -25,7 +25,11 @@ interface StoredAiVerdictRow {
   target_fingerprint: string;
   verdict_label: VerdictLabel;
   delusion_score: number;
+  display_label: string | null;
   explanation_text: string;
+  evidence_check_text: string | null;
+  overreading_text: string | null;
+  what_matters_text: string | null;
   next_move_text: string;
   verdict_version: number;
   local_verdict_label: VerdictLabel;
@@ -105,7 +109,22 @@ function isAnalysisOutput(value: unknown): value is AnalysisOutput {
 }
 
 function isAiVerdictOutput(value: unknown): value is AiVerdictOutput {
-  return isAnalysisOutput(value) && (value as { source?: unknown }).source === 'ai';
+  if (!isAnalysisOutput(value) || (value as { source?: unknown }).source !== 'ai') {
+    return false;
+  }
+
+  const output = value as Partial<AiVerdictOutput>;
+
+  return (
+    typeof output.displayLabel === 'string' &&
+    output.displayLabel.trim().length > 0 &&
+    typeof output.evidenceCheckText === 'string' &&
+    output.evidenceCheckText.trim().length > 0 &&
+    typeof output.overreadingText === 'string' &&
+    output.overreadingText.trim().length > 0 &&
+    typeof output.whatMattersText === 'string' &&
+    output.whatMattersText.trim().length > 0
+  );
 }
 
 function isCacheMetadata(value: unknown): value is AiVerdictCacheMetadata {
@@ -276,7 +295,13 @@ function snapshotFromStoredRow(row: StoredAiVerdictRow): CaseAiVerdictSnapshot {
     verdict: {
       verdictLabel: row.verdict_label,
       delusionScore: row.delusion_score,
+      displayLabel: row.display_label ?? row.verdict_label.replace(/_/g, ' '),
       explanationText: row.explanation_text,
+      evidenceCheckText:
+        row.evidence_check_text ?? 'The saved AI verdict predates detailed evidence notes for this case.',
+      overreadingText:
+        row.overreading_text ?? 'The saved AI verdict predates detailed overreading notes for this case.',
+      whatMattersText: row.what_matters_text ?? 'Use the saved next move as the cleanest read on what matters.',
       nextMoveText: row.next_move_text,
       verdictVersion: row.verdict_version,
       source: 'ai',
@@ -442,7 +467,7 @@ export const aiVerdictService = {
       const { data, error } = await supabase
         .from('ai_case_verdicts')
         .select(
-          'id,target_fingerprint,verdict_label,delusion_score,explanation_text,next_move_text,verdict_version,local_verdict_label,local_delusion_score,local_explanation_text,local_next_move_text,local_verdict_version,model_provider,model_name,model_version,prompt_version,response_schema_version,created_at',
+          'id,target_fingerprint,verdict_label,delusion_score,display_label,explanation_text,evidence_check_text,overreading_text,what_matters_text,next_move_text,verdict_version,local_verdict_label,local_delusion_score,local_explanation_text,local_next_move_text,local_verdict_version,model_provider,model_name,model_version,prompt_version,response_schema_version,created_at',
         )
         .eq('case_id', caseId)
         .order('created_at', { ascending: false })

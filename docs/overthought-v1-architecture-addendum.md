@@ -114,3 +114,15 @@ Optional `ai-verdict` quota cap environment variables:
 - Magic-link email is no longer the primary app UI path.
 - If Supabase email confirmation is enabled, email/password sign-up may still require the user to confirm by email before signing in.
 - Email deliverability and confirmation-link polish remain later backlog unless they block manual testing.
+
+## 8. Profile fields decision
+
+- Extra profile fields are deferred for the current TestFlight/v1 pass.
+- Do not add first name, last name, nickname, country, or broader profile settings without a schema migration.
+- Minimal future migration should add nullable profile columns only, preserving existing accounts:
+  - `first_name text`
+  - `last_name text`
+  - `nickname text`
+  - `country_code text`
+- Display naming should remain backwards-compatible: prefer nickname if present, then full name, then existing `display_name`, then email prefix.
+- Implementation should update the shared `Profile` type, `profileRepository`, auth session profile mapping, profile edit UI, and repository tests in the same phase as the migration.

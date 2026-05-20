@@ -35,7 +35,11 @@ function aiVerdictRow(overrides: Partial<AiVerdictStoredRow> = {}): AiVerdictSto
     target_fingerprint: 'fingerprint-case-1',
     verdict_label: 'dangerous_overthinking',
     delusion_score: 78,
+    display_label: 'Fog Machine',
     explanation_text: 'AI says sometime is fog with punctuation.',
+    evidence_check_text: 'The evidence is one vague "sometime," which is not a plan.',
+    overreading_text: 'You are turning a maybe into a calendar invite.',
+    what_matters_text: 'A real plan needs a day, a time, and fewer fumes.',
     next_move_text: 'Ask once for a real day, then stop refreshing the evidence.',
     verdict_version: 1,
     local_verdict_label: 'mild_delusion',
@@ -88,12 +92,16 @@ function reservationFailure(
 function successProvider(overrides: Partial<Extract<AiVerdictProviderResult, { ok: true }>> = {}) {
   return jest.fn<Promise<AiVerdictProviderResult>, [AiVerdictGenerationTarget]>(async () => ({
     ok: true,
-    verdict: {
-      verdictLabel: 'dangerous_overthinking',
-      delusionScore: 78,
-      explanationText: 'AI says sometime is fog with punctuation.',
-      nextMoveText: 'Ask once for a real day, then stop refreshing the evidence.',
-      verdictVersion: 1,
+      verdict: {
+        verdictLabel: 'dangerous_overthinking',
+        delusionScore: 78,
+        displayLabel: 'Fog Machine',
+        explanationText: 'AI says sometime is fog with punctuation.',
+        evidenceCheckText: 'The evidence is one vague "sometime," which is not a plan.',
+        overreadingText: 'You are turning a maybe into a calendar invite.',
+        whatMattersText: 'A real plan needs a day, a time, and fewer fumes.',
+        nextMoveText: 'Ask once for a real day, then stop refreshing the evidence.',
+        verdictVersion: 1,
     },
     modelVersion: 'test-model-version',
     ...overrides,
@@ -134,11 +142,15 @@ function createAdapter(overrides: Partial<AiVerdictDataAdapter> = {}) {
       lastAuthenticatedInsert = input;
       return aiVerdictRow({
         id: 'ai-verdict-generated',
-        target_fingerprint: input.target_fingerprint,
-        verdict_label: input.verdict_label,
-        delusion_score: input.delusion_score,
-        explanation_text: input.explanation_text,
-        next_move_text: input.next_move_text,
+	        target_fingerprint: input.target_fingerprint,
+	        verdict_label: input.verdict_label,
+	        delusion_score: input.delusion_score,
+	        display_label: input.display_label,
+	        explanation_text: input.explanation_text,
+	        evidence_check_text: input.evidence_check_text,
+	        overreading_text: input.overreading_text,
+	        what_matters_text: input.what_matters_text,
+	        next_move_text: input.next_move_text,
         verdict_version: input.verdict_version,
         local_verdict_label: input.local_verdict_label,
         local_delusion_score: input.local_delusion_score,
@@ -156,11 +168,15 @@ function createAdapter(overrides: Partial<AiVerdictDataAdapter> = {}) {
       lastGuestInsert = input;
       return aiVerdictRow({
         id: 'guest-ai-verdict-generated',
-        target_fingerprint: input.target_fingerprint,
-        verdict_label: input.verdict_label,
-        delusion_score: input.delusion_score,
-        explanation_text: input.explanation_text,
-        next_move_text: input.next_move_text,
+	        target_fingerprint: input.target_fingerprint,
+	        verdict_label: input.verdict_label,
+	        delusion_score: input.delusion_score,
+	        display_label: input.display_label,
+	        explanation_text: input.explanation_text,
+	        evidence_check_text: input.evidence_check_text,
+	        overreading_text: input.overreading_text,
+	        what_matters_text: input.what_matters_text,
+	        next_move_text: input.next_move_text,
         verdict_version: input.verdict_version,
         local_verdict_label: input.local_verdict_label,
         local_delusion_score: input.local_delusion_score,
@@ -489,9 +505,13 @@ describe('ai-verdict core authenticated path', () => {
       local_explanation_text: 'The local result says this is thin evidence.',
       local_next_move_text: 'Wait for a concrete plan.',
       local_verdict_version: 1,
-      verdict_label: 'dangerous_overthinking',
-      delusion_score: 78,
-    });
+	      verdict_label: 'dangerous_overthinking',
+	      delusion_score: 78,
+	      display_label: 'Fog Machine',
+	      evidence_check_text: 'The evidence is one vague "sometime," which is not a plan.',
+	      overreading_text: 'You are turning a maybe into a calendar invite.',
+	      what_matters_text: 'A real plan needs a day, a time, and fewer fumes.',
+	    });
     expect(result.body.ok).toBe(true);
     if (result.body.ok) {
       expect(result.body.localFallback.nextMoveText).toBe('Wait for a concrete plan.');
@@ -678,9 +698,10 @@ describe('ai-verdict core guest path', () => {
       local_verdict_label: 'mild_delusion',
       local_delusion_score: 61,
       local_explanation_text: 'The local result says this is thin evidence.',
-      local_next_move_text: 'Wait for a concrete plan.',
-      verdict_label: 'dangerous_overthinking',
-    });
+	      local_next_move_text: 'Wait for a concrete plan.',
+	      verdict_label: 'dangerous_overthinking',
+	      display_label: 'Fog Machine',
+	    });
     expect(adapter.lastGuestInsert()).not.toHaveProperty('input_text');
   });
 });
@@ -836,11 +857,15 @@ describe('Gemini AI verdict provider', () => {
                 parts: [
                   {
                     text: JSON.stringify({
-                      verdictLabel: 'mild_delusion',
-                      delusionScore: 55,
-                      explanationText: 'This is thin, but not imaginary.',
-                      nextMoveText: 'Wait for a real plan before reacting.',
-                      verdictVersion: 1,
+	                      verdictLabel: 'mild_delusion',
+	                      delusionScore: 55,
+	                      displayLabel: 'Thin Plot',
+	                      explanationText: 'This is thin, but not imaginary.',
+	                      evidenceCheckText: 'The receipt is a vague maybe, not a plan.',
+	                      overreadingText: 'You are giving a foggy sentence a full production budget.',
+	                      whatMattersText: 'A real plan gives you a day and time.',
+	                      nextMoveText: 'Wait for a real plan before reacting.',
+	                      verdictVersion: 1,
                     }),
                   },
                 ],
@@ -857,11 +882,15 @@ describe('Gemini AI verdict provider', () => {
     expect(result).toEqual({
       ok: true,
       verdict: {
-        verdictLabel: 'mild_delusion',
-        delusionScore: 55,
-        explanationText: 'This is thin, but not imaginary.',
-        nextMoveText: 'Wait for a real plan before reacting.',
-        verdictVersion: 1,
+	        verdictLabel: 'mild_delusion',
+	        delusionScore: 55,
+	        displayLabel: 'Thin Plot',
+	        explanationText: 'This is thin, but not imaginary.',
+	        evidenceCheckText: 'The receipt is a vague maybe, not a plan.',
+	        overreadingText: 'You are giving a foggy sentence a full production budget.',
+	        whatMattersText: 'A real plan gives you a day and time.',
+	        nextMoveText: 'Wait for a real plan before reacting.',
+	        verdictVersion: 1,
       },
       modelVersion: 'gemini-test-version',
     });
@@ -884,10 +913,14 @@ describe('Gemini AI verdict provider', () => {
               parts: [
                 {
                   text: JSON.stringify({
-                    verdictLabel: 'slight_reach',
-                    delusionScore: '34',
-                    explanationText: 'There is a signal, just not a full case.',
-                    nextMoveText: 'Ask once, then let the answer be the answer.',
+	                    verdictLabel: 'slight_reach',
+	                    delusionScore: '34',
+	                    displayLabel: 'Tiny Reach',
+	                    explanationText: 'There is a signal, just not a full case.',
+	                    evidenceCheckText: 'The signal exists, but it is still not a real ask.',
+	                    overreadingText: 'You are trying to make a maybe clock in as proof.',
+	                    whatMattersText: 'The next real evidence is whether they make a plan.',
+	                    nextMoveText: 'Ask once, then let the answer be the answer.',
                   }),
                 },
               ],
@@ -902,13 +935,54 @@ describe('Gemini AI verdict provider', () => {
     expect(result).toEqual({
       ok: true,
       verdict: {
-        verdictLabel: 'slight_reach',
-        delusionScore: 34,
-        explanationText: 'There is a signal, just not a full case.',
-        nextMoveText: 'Ask once, then let the answer be the answer.',
+	        verdictLabel: 'slight_reach',
+	        delusionScore: 34,
+	        displayLabel: 'Tiny Reach',
+	        explanationText: 'There is a signal, just not a full case.',
+	        evidenceCheckText: 'The signal exists, but it is still not a real ask.',
+	        overreadingText: 'You are trying to make a maybe clock in as proof.',
+	        whatMattersText: 'The next real evidence is whether they make a plan.',
+	        nextMoveText: 'Ask once, then let the answer be the answer.',
         verdictVersion: 1,
       },
       modelVersion: 'gemini-test-version',
+    });
+  });
+
+  it('rejects Gemini scores and verdict labels that do not match calibration', async () => {
+    global.fetch = jest.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        modelVersion: 'gemini-test-version',
+        candidates: [
+          {
+            content: {
+              parts: [
+                {
+                  text: JSON.stringify({
+                    verdictLabel: 'full_clown_territory',
+                    delusionScore: 55,
+                    displayLabel: 'Clown Emergency',
+                    explanationText: 'This is thin, but not a full clown case.',
+                    evidenceCheckText: 'The receipt is weak but not fantasy-only.',
+                    overreadingText: 'You are adding more plot than the evidence can hold.',
+                    whatMattersText: 'The next evidence is whether they make a real plan.',
+                    nextMoveText: 'Wait for a real plan before reacting.',
+                    verdictVersion: 1,
+                  }),
+                },
+              ],
+            },
+          },
+        ],
+      }),
+    })) as unknown as typeof fetch;
+
+    const result = await generateAiVerdictWithGemini({ targetType: 'case', row: caseRow() }, 'api-key');
+
+    expect(result).toEqual({
+      ok: false,
+      code: 'invalid_ai_response',
     });
   });
 

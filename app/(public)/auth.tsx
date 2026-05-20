@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Alert, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { usePathname, useRouter } from 'expo-router';
-import { ArrowLeft, LogIn, UserPlus } from 'lucide-react-native';
+import { ArrowLeft, LockKeyhole, LogIn, Mail, Sparkles, UserPlus } from 'lucide-react-native';
 import { authService } from '../../src/features/auth/authService';
 import { env } from '../../src/lib/env';
 import { useAuthStore } from '../../src/store/authStore';
@@ -84,171 +84,306 @@ export default function AuthRoute() {
 
   return (
     <Screen bottomInset={32}>
-      <Pressable accessibilityRole="button" onPress={() => router.back()} style={styles.backButton}>
-        <ArrowLeft color={colors.text.primary} size={22} strokeWidth={2.6} />
-        <AppText variant="body" style={styles.backText}>
-          Back
-        </AppText>
-      </Pressable>
+      <View style={styles.topRow}>
+        <Pressable accessibilityRole="button" onPress={() => router.back()} style={styles.backButton}>
+          <ArrowLeft color={colors.text.primary} size={20} strokeWidth={2.6} />
+        </Pressable>
+        <View style={styles.brandPill}>
+          <Sparkles color={colors.brand.pink} size={14} strokeWidth={2.7} />
+          <AppText variant="eyebrow" style={styles.brandPillText}>
+            Overthought
+          </AppText>
+        </View>
+      </View>
+
       <View style={styles.copy}>
         <AppText variant="eyebrow">Optional login</AppText>
-        <AppText variant="display">
+        <AppText variant="display" style={styles.title}>
           Save your <AppText variant="display" color={colors.brand.pink} style={styles.script}>case file</AppText>.
         </AppText>
-        <AppText variant="subtitle">Use email and password, or keep judging as a guest.</AppText>
+        <AppText variant="subtitle" style={styles.subtitle}>
+          Sync cases, keep Premium attached to your account, and come back to the evidence later.
+        </AppText>
       </View>
-      <View style={styles.modeSwitch}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityState={{ selected: authMode === 'sign_in' }}
-          onPress={() => setAuthMode('sign_in')}
-          style={[styles.modeButton, authMode === 'sign_in' && styles.modeButtonActive]}
-        >
-          <AppText variant="eyebrow" color={authMode === 'sign_in' ? colors.text.onBrand : colors.text.secondary} style={styles.modeText}>
-            Sign in
+
+      <View style={styles.authPanel}>
+        <View style={styles.modeSwitch}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ selected: authMode === 'sign_in' }}
+            onPress={() => setAuthMode('sign_in')}
+            style={[styles.modeButton, authMode === 'sign_in' && styles.modeButtonActive]}
+          >
+            <AppText variant="eyebrow" color={authMode === 'sign_in' ? colors.text.onBrand : colors.text.secondary} style={styles.modeText}>
+              Sign in
+            </AppText>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ selected: authMode === 'sign_up' }}
+            onPress={() => setAuthMode('sign_up')}
+            style={[styles.modeButton, authMode === 'sign_up' && styles.modeButtonActive]}
+          >
+            <AppText variant="eyebrow" color={authMode === 'sign_up' ? colors.text.onBrand : colors.text.secondary} style={styles.modeText}>
+              Create account
+            </AppText>
+          </Pressable>
+        </View>
+
+        <View style={styles.form}>
+          <View style={styles.field}>
+            <AppText variant="eyebrow" style={styles.fieldLabel}>
+              Email
+            </AppText>
+            <View style={styles.inputShell}>
+              <Mail color={colors.text.secondary} size={18} strokeWidth={2.4} />
+              <TextInput
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoComplete="email"
+                inputMode="email"
+                keyboardType="email-address"
+                onChangeText={setEmail}
+                placeholder="you@example.com"
+                placeholderTextColor={colors.ui.placeholder}
+                returnKeyType="next"
+                style={styles.input}
+                value={email}
+              />
+            </View>
+          </View>
+          <View style={styles.field}>
+            <AppText variant="eyebrow" style={styles.fieldLabel}>
+              Password
+            </AppText>
+            <View style={styles.inputShell}>
+              <LockKeyhole color={colors.text.secondary} size={18} strokeWidth={2.4} />
+              <TextInput
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoComplete={authMode === 'sign_in' ? 'current-password' : 'new-password'}
+                onChangeText={setPassword}
+                placeholder="At least 8 characters"
+                placeholderTextColor={colors.ui.placeholder}
+                secureTextEntry
+                style={styles.input}
+                textContentType={authMode === 'sign_in' ? 'password' : 'newPassword'}
+                value={password}
+              />
+            </View>
+          </View>
+        </View>
+
+        {authMode === 'sign_in' ? (
+          <Pressable
+            accessibilityRole="button"
+            disabled={emailLoading || appleLoading || googleLoading}
+            onPress={() => router.push('/forgot-password')}
+            style={styles.forgotButton}
+          >
+            <AppText variant="body" color={colors.text.secondary} style={styles.forgotText}>
+              Forgot password?
+            </AppText>
+          </Pressable>
+        ) : (
+          <AppText variant="meta" style={styles.confirmationNote}>
+            You may need to confirm your email before signing in.
           </AppText>
-        </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityState={{ selected: authMode === 'sign_up' }}
-          onPress={() => setAuthMode('sign_up')}
-          style={[styles.modeButton, authMode === 'sign_up' && styles.modeButtonActive]}
-        >
-          <AppText variant="eyebrow" color={authMode === 'sign_up' ? colors.text.onBrand : colors.text.secondary} style={styles.modeText}>
-            Create account
-          </AppText>
-        </Pressable>
+        )}
+
+        <View style={styles.actionStack}>
+          <Button
+            title={authMode === 'sign_in' ? 'Sign in with email' : 'Create account'}
+            icon={authMode === 'sign_in' ? LogIn : UserPlus}
+            loading={emailLoading}
+            disabled={!email.includes('@') || password.length < 8 || emailLoading || appleLoading || googleLoading}
+            onPress={() => void submit()}
+          />
+        </View>
+
+        {appleAvailable || env.enableGoogleAuth ? (
+          <View style={styles.dividerRow}>
+            <View style={styles.dividerLine} />
+            <AppText variant="eyebrow" style={styles.dividerText}>
+              Or
+            </AppText>
+            <View style={styles.dividerLine} />
+          </View>
+        ) : null}
+
+        <View style={styles.providerStack}>
+          {appleAvailable ? (
+            <Button
+              title="Continue with Apple"
+              variant="outline"
+              loading={appleLoading}
+              disabled={emailLoading || appleLoading || googleLoading}
+              onPress={() => void signInWithApple()}
+            />
+          ) : null}
+          {env.enableGoogleAuth ? (
+            <Button
+              title="Continue with Google"
+              variant="outline"
+              loading={googleLoading}
+              disabled={emailLoading || appleLoading || googleLoading}
+              onPress={() => void signInWithGoogle()}
+            />
+          ) : null}
+        </View>
       </View>
-      <View style={styles.form}>
-        <TextInput
-          autoCapitalize="none"
-          autoCorrect={false}
-          autoComplete="email"
-          inputMode="email"
-          keyboardType="email-address"
-          onChangeText={setEmail}
-          placeholder="you@example.com"
-          placeholderTextColor={colors.ui.placeholder}
-          style={styles.input}
-          value={email}
-        />
-        <TextInput
-          autoCapitalize="none"
-          autoCorrect={false}
-          autoComplete={authMode === 'sign_in' ? 'current-password' : 'new-password'}
-          onChangeText={setPassword}
-          placeholder="Password"
-          placeholderTextColor={colors.ui.placeholder}
-          secureTextEntry
-          style={styles.input}
-          textContentType={authMode === 'sign_in' ? 'password' : 'newPassword'}
-          value={password}
-        />
-      </View>
-      {authMode === 'sign_in' ? (
-        <Pressable
-          accessibilityRole="button"
-          disabled={emailLoading || appleLoading || googleLoading}
-          onPress={() => router.push('/forgot-password')}
-          style={styles.forgotButton}
-        >
-          <AppText variant="body" color={colors.text.secondary} style={styles.forgotText}>
-            Forgot password?
-          </AppText>
-        </Pressable>
-      ) : null}
-      <Button
-        title={authMode === 'sign_in' ? 'Sign in with email' : 'Create account'}
-        icon={authMode === 'sign_in' ? LogIn : UserPlus}
-        loading={emailLoading}
-        disabled={!email.includes('@') || password.length < 8 || emailLoading || appleLoading || googleLoading}
-        onPress={() => void submit()}
-      />
-      {appleAvailable ? (
+
+      <View style={styles.guestWrap}>
         <Button
-          title="Continue with Apple"
-          variant="outline"
-          loading={appleLoading}
-          disabled={emailLoading || appleLoading || googleLoading}
-          onPress={() => void signInWithApple()}
+          title="Continue as guest"
+          variant="ghost"
+          onPress={() => {
+            authService.continueAsGuest();
+            router.replace('/home');
+          }}
         />
-      ) : null}
-      {env.enableGoogleAuth ? (
-        <Button
-          title="Continue with Google"
-          variant="outline"
-          loading={googleLoading}
-          disabled={emailLoading || appleLoading || googleLoading}
-          onPress={() => void signInWithGoogle()}
-        />
-      ) : null}
-      <Button
-        title="Continue as guest"
-        variant="ghost"
-        onPress={() => {
-          authService.continueAsGuest();
-          router.replace('/home');
-        }}
-      />
+      </View>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
+  topRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: spacing.xl,
+  },
   backButton: {
     alignItems: 'center',
-    alignSelf: 'flex-start',
+    backgroundColor: colors.bg.surface,
+    borderColor: colors.ui.border,
+    borderRadius: 16,
+    borderWidth: 1,
+    height: 44,
+    justifyContent: 'center',
+    width: 44,
+  },
+  brandPill: {
+    alignItems: 'center',
+    backgroundColor: colors.bg.surface,
+    borderColor: colors.ui.border,
+    borderRadius: radii.pill,
+    borderWidth: 1,
     flexDirection: 'row',
     gap: spacing.xs,
-    minHeight: 40,
-    paddingRight: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
   },
-  backText: {
-    fontFamily: typography.family.displaySemiBold,
-    fontSize: 16,
+  brandPillText: {
+    color: colors.text.primary,
+    fontFamily: typography.family.displayBold,
+    fontSize: 10,
+    letterSpacing: 1.5,
   },
   copy: {
-    gap: spacing.md,
-    marginTop: spacing.xl,
-    marginBottom: spacing.lg,
+    gap: spacing.sm,
+    marginBottom: spacing.xl,
+  },
+  title: {
+    fontSize: 38,
+    lineHeight: 41,
   },
   script: {
     fontFamily: typography.family.editorial,
   },
-  form: {
-    gap: spacing.md,
-    marginBottom: spacing.sm,
-  },
-  input: {
-    backgroundColor: colors.bg.surface,
-    borderColor: colors.ui.border,
-    borderRadius: radii.lg,
-    borderWidth: 1,
-    color: colors.text.primary,
-    fontFamily: typography.family.bodyMedium,
+  subtitle: {
+    fontFamily: typography.family.body,
     fontSize: 15,
+    lineHeight: 22,
+  },
+  authPanel: {
+    backgroundColor: colors.bg.surface,
+    borderColor: colors.brand.ink,
+    borderRadius: radii.xl,
+    borderWidth: 2,
+    gap: spacing.lg,
+    padding: spacing.lg,
+    shadowColor: colors.brand.ink,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 1,
+    shadowRadius: 0,
+    elevation: 6,
+  },
+  form: {
+    gap: spacing.lg,
+  },
+  field: {
+    gap: spacing.xs,
+  },
+  fieldLabel: {
+    color: colors.text.secondary,
+    fontFamily: typography.family.displayBold,
+    fontSize: 9,
+    letterSpacing: 1.5,
+  },
+  inputShell: {
+    alignItems: 'center',
+    backgroundColor: '#F9F6EF',
+    borderColor: colors.ui.border,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: spacing.sm,
     minHeight: 54,
     paddingHorizontal: spacing.lg,
   },
+  input: {
+    color: colors.text.primary,
+    flex: 1,
+    fontFamily: typography.family.bodyMedium,
+    fontSize: 15,
+    minWidth: 0,
+    paddingVertical: 0,
+  },
   forgotButton: {
     alignSelf: 'flex-end',
-    marginBottom: spacing.lg,
     minHeight: 30,
     paddingLeft: spacing.lg,
-    paddingVertical: spacing.xs,
   },
   forgotText: {
     fontFamily: typography.family.displaySemiBold,
     fontSize: 14,
   },
+  confirmationNote: {
+    marginTop: -spacing.sm,
+  },
+  actionStack: {
+    gap: spacing.md,
+  },
+  providerStack: {
+    gap: spacing.md,
+  },
+  dividerRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  dividerLine: {
+    backgroundColor: colors.ui.divider,
+    flex: 1,
+    height: 1,
+  },
+  dividerText: {
+    fontFamily: typography.family.displayBold,
+    fontSize: 9,
+    letterSpacing: 1.6,
+  },
+  guestWrap: {
+    marginTop: spacing.xl,
+  },
   modeSwitch: {
-    backgroundColor: colors.bg.surface,
+    backgroundColor: colors.bg.muted,
     borderColor: colors.ui.border,
-    borderRadius: radii.lg,
+    borderRadius: radii.md,
     borderWidth: 1,
     flexDirection: 'row',
     gap: spacing.xs,
-    marginBottom: spacing.lg,
     padding: spacing.xs,
   },
   modeButton: {

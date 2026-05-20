@@ -35,7 +35,11 @@ function successResponse(overrides: Partial<Extract<AiVerdictResponse, { ok: tru
     verdict: {
       verdictLabel: 'dangerous_overthinking',
       delusionScore: 77,
+      displayLabel: 'Breadcrumb Circus',
       explanationText: 'AI says this is a maybe wearing a fake mustache.',
+      evidenceCheckText: 'The receipt is "maybe sometime," which is a fog machine with punctuation.',
+      overreadingText: 'You are treating a non-plan like a calendar invite in witness protection.',
+      whatMattersText: 'A real plan has a day, a time, and less interpretive dance.',
       nextMoveText: 'Ask once for a real plan, then stop refreshing.',
       verdictVersion: 1,
       source: 'ai',
@@ -321,7 +325,11 @@ describe('aiVerdictService', () => {
         target_fingerprint: 'fingerprint-late',
         verdict_label: 'dangerous_overthinking',
         delusion_score: 78,
+        display_label: 'Late Spiral',
         explanation_text: 'Late stored AI read.',
+        evidence_check_text: 'Late evidence check.',
+        overreading_text: 'Late overreading note.',
+        what_matters_text: 'Late what matters note.',
         next_move_text: 'Use the late stored answer.',
         verdict_version: 1,
         local_verdict_label: 'mild_delusion',
@@ -393,7 +401,11 @@ describe('aiVerdictService', () => {
         target_fingerprint: 'fingerprint-stored',
         verdict_label: 'slight_reach',
         delusion_score: 34,
+        display_label: 'Stored Spiral',
         explanation_text: 'Stored AI read.',
+        evidence_check_text: 'Stored evidence check.',
+        overreading_text: 'Stored overreading note.',
+        what_matters_text: 'Stored what matters note.',
         next_move_text: 'Use the stored answer.',
         verdict_version: 1,
         local_verdict_label: 'mild_delusion',
@@ -439,6 +451,8 @@ describe('aiVerdictService', () => {
     expect(mockSupabaseFrom).toHaveBeenCalledWith('ai_case_verdicts');
     expect(eq).toHaveBeenCalledWith('case_id', 'remote-case-1');
     expect(result?.verdict.delusionScore).toBe(34);
+    expect(result?.verdict.displayLabel).toBe('Stored Spiral');
+    expect(result?.verdict.evidenceCheckText).toBe('Stored evidence check.');
     expect(useAiVerdictStore.getState().byCaseId['remote-case-1'].verdict.delusionScore).toBe(34);
     expect(useAiVerdictStore.getState().requestByCaseId['remote-case-1']).toMatchObject({
       status: 'cache',

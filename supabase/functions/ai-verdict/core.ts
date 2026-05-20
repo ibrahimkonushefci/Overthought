@@ -81,6 +81,18 @@ export type AiVerdictGenerationTarget =
 export interface AiVerdictOutput {
   verdictLabel: VerdictLabel;
   delusionScore: number;
+  displayLabel: string;
+  explanationText: string;
+  evidenceCheckText: string;
+  overreadingText: string;
+  whatMattersText: string;
+  nextMoveText: string;
+  verdictVersion: number;
+}
+
+interface AiVerdictFallbackOutput {
+  verdictLabel: VerdictLabel;
+  delusionScore: number;
   explanationText: string;
   nextMoveText: string;
   verdictVersion: number;
@@ -91,7 +103,11 @@ export interface AiVerdictStoredRow {
   target_fingerprint: string;
   verdict_label: VerdictLabel;
   delusion_score: number;
+  display_label: string | null;
   explanation_text: string;
+  evidence_check_text: string | null;
+  overreading_text: string | null;
+  what_matters_text: string | null;
   next_move_text: string;
   verdict_version: number;
   local_verdict_label: VerdictLabel;
@@ -119,7 +135,11 @@ export interface InsertAuthenticatedAiVerdictInput {
   local_verdict_version: number;
   verdict_label: VerdictLabel;
   delusion_score: number;
+  display_label: string;
   explanation_text: string;
+  evidence_check_text: string;
+  overreading_text: string;
+  what_matters_text: string;
   next_move_text: string;
   verdict_version: number;
   model_provider: string;
@@ -258,7 +278,7 @@ type AiVerdictResponse =
   | {
       ok: true;
       verdict: AiVerdictOutput & { source: 'ai' };
-      localFallback: AiVerdictOutput;
+      localFallback: AiVerdictFallbackOutput;
       cache: {
         id: string;
         source: 'cache' | 'generated';
@@ -277,13 +297,13 @@ type AiVerdictResponse =
       code: AiVerdictFailureCode;
       message: string;
       access?: AiVerdictAccessState;
-      localFallback?: AiVerdictOutput;
+      localFallback?: AiVerdictFallbackOutput;
     };
 
 const MODEL_PROVIDER = 'gemini';
 const MODEL_NAME = 'gemini-2.5-flash';
-const PROMPT_VERSION = 1;
-const RESPONSE_SCHEMA_VERSION = 1;
+const PROMPT_VERSION = 2;
+const RESPONSE_SCHEMA_VERSION = 2;
 const SIGNED_IN_FREE_DAILY_LIMIT = 2;
 const GUEST_LIFETIME_LIMIT = 2;
 const GUEST_DAILY_LIMIT = 2;
@@ -303,7 +323,11 @@ const VERDICT_LABELS = new Set<VerdictLabel>([
 ]);
 const CATEGORIES = new Set<CaseCategory>(['romance', 'friendship', 'social', 'general']);
 const AI_VERDICT_FIELD_LIMITS = {
+  displayLabel: 42,
   explanationText: 260,
+  evidenceCheckText: 220,
+  overreadingText: 220,
+  whatMattersText: 220,
   nextMoveText: 170,
 } as const;
 
@@ -311,7 +335,7 @@ function failure(
   status: number,
   code: AiVerdictFailureCode,
   message: string,
-  localFallback?: AiVerdictOutput,
+  localFallback?: AiVerdictFallbackOutput,
   access?: AiVerdictAccessState,
 ): AiVerdictHttpResult {
   return {
@@ -380,7 +404,7 @@ export async function fingerprintGuestCase(snapshot: GuestCaseSnapshot, hash = s
   );
 }
 
-function localFallbackFromCase(row: CaseRow): AiVerdictOutput {
+function localFallbackFromCase(row: CaseRow): AiVerdictFallbackOutput {
   return {
     verdictLabel: row.verdict_label,
     delusionScore: row.delusion_score,
@@ -390,7 +414,7 @@ function localFallbackFromCase(row: CaseRow): AiVerdictOutput {
   };
 }
 
-function localFallbackFromGuest(snapshot: GuestCaseSnapshot): AiVerdictOutput {
+function localFallbackFromGuest(snapshot: GuestCaseSnapshot): AiVerdictFallbackOutput {
   return {
     verdictLabel: snapshot.localVerdictLabel,
     delusionScore: snapshot.localDelusionScore,
@@ -403,7 +427,7 @@ function localFallbackFromGuest(snapshot: GuestCaseSnapshot): AiVerdictOutput {
 function responseFromRow(
   row: AiVerdictStoredRow,
   source: 'cache' | 'generated',
-  localFallback: AiVerdictOutput,
+  localFallback: AiVerdictFallbackOutput,
   access: AiVerdictAccessState,
 ): AiVerdictHttpResult {
   return {
@@ -413,7 +437,13 @@ function responseFromRow(
       verdict: {
         verdictLabel: row.verdict_label,
         delusionScore: row.delusion_score,
+        displayLabel: row.display_label ?? row.verdict_label.replace(/_/g, ' '),
         explanationText: row.explanation_text,
+        evidenceCheckText:
+          row.evidence_check_text ?? 'The saved AI verdict predates detailed evidence notes for this case.',
+        overreadingText:
+          row.overreading_text ?? 'The saved AI verdict predates detailed overreading notes for this case.',
+        whatMattersText: row.what_matters_text ?? 'Use the saved next move as the cleanest read on what matters.',
         nextMoveText: row.next_move_text,
         verdictVersion: row.verdict_version,
         source: 'ai',
@@ -669,7 +699,11 @@ async function handleAuthenticatedRequest(
         local_verdict_version: caseRow.latest_verdict_version,
         verdict_label: providerResult.verdict.verdictLabel,
         delusion_score: providerResult.verdict.delusionScore,
+        display_label: providerResult.verdict.displayLabel,
         explanation_text: providerResult.verdict.explanationText,
+        evidence_check_text: providerResult.verdict.evidenceCheckText,
+        overreading_text: providerResult.verdict.overreadingText,
+        what_matters_text: providerResult.verdict.whatMattersText,
         next_move_text: providerResult.verdict.nextMoveText,
         verdict_version: providerResult.verdict.verdictVersion,
         model_provider: runtime.modelProvider,
@@ -824,7 +858,11 @@ async function handleGuestRequest(
         local_verdict_version: snapshot.localVerdictVersion,
         verdict_label: providerResult.verdict.verdictLabel,
         delusion_score: providerResult.verdict.delusionScore,
+        display_label: providerResult.verdict.displayLabel,
         explanation_text: providerResult.verdict.explanationText,
+        evidence_check_text: providerResult.verdict.evidenceCheckText,
+        overreading_text: providerResult.verdict.overreadingText,
+        what_matters_text: providerResult.verdict.whatMattersText,
         next_move_text: providerResult.verdict.nextMoveText,
         verdict_version: providerResult.verdict.verdictVersion,
         model_provider: runtime.modelProvider,
@@ -1028,15 +1066,39 @@ function aiVerdictJsonSchema() {
         minimum: 0,
         maximum: 100,
       },
-      explanationText: stringField('A short, concrete, funny-first verdict explanation for the user.'),
-      nextMoveText: stringField('One practical next move, written as a direct instruction.'),
+      displayLabel: stringField('A punchy 2-5 word card title generated for this exact case.'),
+      explanationText: stringField('The Read: a short, concrete, roast-first verdict using exact case details.'),
+      evidenceCheckText: stringField('Evidence Check: what the actual receipts prove or fail to prove.'),
+      overreadingText: stringField("You're Overreading: the specific fantasy or spiral the user is adding."),
+      whatMattersText: stringField('What Matters: the decisive standard for this exact case, not generic advice.'),
+      nextMoveText: stringField('Do This: one practical next move, written as a direct instruction.'),
       verdictVersion: {
         type: 'integer',
         minimum: 1,
       },
     },
-    required: ['verdictLabel', 'delusionScore', 'explanationText', 'nextMoveText', 'verdictVersion'],
-    propertyOrdering: ['verdictLabel', 'delusionScore', 'explanationText', 'nextMoveText', 'verdictVersion'],
+    required: [
+      'verdictLabel',
+      'delusionScore',
+      'displayLabel',
+      'explanationText',
+      'evidenceCheckText',
+      'overreadingText',
+      'whatMattersText',
+      'nextMoveText',
+      'verdictVersion',
+    ],
+    propertyOrdering: [
+      'verdictLabel',
+      'delusionScore',
+      'displayLabel',
+      'explanationText',
+      'evidenceCheckText',
+      'overreadingText',
+      'whatMattersText',
+      'nextMoveText',
+      'verdictVersion',
+    ],
   };
 }
 
@@ -1071,26 +1133,33 @@ STRICT RETRY MODE:
   return `You are Overthought's canonical AI verdict generator.
 
 Return exactly one valid JSON object and nothing else.
-Use exactly these keys: verdictLabel, delusionScore, explanationText, nextMoveText, verdictVersion.
+Use exactly these keys: verdictLabel, delusionScore, displayLabel, explanationText, evidenceCheckText, overreadingText, whatMattersText, nextMoveText, verdictVersion.
 Do not include markdown, code fences, commentary, or extra keys.${strictJsonReminder}
 
-Verdict labels:
-- barely_delusional: 0-20
-- slight_reach: 21-40
-- mild_delusion: 41-65
-- dangerous_overthinking: 66-85
-- full_clown_territory: 86-100
+Score and label calibration:
+- 0-20: barely_delusional. Grounded or barely overthinking.
+- 21-45: slight_reach. Mild delusion, light reach, not enough evidence yet.
+- 46-70: mild_delusion. Serious overthinking, building a plot from thin signals.
+- 71-90: dangerous_overthinking. The spiral is driving, evidence is weak or contradictory.
+- 91-100: full_clown_territory. Full clown territory, fantasy has fully outrun receipts.
+- The delusionScore, verdictLabel, and displayLabel must agree. Do not give a low score with a severe label or a clown title.
 
 Tone:
-- funny-first and useful
-- concrete, direct, group-chat sharp
+- roast first, funny second, useful third
+- concrete, direct, group-chat savage
 - roast the overthinking, not the user's identity or worth
 - no slurs, threats, sexual insults, self-harm language, diagnosis language, therapy language, or corporate advice
 - no generic AI hedging
 - use details from the case
+- each text field must reference or clearly depend on the exact case details
+- avoid reusable lines like "concrete actions matter," "direct words and follow-through," or "making the maybe louder"
 
 Length:
+- displayLabel: 2-5 words, max ${AI_VERDICT_FIELD_LIMITS.displayLabel} characters
 - explanationText: 1-2 short sentences, max ${AI_VERDICT_FIELD_LIMITS.explanationText} characters
+- evidenceCheckText: 1 sentence, max ${AI_VERDICT_FIELD_LIMITS.evidenceCheckText} characters
+- overreadingText: 1 sentence, max ${AI_VERDICT_FIELD_LIMITS.overreadingText} characters
+- whatMattersText: 1 sentence, max ${AI_VERDICT_FIELD_LIMITS.whatMattersText} characters
 - nextMoveText: one direct next move, max ${AI_VERDICT_FIELD_LIMITS.nextMoveText} characters
 
 Local backup result, for context only. You may disagree, but keep the same output contract:
@@ -1141,7 +1210,11 @@ function sanitizeAiVerdictOutput(value: AiVerdictOutput): AiVerdictOutput {
   return {
     verdictLabel: value.verdictLabel,
     delusionScore: value.delusionScore,
+    displayLabel: value.displayLabel.trim().slice(0, AI_VERDICT_FIELD_LIMITS.displayLabel),
     explanationText: value.explanationText.trim().slice(0, AI_VERDICT_FIELD_LIMITS.explanationText),
+    evidenceCheckText: value.evidenceCheckText.trim().slice(0, AI_VERDICT_FIELD_LIMITS.evidenceCheckText),
+    overreadingText: value.overreadingText.trim().slice(0, AI_VERDICT_FIELD_LIMITS.overreadingText),
+    whatMattersText: value.whatMattersText.trim().slice(0, AI_VERDICT_FIELD_LIMITS.whatMattersText),
     nextMoveText: value.nextMoveText.trim().slice(0, AI_VERDICT_FIELD_LIMITS.nextMoveText),
     verdictVersion: value.verdictVersion,
   };
@@ -1160,6 +1233,26 @@ function integerFromUnknown(value: unknown): number | null {
   return null;
 }
 
+function expectedVerdictLabelForScore(score: number): VerdictLabel {
+  if (score <= 20) {
+    return 'barely_delusional';
+  }
+
+  if (score <= 45) {
+    return 'slight_reach';
+  }
+
+  if (score <= 70) {
+    return 'mild_delusion';
+  }
+
+  if (score <= 90) {
+    return 'dangerous_overthinking';
+  }
+
+  return 'full_clown_territory';
+}
+
 function coerceAiVerdictOutput(value: unknown): AiVerdictOutput | null {
   if (!value || typeof value !== 'object') {
     return null;
@@ -1175,8 +1268,17 @@ function coerceAiVerdictOutput(value: unknown): AiVerdictOutput | null {
     delusionScore === null ||
     delusionScore < 0 ||
     delusionScore > 100 ||
+    output.verdictLabel !== expectedVerdictLabelForScore(delusionScore) ||
+    typeof output.displayLabel !== 'string' ||
+    output.displayLabel.trim().length === 0 ||
     typeof output.explanationText !== 'string' ||
     output.explanationText.trim().length === 0 ||
+    typeof output.evidenceCheckText !== 'string' ||
+    output.evidenceCheckText.trim().length === 0 ||
+    typeof output.overreadingText !== 'string' ||
+    output.overreadingText.trim().length === 0 ||
+    typeof output.whatMattersText !== 'string' ||
+    output.whatMattersText.trim().length === 0 ||
     typeof output.nextMoveText !== 'string' ||
     output.nextMoveText.trim().length === 0 ||
     verdictVersion === null ||
@@ -1188,7 +1290,11 @@ function coerceAiVerdictOutput(value: unknown): AiVerdictOutput | null {
   return {
     verdictLabel: output.verdictLabel as VerdictLabel,
     delusionScore,
+    displayLabel: output.displayLabel,
     explanationText: output.explanationText,
+    evidenceCheckText: output.evidenceCheckText,
+    overreadingText: output.overreadingText,
+    whatMattersText: output.whatMattersText,
     nextMoveText: output.nextMoveText,
     verdictVersion,
   };

@@ -11,6 +11,7 @@ import {
   ChevronDown,
   ChevronUp,
   CircleHelp,
+  Crown,
   Plus,
   Share2,
   Sparkles,
@@ -20,6 +21,7 @@ import {
 import type { LucideIcon } from 'lucide-react-native';
 import type {
   AnalysisOutput,
+  AiVerdictOutput,
   AiVerdictRequestState,
   DeepReadAccessState,
   DeepReadResponse,
@@ -51,6 +53,7 @@ import { relativeTime } from '../../../../src/shared/utils/date';
 import { useAiVerdictStore } from '../../../../src/store/aiVerdictStore';
 
 const detailScrollByCaseId = new Map<string, number>();
+const quotaUpgradePromptedCaseIds = new Set<string>();
 const caseDetailBackground = '#FBF9F2';
 const aiVerdictTimeoutRecoveryDelaysMs = [2_000, 5_000, 10_000];
 
@@ -81,6 +84,7 @@ export default function CaseDetailRoute() {
   const [deepReadFailureAccess, setDeepReadFailureAccess] = useState<DeepReadAccessState | null>(null);
   const [sharePreviewVisible, setSharePreviewVisible] = useState(false);
   const [shareInProgress, setShareInProgress] = useState(false);
+  const [quotaUpgradePromptVisible, setQuotaUpgradePromptVisible] = useState(false);
   const aiVerdictsByCaseId = useAiVerdictStore((state) => state.byCaseId);
   const aiVerdictRequestsByCaseId = useAiVerdictStore((state) => state.requestByCaseId);
   const shareCardRef = useRef<ViewShot | null>(null);
@@ -164,6 +168,36 @@ export default function CaseDetailRoute() {
     };
   }, [aiVerdictRequestsByCaseId, aiVerdictsByCaseId, record]);
 
+  const routeToQuotaUpgrade = useCallback(
+    (requestState?: AiVerdictRequestState) => {
+      setQuotaUpgradePromptVisible(false);
+
+      if (requestState?.access?.accessTier === 'guest') {
+        router.push('/auth');
+        return;
+      }
+
+      router.push('/paywall');
+    },
+    [router],
+  );
+
+  useEffect(() => {
+    if (!record || !shouldPresentNewResult) {
+      return;
+    }
+
+    const currentCaseId = getCaseId(record);
+    const requestState = aiVerdictRequestsByCaseId[currentCaseId];
+
+    if (!isUpgradeEligibleAiQuotaState(requestState) || quotaUpgradePromptedCaseIds.has(currentCaseId)) {
+      return;
+    }
+
+    quotaUpgradePromptedCaseIds.add(currentCaseId);
+    setQuotaUpgradePromptVisible(true);
+  }, [aiVerdictRequestsByCaseId, record, shouldPresentNewResult]);
+
   const resultPresentationKey = shouldRunResultIntro
     ? record
       ? `new-analysis:${getCaseId(record)}`
@@ -234,13 +268,14 @@ export default function CaseDetailRoute() {
   const aiVerdictDeepReadLocked = aiVerdictRequest
     ? aiVerdictDeepReadLockStatuses.has(aiVerdictRequest.status)
     : false;
+  const quotaUpgradeEligible = isUpgradeEligibleAiQuotaState(aiVerdictRequest);
+  const quotaRetryEligible = !shouldPresentNewResult && isRetryEligibleAiQuotaState(aiVerdictRequest) && !aiVerdict;
   const shouldShowDeepRead =
     !isAiVerdictVisible &&
     (verdictSource === 'basic' || deepReadStatus === 'loading' || deepReadStatus === 'ready' || aiVerdictDeepReadLocked);
-  const heroDisplayLabel = getVerdictDisplayLabel(
-    visibleVerdict.verdictLabel,
-    `${caseId}|${record.inputText}|${visibleVerdict.delusionScore}`,
-  );
+  const heroDisplayLabel = aiVerdict
+    ? aiVerdict.verdict.displayLabel
+    : getVerdictDisplayLabel(visibleVerdict.verdictLabel, `${caseId}|${record.inputText}|${visibleVerdict.delusionScore}`);
   const displayCaseId = formatDisplayCaseId(getCaseId(record));
   const deepReadShare = deepReadStatus === 'ready' ? deepReadResult?.deepRead : null;
   const sharePayload: ShareCardPayload = {
@@ -265,6 +300,14 @@ export default function CaseDetailRoute() {
     await Share.share({
       message: shareMessage,
     });
+  };
+
+  const retryAiVerdict = async () => {
+    if (!record || aiVerdictLoading) {
+      return;
+    }
+
+    await aiVerdictService.requestForCase(record);
   };
 
   const shareCard = async () => {
@@ -400,9 +443,9 @@ export default function CaseDetailRoute() {
           </Pressable>
         </View>
 
-        {isAiVerdictVisible ? (
+        {isAiVerdictVisible && aiVerdict ? (
           <AiVerdictPremiumCard
-            verdict={visibleVerdict}
+            verdict={aiVerdict.verdict}
             displayLabel={heroDisplayLabel}
             caseDisplayId={displayCaseId}
             remainingLabel={aiVerdictAccessLabel(aiVerdict?.access ?? aiVerdictRequest?.access, isGuestCase(record))}
@@ -414,6 +457,8 @@ export default function CaseDetailRoute() {
               requestState={aiVerdictRequest}
               access={aiVerdict?.access ?? aiVerdictRequest?.access}
               isGuest={isGuestCase(record)}
+              onUpgrade={quotaUpgradeEligible && !quotaRetryEligible ? () => routeToQuotaUpgrade(aiVerdictRequest) : undefined}
+              onRetry={quotaRetryEligible ? () => void retryAiVerdict() : undefined}
             />
             <ScorePanel
               caseId={caseId}
@@ -451,8 +496,12 @@ export default function CaseDetailRoute() {
               result={deepReadResult}
               message={deepReadMessage}
               failureAccess={deepReadFailureAccess}
+              quotaUpgradeRequestState={quotaUpgradeEligible && !quotaRetryEligible ? aiVerdictRequest : undefined}
+              quotaRetryEligible={quotaRetryEligible}
               onRequest={() => void requestDeepRead()}
+              onRetry={() => void retryAiVerdict()}
               onSignIn={() => router.push('/auth')}
+              onUpgrade={() => routeToQuotaUpgrade(aiVerdictRequest)}
             />
           </View>
         ) : null}
@@ -524,6 +573,12 @@ export default function CaseDetailRoute() {
         onClose={() => setSharePreviewVisible(false)}
         onShare={() => void shareCard()}
       />
+      <AiQuotaUpgradeModal
+        requestState={aiVerdictRequest}
+        visible={quotaUpgradePromptVisible && quotaUpgradeEligible}
+        onClose={() => setQuotaUpgradePromptVisible(false)}
+        onUpgrade={() => routeToQuotaUpgrade(aiVerdictRequest)}
+      />
     </Screen>
   );
 }
@@ -586,12 +641,84 @@ function SharePreviewModal({
   );
 }
 
+function AiQuotaUpgradeModal({
+  requestState,
+  visible,
+  onClose,
+  onUpgrade,
+}: {
+  requestState?: AiVerdictRequestState;
+  visible: boolean;
+  onClose: () => void;
+  onUpgrade: () => void;
+}) {
+  const copy = quotaUpgradeCopy(requestState);
+
+  return (
+    <Modal animationType="fade" onRequestClose={onClose} transparent visible={visible}>
+      <View style={styles.upgradeModalOverlay}>
+        <View style={styles.upgradeModalContent}>
+          <View style={styles.upgradeModalBadge}>
+            <Crown color={colors.text.onAccent} size={15} strokeWidth={2.6} />
+            <AppText variant="eyebrow" color={colors.text.onAccent} style={styles.upgradeModalBadgeText}>
+              Premium
+            </AppText>
+          </View>
+          <AppText variant="display" center style={styles.upgradeModalTitle}>
+            {copy.title}
+          </AppText>
+          <AppText variant="subtitle" center style={styles.upgradeModalBody}>
+            {copy.body}
+          </AppText>
+          <Pressable accessibilityRole="button" onPress={onUpgrade} style={styles.upgradeModalPrimary}>
+            <Sparkles color={colors.text.onAccent} size={18} strokeWidth={2.8} />
+            <AppText variant="title" center color={colors.text.onAccent} style={styles.upgradeModalPrimaryText}>
+              {copy.cta}
+            </AppText>
+          </Pressable>
+          <Pressable accessibilityRole="button" onPress={onClose} style={styles.upgradeModalSecondary}>
+            <AppText variant="body" center color={colors.text.secondary} style={styles.upgradeModalSecondaryText}>
+              Keep Basic verdict
+            </AppText>
+          </Pressable>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 function formatDisplayCaseId(caseId: string): string {
   const suffix = caseId.replace(/[^a-zA-Z0-9]/g, '').slice(0, 4).toUpperCase();
   return suffix ? `OT-${suffix}` : 'OT';
 }
 
 type AiVerdictDisplaySource = 'loading' | 'ai' | 'cache' | 'basic';
+
+function isUpgradeEligibleAiQuotaState(requestState?: AiVerdictRequestState): boolean {
+  return (
+    requestState?.status === 'quota_exceeded' &&
+    (requestState.access?.accessTier === 'guest' || requestState.access?.accessTier === 'free')
+  );
+}
+
+function isRetryEligibleAiQuotaState(requestState?: AiVerdictRequestState): boolean {
+  return (
+    requestState?.status === 'quota_exceeded' &&
+    (requestState.access?.accessTier === 'free' || requestState.access?.quotaScope === 'daily')
+  );
+}
+
+function quotaUpgradeCopy(requestState?: AiVerdictRequestState) {
+  const isGuest = requestState?.access?.accessTier === 'guest';
+
+  return {
+    title: isGuest ? 'Your free AI verdicts are used up.' : "Today's free AI verdicts are used up.",
+    body: isGuest
+      ? 'Sign in to upgrade and get more AI verdicts for the cases you cannot stop replaying.'
+      : 'Upgrade to Premium for more AI verdicts and sharper reads when Basic is not enough.',
+    cta: isGuest ? 'Sign in to upgrade' : 'Upgrade',
+  };
+}
 
 function accessCopy({
   requestState,
@@ -687,17 +814,25 @@ function AiVerdictStatusStrip({
   requestState,
   access,
   isGuest,
+  onUpgrade,
+  onRetry,
 }: {
   source: AiVerdictDisplaySource;
   requestState?: AiVerdictRequestState;
   access?: AiVerdictRequestState['access'];
   isGuest: boolean;
+  onUpgrade?: () => void;
+  onRetry?: () => void;
 }) {
   const statusText = aiVerdictStatusText({
     source,
     requestState: requestState ?? (access ? { status: 'idle', access, updatedAt: '' } : undefined),
     isGuest,
   });
+  const upgradeCopy = onUpgrade ? quotaUpgradeCopy(requestState) : null;
+  const bodyText = onRetry
+    ? 'AI quota may be available again. Try AI Verdict when you want to use one for this case.'
+    : statusText.body;
 
   return (
     <View style={[styles.aiVerdictStatus, statusText.tone === 'ai' && styles.aiVerdictStatusReady]}>
@@ -722,9 +857,25 @@ function AiVerdictStatusStrip({
         </View>
       </View>
       <AppText variant="meta" color={colors.text.secondary} style={styles.aiVerdictStatusBody}>
-        {statusText.body}
+        {bodyText}
       </AppText>
+      {upgradeCopy && onUpgrade ? (
+        <QuotaUpgradeButton label={upgradeCopy.cta} onPress={onUpgrade} />
+      ) : null}
+      {onRetry ? <QuotaUpgradeButton label="Try AI Verdict" onPress={onRetry} /> : null}
     </View>
+  );
+}
+
+function QuotaUpgradeButton({ label, onPress }: { label: string; onPress: () => void }) {
+  return (
+    <Pressable accessibilityRole="button" onPress={onPress} style={styles.quotaUpgradeButton}>
+      <Sparkles color={colors.text.onAccent} size={16} strokeWidth={2.7} />
+      <AppText variant="body" center color={colors.text.onAccent} style={styles.quotaUpgradeButtonText}>
+        {label}
+      </AppText>
+      <ArrowUpRight color={colors.text.onAccent} size={17} strokeWidth={2.8} />
+    </Pressable>
   );
 }
 
@@ -746,30 +897,30 @@ function AiVerdictPremiumCard({
   caseDisplayId,
   remainingLabel,
 }: {
-  verdict: AnalysisOutput;
+  verdict: AiVerdictOutput;
   displayLabel: string;
   caseDisplayId: string;
   remainingLabel: string;
 }) {
-  const [openSection, setOpenSection] = useState<AiVerdictInsightKey>('whatsHappening');
+  const [openSection, setOpenSection] = useState<AiVerdictInsightKey>('evidenceCheck');
   const stroke = scoreColor(verdict.delusionScore);
   const circumference = 2 * Math.PI * 44;
   const offset = circumference - (verdict.delusionScore / 100) * circumference;
   const sections: AiVerdictInsightSection[] = [
     {
-      key: 'whatsHappening',
-      label: "What's happening",
-      body: verdict.explanationText,
+      key: 'evidenceCheck',
+      label: 'Evidence check',
+      body: verdict.evidenceCheckText,
     },
     {
       key: 'youreOverreading',
       label: "You're overreading",
-      body: 'The story around the evidence may be louder than the evidence itself.',
+      body: verdict.overreadingText,
     },
     {
       key: 'whatMatters',
       label: 'What matters',
-      body: 'Concrete actions, direct words, and follow-through matter more than the spiral.',
+      body: verdict.whatMattersText,
     },
   ];
 
@@ -873,7 +1024,7 @@ function AiVerdictPremiumCard({
   );
 }
 
-type AiVerdictInsightKey = 'none' | 'whatsHappening' | 'youreOverreading' | 'whatMatters';
+type AiVerdictInsightKey = 'none' | 'evidenceCheck' | 'youreOverreading' | 'whatMatters';
 
 interface AiVerdictInsightSection {
   key: Exclude<AiVerdictInsightKey, 'none'>;
@@ -915,23 +1066,43 @@ function DeepReadContent({
   result,
   message,
   failureAccess,
+  quotaUpgradeRequestState,
+  quotaRetryEligible,
   onRequest,
+  onRetry,
   onSignIn,
+  onUpgrade,
 }: {
   locked?: boolean;
   status: DeepReadStatus;
   result: Extract<DeepReadResponse, { ok: true }> | null;
   message: string | null;
   failureAccess: DeepReadAccessState | null;
+  quotaUpgradeRequestState?: AiVerdictRequestState;
+  quotaRetryEligible?: boolean;
   onRequest: () => void;
+  onRetry: () => void;
   onSignIn: () => void;
+  onUpgrade: () => void;
 }) {
   const [openSection, setOpenSection] = useState<DeepReadSectionKey>('whatsActuallyHappening');
 
   if (locked) {
+    const upgradeCopy = quotaUpgradeRequestState ? quotaUpgradeCopy(quotaUpgradeRequestState) : null;
+
     return (
       <View style={styles.deepStateStack}>
-        <DeepReadStateText text="AI reads are used up for now. Your basic verdict is still available." />
+        <DeepReadStateText
+          text={
+            quotaRetryEligible
+              ? 'AI quota may be available again. Try AI Verdict before opening Deep Read for this case.'
+              : upgradeCopy
+                ? `${upgradeCopy.title} Your basic verdict is still available.`
+                : 'AI reads are used up for now. Your basic verdict is still available.'
+          }
+        />
+        {upgradeCopy ? <DeepReadButton label={upgradeCopy.cta} onPress={onUpgrade} /> : null}
+        {quotaRetryEligible ? <DeepReadButton label="Try AI Verdict" onPress={onRetry} /> : null}
       </View>
     );
   }
@@ -1349,6 +1520,25 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 17,
   },
+  quotaUpgradeButton: {
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: colors.accent.lime,
+    borderColor: colors.brand.ink,
+    borderRadius: radii.pill,
+    borderWidth: 2,
+    flexDirection: 'row',
+    gap: spacing.xs,
+    justifyContent: 'center',
+    minHeight: 38,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xs,
+  },
+  quotaUpgradeButtonText: {
+    fontFamily: typography.family.displayBold,
+    fontSize: 13,
+    lineHeight: 17,
+  },
   deepHeader: {
     alignItems: 'center',
     flexDirection: 'row',
@@ -1700,5 +1890,86 @@ const styles = StyleSheet.create({
     fontFamily: typography.family.displayBold,
     fontSize: 15,
     lineHeight: 20,
+  },
+  upgradeModalOverlay: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(31, 23, 34, 0.72)',
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.xxl,
+  },
+  upgradeModalContent: {
+    alignItems: 'center',
+    backgroundColor: colors.bg.surface,
+    borderColor: colors.brand.ink,
+    borderRadius: radii.xl,
+    borderWidth: 2,
+    gap: spacing.md,
+    maxWidth: 360,
+    padding: spacing.xl,
+    shadowColor: colors.brand.ink,
+    shadowOffset: { width: 0, height: 7 },
+    shadowOpacity: 1,
+    shadowRadius: 0,
+    width: '100%',
+    elevation: 7,
+  },
+  upgradeModalBadge: {
+    alignItems: 'center',
+    alignSelf: 'center',
+    backgroundColor: colors.accent.lime,
+    borderRadius: radii.pill,
+    flexDirection: 'row',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 5,
+  },
+  upgradeModalBadgeText: {
+    fontFamily: typography.family.displayBold,
+    fontSize: 10,
+    letterSpacing: 1.1,
+    lineHeight: 13,
+  },
+  upgradeModalTitle: {
+    fontFamily: typography.family.displayBold,
+    fontSize: 30,
+    lineHeight: 34,
+  },
+  upgradeModalBody: {
+    color: colors.text.secondary,
+    fontFamily: typography.family.bodyMedium,
+    fontSize: 15,
+    lineHeight: 21,
+  },
+  upgradeModalPrimary: {
+    alignItems: 'center',
+    backgroundColor: colors.accent.lime,
+    borderColor: colors.brand.ink,
+    borderRadius: radii.pill,
+    borderWidth: 2,
+    flexDirection: 'row',
+    gap: spacing.sm,
+    justifyContent: 'center',
+    marginTop: spacing.xs,
+    minHeight: 52,
+    paddingHorizontal: spacing.lg,
+    width: '100%',
+  },
+  upgradeModalPrimaryText: {
+    fontFamily: typography.family.displayBold,
+    fontSize: 15,
+    lineHeight: 20,
+  },
+  upgradeModalSecondary: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 38,
+    paddingHorizontal: spacing.lg,
+  },
+  upgradeModalSecondaryText: {
+    fontFamily: typography.family.displaySemiBold,
+    fontSize: 14,
+    lineHeight: 18,
   },
 });

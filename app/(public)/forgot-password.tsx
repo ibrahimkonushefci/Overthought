@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Alert, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, MailCheck } from 'lucide-react-native';
+import { ArrowLeft, Mail, MailCheck, Sparkles } from 'lucide-react-native';
 import { authService } from '../../src/features/auth/authService';
 import { Button } from '../../src/shared/ui/Button';
 import { AppText } from '../../src/shared/ui/Text';
@@ -30,82 +30,156 @@ export default function ForgotPasswordRoute() {
 
   return (
     <Screen bottomInset={32}>
-      <Pressable accessibilityRole="button" onPress={() => router.replace('/auth')} style={styles.backButton}>
-        <ArrowLeft color={colors.text.primary} size={22} strokeWidth={2.6} />
-        <AppText variant="body" style={styles.backText}>
-          Back
-        </AppText>
-      </Pressable>
+      <View style={styles.topRow}>
+        <Pressable accessibilityRole="button" onPress={() => router.back()} style={styles.backButton}>
+          <ArrowLeft color={colors.text.primary} size={20} strokeWidth={2.6} />
+        </Pressable>
+        <View style={styles.brandPill}>
+          <Sparkles color={colors.brand.pink} size={14} strokeWidth={2.7} />
+          <AppText variant="eyebrow" style={styles.brandPillText}>
+            Overthought
+          </AppText>
+        </View>
+      </View>
 
       <View style={styles.copy}>
         <AppText variant="eyebrow">Forgot password</AppText>
-        <AppText variant="display">
+        <AppText variant="display" style={styles.title}>
           Reset your <AppText variant="display" color={colors.brand.pink} style={styles.script}>case file</AppText> key.
         </AppText>
-        <AppText variant="subtitle">
+        <AppText variant="subtitle" style={styles.subtitle}>
           Enter your account email and we will send a reset link.
         </AppText>
       </View>
 
-      <View style={styles.form}>
-        <TextInput
-          autoCapitalize="none"
-          autoComplete="email"
-          autoCorrect={false}
-          inputMode="email"
-          keyboardType="email-address"
-          onChangeText={setEmail}
-          placeholder="you@example.com"
-          placeholderTextColor={colors.ui.placeholder}
-          style={styles.input}
-          value={email}
+      <View style={styles.authPanel}>
+        <View style={styles.form}>
+          <View style={styles.field}>
+            <AppText variant="eyebrow" style={styles.fieldLabel}>
+              Email
+            </AppText>
+            <View style={styles.inputShell}>
+              <Mail color={colors.text.secondary} size={18} strokeWidth={2.4} />
+              <TextInput
+                autoCapitalize="none"
+                autoComplete="email"
+                autoCorrect={false}
+                inputMode="email"
+                keyboardType="email-address"
+                onChangeText={setEmail}
+                placeholder="you@example.com"
+                placeholderTextColor={colors.ui.placeholder}
+                style={styles.input}
+                value={email}
+              />
+            </View>
+          </View>
+        </View>
+
+        <Button
+          title="Send reset link"
+          icon={MailCheck}
+          loading={loading}
+          disabled={!email.includes('@') || loading}
+          onPress={() => void submit()}
         />
       </View>
-
-      <Button
-        title="Send reset link"
-        icon={MailCheck}
-        loading={loading}
-        disabled={!email.includes('@') || loading}
-        onPress={() => void submit()}
-      />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
+  topRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: spacing.xl,
+  },
   backButton: {
     alignItems: 'center',
-    alignSelf: 'flex-start',
+    backgroundColor: colors.bg.surface,
+    borderColor: colors.ui.border,
+    borderRadius: 16,
+    borderWidth: 1,
+    height: 44,
+    justifyContent: 'center',
+    width: 44,
+  },
+  brandPill: {
+    alignItems: 'center',
+    backgroundColor: colors.bg.surface,
+    borderColor: colors.ui.border,
+    borderRadius: radii.pill,
+    borderWidth: 1,
     flexDirection: 'row',
     gap: spacing.xs,
-    minHeight: 40,
-    paddingRight: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
   },
-  backText: {
-    fontFamily: typography.family.displaySemiBold,
-    fontSize: 16,
+  brandPillText: {
+    color: colors.text.primary,
+    fontFamily: typography.family.displayBold,
+    fontSize: 10,
+    letterSpacing: 1.5,
   },
   copy: {
-    gap: spacing.md,
+    gap: spacing.sm,
     marginBottom: spacing.xl,
-    marginTop: spacing.xl,
+  },
+  title: {
+    fontSize: 38,
+    lineHeight: 41,
   },
   script: {
     fontFamily: typography.family.editorial,
   },
-  form: {
-    marginBottom: spacing.lg,
-  },
-  input: {
-    backgroundColor: colors.bg.surface,
-    borderColor: colors.ui.border,
-    borderRadius: radii.lg,
-    borderWidth: 1,
-    color: colors.text.primary,
-    fontFamily: typography.family.bodyMedium,
+  subtitle: {
+    fontFamily: typography.family.body,
     fontSize: 15,
+    lineHeight: 22,
+  },
+  authPanel: {
+    backgroundColor: colors.bg.surface,
+    borderColor: colors.brand.ink,
+    borderRadius: radii.xl,
+    borderWidth: 2,
+    gap: spacing.lg,
+    padding: spacing.lg,
+    shadowColor: colors.brand.ink,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 1,
+    shadowRadius: 0,
+    elevation: 6,
+  },
+  form: {
+    gap: spacing.lg,
+  },
+  field: {
+    gap: spacing.xs,
+  },
+  fieldLabel: {
+    color: colors.text.secondary,
+    fontFamily: typography.family.displayBold,
+    fontSize: 9,
+    letterSpacing: 1.5,
+  },
+  inputShell: {
+    alignItems: 'center',
+    backgroundColor: '#F9F6EF',
+    borderColor: colors.ui.border,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: spacing.sm,
     minHeight: 54,
     paddingHorizontal: spacing.lg,
+  },
+  input: {
+    color: colors.text.primary,
+    flex: 1,
+    fontFamily: typography.family.bodyMedium,
+    fontSize: 15,
+    minWidth: 0,
+    paddingVertical: 0,
   },
 });

@@ -113,7 +113,7 @@ interface GeminiErrorResponse {
 
 const MODEL_PROVIDER = 'gemini';
 const MODEL_NAME = 'gemini-2.5-flash';
-const PROMPT_VERSION = 1;
+const PROMPT_VERSION = 2;
 const RESPONSE_SCHEMA_VERSION = 1;
 const FREE_DAILY_LIMIT = 2;
 const PREMIUM_DAILY_FAIR_USE_LIMIT = 100;
@@ -316,7 +316,7 @@ function deepReadJsonSchema() {
     type: 'object',
     properties: {
       whatsActuallyHappening: stringField(
-        'A blunt, funny read of what the situation most likely means. Short, concrete, group-chat direct.',
+        'A concrete diagnosis of what the situation most likely means. Must explain the pattern, not repeat the roastLine.',
       ),
       whatYoureOverreading: stringField(
         'The fantasy, assumption, or fake storyline being added without enough evidence. Roast the overthinking, not the user.',
@@ -328,7 +328,7 @@ function deepReadJsonSchema() {
         'One practical next move. Short, useful, grounded in the local verdict, and never therapy-coded or corporate.',
       ),
       roastLine: stringField(
-        'The most quotable screenshot line. Savage, meme-aware, slightly rude, but not hateful, sexual, or cruel.',
+        'The most quotable screenshot hook. One punchline only; do not explain the same point as whatsActuallyHappening.',
       ),
     },
     required: [
@@ -403,6 +403,15 @@ function buildDeepReadPrompt(row: CaseRow, strictJsonOnly = false): string {
   - Cut filler before returning JSON.
   - Use occasional meme/group-chat phrasing, but do not overdo slang.
   - The roastLine must be the most savage and screenshot-worthy line.
+  - Make the fields do different jobs. Do not write five versions of the same point.
+  - roastLine is the headline/hook: one quotable joke or verdict.
+  - whatsActuallyHappening is the diagnosis: what the behavior pattern means in plain language.
+  - whatYoureOverreading is the fantasy: what the user is adding that the evidence does not support.
+  - whatEvidenceActuallyMatters is the receipts: which concrete actions or omissions should count.
+  - whatToDoNext is the instruction: exactly what to do now.
+  - Do not repeat the same sentence, metaphor, opener, or punchline across fields.
+  - Do not copy or lightly rephrase roastLine inside whatsActuallyHappening.
+  - No two fields should share more than 5 consecutive words.
 
   Replacement style:
   - Instead of "consider this conversation closed," prefer "until there's a plan, don't build a plot."

@@ -117,6 +117,10 @@ export interface DeepReadAccessState {
 }
 
 export interface AiVerdictOutput extends AnalysisOutput {
+  displayLabel: string;
+  evidenceCheckText: string;
+  overreadingText: string;
+  whatMattersText: string;
   source: 'ai';
 }
 
