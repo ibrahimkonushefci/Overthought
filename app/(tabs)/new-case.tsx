@@ -27,12 +27,10 @@ function wait(milliseconds: number) {
 export default function NewCaseRoute() {
   const router = useRouter();
   const draft = useGuestStore((state) => state.drafts.caseText);
-  const preferredCategory = useGuestStore((state) => state.drafts.preferredCategory);
   const setCaseDraft = useGuestStore((state) => state.setCaseDraft);
-  const setPreferredCategory = useGuestStore((state) => state.setPreferredCategory);
   const sessionMode = useAuthStore((state) => state.sessionMode);
   const [inputText, setInputText] = useState(draft);
-  const [category, setCategory] = useState<CaseCategory>(preferredCategory);
+  const [category, setCategory] = useState<CaseCategory>('romance');
   const [loading, setLoading] = useState(false);
   const [examples, setExamples] = useState(() => pickExamplePrompts(4));
 
@@ -52,9 +50,11 @@ export default function NewCaseRoute() {
       const aiVerdictRequest = aiVerdictService.requestForCase(record);
       setCaseDraft('');
       setInputText('');
+      setCategory('romance');
       setExamples(pickExamplePrompts(4));
-      await Promise.all([minimumAnalyzingTime, aiVerdictRequest]);
-      router.replace(`/case/${getCaseId(record)}?fromAnalysis=1`);
+      const [, aiResult] = await Promise.all([minimumAnalyzingTime, aiVerdictRequest]);
+      const quotaParam = !aiResult.ok && aiResult.code === 'quota_exceeded' ? '&aiQuota=1' : '';
+      router.replace(`/case/${getCaseId(record)}?fromAnalysis=1${quotaParam}`);
     } catch (error) {
       Alert.alert('Could not save the case', error instanceof Error ? error.message : 'Try again.');
     } finally {
@@ -109,10 +109,7 @@ export default function NewCaseRoute() {
             category={item}
             selected={item === category}
             mode="category"
-            onPress={() => {
-              setCategory(item);
-              setPreferredCategory(item);
-            }}
+            onPress={() => setCategory(item)}
           />
         ))}
       </View>

@@ -44,8 +44,8 @@ const styles = StyleSheet.create({
   categoryPill: {
     borderColor: colors.brand.ink,
     borderWidth: 2,
-    minHeight: 40,
-    paddingHorizontal: spacing.lg,
+    minHeight: 36,
+    paddingHorizontal: spacing.md,
   },
   selected: {
     backgroundColor: colors.brand.ink,
@@ -62,7 +62,7 @@ const styles = StyleSheet.create({
   categoryText: {
     color: colors.text.primary,
     fontFamily: typography.family.displaySemiBold,
-    fontSize: 14,
+    fontSize: 13,
   },
   selectedText: {
     color: colors.text.onBrand,

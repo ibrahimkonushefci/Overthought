@@ -1,7 +1,7 @@
 import type { CreateCaseInput, GuestCaseLocal, OutcomeStatus } from '../../../types/shared';
 import { trackEvent } from '../../../lib/analytics/analyticsService';
 import { supabase } from '../../../lib/supabase/client';
-import { nowIso } from '../../../shared/utils/date';
+import { nowIso, parseAppTimestamp } from '../../../shared/utils/date';
 import { createId } from '../../../shared/utils/id';
 import { titleFromInput } from '../../../shared/utils/verdict';
 import { useAuthStore } from '../../../store/authStore';
@@ -50,6 +50,20 @@ function normalizedSupabaseInsertError(error: unknown): Error {
 
 function logCaseCreateDiagnostic(event: string, details: Record<string, unknown>) {
   console.info(`[case-create] ${event}`, details);
+}
+
+function caseListTimestamp(record: CaseEntity): number {
+  const timestamps = [
+    parseAppTimestamp(record.updatedAt),
+    parseAppTimestamp(record.createdAt),
+    parseAppTimestamp(record.lastAnalyzedAt),
+  ].filter(Number.isFinite);
+
+  return timestamps.length > 0 ? Math.max(...timestamps) : 0;
+}
+
+function sortCasesNewestFirst(records: CaseEntity[]): CaseEntity[] {
+  return [...records].sort((left, right) => caseListTimestamp(right) - caseListTimestamp(left));
 }
 
 export const caseRepository = {
@@ -181,10 +195,10 @@ export const caseRepository = {
         throw error;
       }
 
-      return (data as CaseRow[]).map(mapCaseRow);
+      return sortCasesNewestFirst((data as CaseRow[]).map(mapCaseRow));
     }
 
-    return selectActiveGuestCases(useGuestStore.getState());
+    return sortCasesNewestFirst(selectActiveGuestCases(useGuestStore.getState()));
   },
   async getCase(caseId: string): Promise<CaseEntity | null> {
     const auth = useAuthStore.getState();

@@ -17,7 +17,7 @@ import {
 
 const MODEL_PROVIDER = 'gemini';
 const MODEL_NAME = 'gemini-2.5-flash';
-const PROMPT_VERSION = 2;
+const PROMPT_VERSION = 3;
 const RESPONSE_SCHEMA_VERSION = 2;
 const SIGNED_IN_FREE_DAILY_LIMIT = 2;
 const GUEST_LIFETIME_LIMIT = 2;

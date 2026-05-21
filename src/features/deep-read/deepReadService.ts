@@ -1,5 +1,6 @@
 import { supabase } from '../../lib/supabase/client';
 import { useAuthStore } from '../../store/authStore';
+import { getAiVerdictDeepReadLockState } from '../ai-verdict/aiVerdictAccess';
 import type { DeepReadFailureCode, DeepReadOutput, DeepReadResponse } from '../../types/shared';
 
 // Current Phase B Edge Function contract: authenticated case-level requests only.
@@ -112,6 +113,16 @@ export const deepReadService = {
 
     if (!trimmedCaseId) {
       return failure('case_not_found', 'Case not found.');
+    }
+
+    const aiVerdictLockState = getAiVerdictDeepReadLockState(trimmedCaseId);
+
+    if (aiVerdictLockState?.status === 'fair_use_exceeded') {
+      return failure('fair_use_exceeded', 'AI reads are temporarily limited for fair use. Try again later.');
+    }
+
+    if (aiVerdictLockState) {
+      return failure('quota_exceeded', 'AI verdict quota is used up for now. Deep Read stays locked for this case.');
     }
 
     if (!supabase) {

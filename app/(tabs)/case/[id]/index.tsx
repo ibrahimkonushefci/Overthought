@@ -30,6 +30,10 @@ import type {
 import { caseRepository } from '../../../../src/features/cases/repositories/caseRepository';
 import { caseUpdateRepository } from '../../../../src/features/cases/repositories/caseUpdateRepository';
 import { aiVerdictService } from '../../../../src/features/ai-verdict/aiVerdictService';
+import {
+  isAiVerdictDeepReadAccountLocked,
+  isAiVerdictDeepReadCaseLocked,
+} from '../../../../src/features/ai-verdict/aiVerdictAccess';
 import { deepReadService } from '../../../../src/features/deep-read/deepReadService';
 import type { CaseEntity, CaseUpdateEntity } from '../../../../src/features/cases/types';
 import { getCaseId, isGuestCase } from '../../../../src/features/cases/types';
@@ -54,27 +58,15 @@ import { useAiVerdictStore } from '../../../../src/store/aiVerdictStore';
 
 const detailScrollByCaseId = new Map<string, number>();
 const quotaUpgradePromptedCaseIds = new Set<string>();
+const quotaRetryAttemptedCaseIds = new Set<string>();
 const caseDetailBackground = '#FBF9F2';
 const aiVerdictTimeoutRecoveryDelaysMs = [2_000, 5_000, 10_000];
 
 type DeepReadStatus = 'idle' | 'loading' | 'ready' | 'not_authenticated' | 'quota' | 'fair_use' | 'error';
-const aiVerdictDeepReadLockStatuses = new Set<AiVerdictRequestState['status']>([
-  'quota_exceeded',
-  'fair_use_exceeded',
-  'ip_daily_cap_exceeded',
-  'global_daily_cap_exceeded',
-  'ai_failed',
-  'ai_timeout',
-  'invalid_ai_response',
-  'cache_write_failed',
-  'unknown',
-  'guest_key_required',
-  'case_not_found',
-]);
 
 export default function CaseDetailRoute() {
   const router = useRouter();
-  const { id, fromAnalysis } = useLocalSearchParams<{ id: string; fromAnalysis?: string }>();
+  const { id, fromAnalysis, aiQuota } = useLocalSearchParams<{ id: string; fromAnalysis?: string; aiQuota?: string }>();
   const [record, setRecord] = useState<CaseEntity | null>(null);
   const [updates, setUpdates] = useState<CaseUpdateEntity[]>([]);
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
@@ -85,6 +77,7 @@ export default function CaseDetailRoute() {
   const [sharePreviewVisible, setSharePreviewVisible] = useState(false);
   const [shareInProgress, setShareInProgress] = useState(false);
   const [quotaUpgradePromptVisible, setQuotaUpgradePromptVisible] = useState(false);
+  const [, setQuotaRetryAttemptVersion] = useState(0);
   const aiVerdictsByCaseId = useAiVerdictStore((state) => state.byCaseId);
   const aiVerdictRequestsByCaseId = useAiVerdictStore((state) => state.requestByCaseId);
   const shareCardRef = useRef<ViewShot | null>(null);
@@ -190,13 +183,15 @@ export default function CaseDetailRoute() {
     const currentCaseId = getCaseId(record);
     const requestState = aiVerdictRequestsByCaseId[currentCaseId];
 
-    if (!isUpgradeEligibleAiQuotaState(requestState) || quotaUpgradePromptedCaseIds.has(currentCaseId)) {
+    const shouldPromptForQuota = aiQuota === '1' || isUpgradeEligibleAiQuotaState(requestState);
+
+    if (!shouldPromptForQuota || !isUpgradeEligibleAiQuotaState(requestState) || quotaUpgradePromptedCaseIds.has(currentCaseId)) {
       return;
     }
 
     quotaUpgradePromptedCaseIds.add(currentCaseId);
     setQuotaUpgradePromptVisible(true);
-  }, [aiVerdictRequestsByCaseId, record, shouldPresentNewResult]);
+  }, [aiQuota, aiVerdictRequestsByCaseId, record, shouldPresentNewResult]);
 
   const resultPresentationKey = shouldRunResultIntro
     ? record
@@ -265,11 +260,15 @@ export default function CaseDetailRoute() {
         : 'ai'
       : 'basic';
   const isAiVerdictVisible = verdictSource === 'ai' || verdictSource === 'cache';
-  const aiVerdictDeepReadLocked = aiVerdictRequest
-    ? aiVerdictDeepReadLockStatuses.has(aiVerdictRequest.status)
-    : false;
+  const accountDeepReadLockState = Object.values(aiVerdictRequestsByCaseId).find(isAiVerdictDeepReadAccountLocked);
+  const deepReadLockRequestState = isAiVerdictDeepReadCaseLocked(aiVerdictRequest)
+    ? aiVerdictRequest
+    : accountDeepReadLockState;
+  const aiVerdictDeepReadLocked = Boolean(deepReadLockRequestState);
   const quotaUpgradeEligible = isUpgradeEligibleAiQuotaState(aiVerdictRequest);
-  const quotaRetryEligible = !shouldPresentNewResult && isRetryEligibleAiQuotaState(aiVerdictRequest) && !aiVerdict;
+  const quotaRetryAlreadyAttempted = quotaRetryAttemptedCaseIds.has(caseId);
+  const quotaRetryEligible =
+    !shouldPresentNewResult && !quotaRetryAlreadyAttempted && isRetryEligibleAiQuotaState(aiVerdictRequest) && !aiVerdict;
   const shouldShowDeepRead =
     !isAiVerdictVisible &&
     (verdictSource === 'basic' || deepReadStatus === 'loading' || deepReadStatus === 'ready' || aiVerdictDeepReadLocked);
@@ -307,7 +306,12 @@ export default function CaseDetailRoute() {
       return;
     }
 
-    await aiVerdictService.requestForCase(record);
+    const result = await aiVerdictService.requestForCase(record);
+
+    if (!result.ok && result.code === 'quota_exceeded') {
+      quotaRetryAttemptedCaseIds.add(getCaseId(record));
+      setQuotaRetryAttemptVersion((current) => current + 1);
+    }
   };
 
   const shareCard = async () => {
@@ -496,7 +500,11 @@ export default function CaseDetailRoute() {
               result={deepReadResult}
               message={deepReadMessage}
               failureAccess={deepReadFailureAccess}
-              quotaUpgradeRequestState={quotaUpgradeEligible && !quotaRetryEligible ? aiVerdictRequest : undefined}
+              quotaUpgradeRequestState={
+                isUpgradeEligibleAiQuotaState(deepReadLockRequestState) && !quotaRetryEligible
+                  ? deepReadLockRequestState
+                  : undefined
+              }
               quotaRetryEligible={quotaRetryEligible}
               onRequest={() => void requestDeepRead()}
               onRetry={() => void retryAiVerdict()}
@@ -1098,7 +1106,7 @@ function DeepReadContent({
               ? 'AI quota may be available again. Try AI Verdict before opening Deep Read for this case.'
               : upgradeCopy
                 ? `${upgradeCopy.title} Your basic verdict is still available.`
-                : 'AI reads are used up for now. Your basic verdict is still available.'
+                : 'AI reads are locked for this case. Your basic verdict is still available.'
           }
         />
         {upgradeCopy ? <DeepReadButton label={upgradeCopy.cta} onPress={onUpgrade} /> : null}
@@ -1165,7 +1173,7 @@ function DeepReadContent({
   if (status === 'not_authenticated') {
     return (
       <View style={styles.deepStateStack}>
-        <DeepReadStateText text="Sign in to use Deep Read. AI verdicts and Deep Reads use separate limits." />
+        <DeepReadStateText text="Sign in to use Deep Read. AI verdicts run first when available." />
         <DeepReadButton label="Sign in" onPress={onSignIn} />
       </View>
     );
@@ -1179,7 +1187,7 @@ function DeepReadContent({
 
     return (
       <View style={styles.deepStateStack}>
-        <DeepReadStateText text={`${quotaCopy} AI verdict quota is separate; your verdict above is unchanged.`} />
+        <DeepReadStateText text={`${quotaCopy} Your basic verdict above is unchanged.`} />
       </View>
     );
   }
@@ -1187,7 +1195,7 @@ function DeepReadContent({
   if (status === 'fair_use') {
     return (
       <View style={styles.deepStateStack}>
-        <DeepReadStateText text="Deep Read is temporarily limited for fair use. AI verdict quota is separate; your verdict above is unchanged." />
+        <DeepReadStateText text="Deep Read is temporarily limited for fair use. Your verdict above is unchanged." />
         <DeepReadButton label="Try again" onPress={onRequest} />
       </View>
     );
@@ -1197,7 +1205,6 @@ function DeepReadContent({
     return (
       <View style={styles.deepStateStack}>
         <DeepReadStateText text={message ?? "Deep Read couldn't load. Your verdict above is unchanged."} />
-        <DeepReadStateText text="AI verdict and Deep Read are separate." compact />
         <DeepReadButton label="Try again" onPress={onRequest} />
       </View>
     );

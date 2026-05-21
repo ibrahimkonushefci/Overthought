@@ -1,4 +1,5 @@
 import type { GuestCaseLocal } from '../../types/shared';
+import { useAiVerdictStore } from '../../store/aiVerdictStore';
 import { useAuthStore } from '../../store/authStore';
 import { useGuestStore } from '../../store/guestStore';
 
@@ -66,6 +67,7 @@ function caseLookupBuilder(remoteCaseId: string | null) {
 describe('migrationService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    useAiVerdictStore.getState().clearAllAiVerdicts();
     useGuestStore.getState().clearAllLocalData();
     useGuestStore.setState({ localGuestId: 'guest-local-1' });
     useAuthStore.getState().setAuthenticated({
@@ -77,6 +79,7 @@ describe('migrationService', () => {
 
   afterEach(() => {
     useGuestStore.getState().clearAllLocalData();
+    useAiVerdictStore.getState().clearAllAiVerdicts();
     useAuthStore.getState().setGuest();
   });
 
@@ -105,5 +108,66 @@ describe('migrationService', () => {
     expect(mockSupabase.from).toHaveBeenCalledWith('cases');
     expect(builder.insert).not.toHaveBeenCalled();
     expect(useGuestStore.getState().cases).toHaveLength(0);
+  });
+
+  it('preserves a migrated guest AI verdict snapshot under the remote case id', async () => {
+    const guestCase = buildGuestCase();
+    useGuestStore.getState().addCase({
+      ...guestCase,
+      aiVerdict: {
+        verdict: {
+          verdictLabel: 'dangerous_overthinking',
+          delusionScore: 84,
+          displayLabel: 'Breadcrumb Circus',
+          explanationText: 'AI read.',
+          evidenceCheckText: 'AI evidence.',
+          overreadingText: 'AI overreading.',
+          whatMattersText: 'AI matters.',
+          nextMoveText: 'AI move.',
+          verdictVersion: 1,
+          source: 'ai',
+        },
+        localFallback: {
+          verdictLabel: guestCase.verdictLabel,
+          delusionScore: guestCase.delusionScore,
+          explanationText: guestCase.explanationText,
+          nextMoveText: guestCase.nextMoveText,
+          verdictVersion: guestCase.verdictVersion,
+        },
+        cache: {
+          id: 'guest-ai-1',
+          source: 'generated',
+          targetFingerprint: 'fingerprint-1',
+          modelProvider: 'gemini',
+          modelName: 'gemini-2.5-flash',
+          modelVersion: null,
+          promptVersion: 3,
+          responseSchemaVersion: 2,
+          createdAt: '2026-04-22T10:00:02.000Z',
+        },
+        access: {
+          accessTier: 'guest',
+          allowed: true,
+          used: 1,
+          remaining: 1,
+          limit: 2,
+          quotaScope: 'lifetime',
+          quotaBucket: null,
+        },
+        updatedAt: '2026-04-22T10:00:03.000Z',
+      },
+    });
+
+    const builder = caseLookupBuilder('remote-case-1');
+    mockSupabase.from.mockReturnValue(builder);
+
+    const result = await migrationService.migrateGuestCases();
+
+    expect(result).toEqual({ migrated: 1, skipped: 0, failed: 0 });
+    expect(useAiVerdictStore.getState().byCaseId['remote-case-1'].verdict.explanationText).toBe('AI read.');
+    expect(useAiVerdictStore.getState().requestByCaseId['remote-case-1']).toMatchObject({
+      status: 'cache',
+      message: 'Moved from your guest case.',
+    });
   });
 });

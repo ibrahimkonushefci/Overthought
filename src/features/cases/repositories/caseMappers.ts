@@ -5,6 +5,7 @@ import type {
   OutcomeStatus,
   VerdictLabel,
 } from '../../../types/shared';
+import { normalizeIsoTimestamp } from '../../../shared/utils/date';
 
 export interface CaseRow {
   id: string;
@@ -51,11 +52,11 @@ export function mapCaseRow(row: CaseRow): CaseRecord {
     verdictVersion: row.latest_verdict_version,
     triggeredSignals: undefined,
     outcomeStatus: row.outcome_status,
-    lastAnalyzedAt: row.last_analyzed_at,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-    archivedAt: row.archived_at,
-    deletedAt: row.deleted_at,
+    lastAnalyzedAt: normalizeIsoTimestamp(row.last_analyzed_at),
+    createdAt: normalizeIsoTimestamp(row.created_at),
+    updatedAt: normalizeIsoTimestamp(row.updated_at),
+    archivedAt: row.archived_at ? normalizeIsoTimestamp(row.archived_at) : null,
+    deletedAt: row.deleted_at ? normalizeIsoTimestamp(row.deleted_at) : null,
   };
 }
 
@@ -69,6 +70,6 @@ export function mapCaseUpdateRow(row: CaseUpdateRow): CaseUpdateRecord {
     explanationText: row.explanation_text,
     nextMoveText: row.next_move_text,
     verdictVersion: row.verdict_version,
-    createdAt: row.created_at,
+    createdAt: normalizeIsoTimestamp(row.created_at),
   };
 }

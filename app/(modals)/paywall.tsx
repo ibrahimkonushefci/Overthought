@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { Crown, Sparkles } from 'lucide-react-native';
+import { Check, Crown, Sparkles } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Alert, StyleSheet, View } from 'react-native';
 import { trackEvent } from '../../src/lib/analytics/analyticsService';
@@ -16,8 +16,9 @@ export default function PaywallPlaceholderRoute() {
   const premiumState = usePremiumStore((state) => state.premiumState);
   const hasPremium = isPremiumStateActive(premiumState);
   const [subtitle, setSubtitle] = useState(
-    'Go deeper on the situations you cannot stop replaying.',
+    'More AI help for the cases you cannot stop replaying.',
   );
+  const [debugMessage, setDebugMessage] = useState<string | null>(null);
   const [ctaTitle, setCtaTitle] = useState('Not yet');
   const [loading, setLoading] = useState(false);
 
@@ -32,6 +33,7 @@ export default function PaywallPlaceholderRoute() {
 
       if (hasPremium) {
         setSubtitle('Premium is already active on this account.');
+        setDebugMessage(null);
         setCtaTitle('Premium active');
         return;
       }
@@ -41,13 +43,14 @@ export default function PaywallPlaceholderRoute() {
           ? `${result.packageInfo.priceString}/${result.packageInfo.periodLabel}`
           : result.packageInfo.priceString;
 
-        setSubtitle(`More Deep Reads for your cases. Fair-use limits apply. ${packageLabel}.`);
+        setSubtitle(`More AI Verdicts and Deep Reads for your cases. Fair-use limits apply. ${packageLabel}.`);
+        setDebugMessage(null);
         setCtaTitle(`Start ${result.packageInfo.priceString}`);
         return;
       }
 
       if (result.message) {
-        setSubtitle(result.message);
+        setDebugMessage(result.message);
       }
       setCtaTitle('Try Premium');
     });
@@ -95,14 +98,39 @@ export default function PaywallPlaceholderRoute() {
           </AppText>
         </View>
         <AppText variant="display" color={colors.text.onBrand} style={styles.title}>
-          Sharper Deep Reads.
+          More AI Verdicts.
         </AppText>
         <AppText variant="subtitle" color={colors.text.onBrand}>
           {subtitle}
         </AppText>
+        <View style={styles.benefitList}>
+          <PremiumBenefit text="More AI Verdicts when free reads run out" />
+          <PremiumBenefit text="Sharper Deep Reads with more context" />
+          <PremiumBenefit text="Premium access stays attached when signed in" />
+        </View>
+        {debugMessage ? (
+          <View style={styles.debugNotice}>
+            <AppText variant="meta" color={colors.text.onBrand} style={styles.debugText}>
+              Dev note: {debugMessage}
+            </AppText>
+          </View>
+        ) : null}
         <Button title={ctaTitle} variant="accent" icon={Sparkles} loading={loading} onPress={() => void purchase()} />
       </LinearGradient>
     </Screen>
+  );
+}
+
+function PremiumBenefit({ text }: { text: string }) {
+  return (
+    <View style={styles.benefitRow}>
+      <View style={styles.benefitIcon}>
+        <Check color={colors.brand.ink} size={13} strokeWidth={3} />
+      </View>
+      <AppText variant="body" color={colors.text.onBrand} style={styles.benefitText}>
+        {text}
+      </AppText>
+    </View>
   );
 }
 
@@ -129,5 +157,35 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     lineHeight: 37,
+  },
+  benefitList: {
+    gap: spacing.sm,
+    marginVertical: spacing.sm,
+  },
+  benefitRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  benefitIcon: {
+    alignItems: 'center',
+    backgroundColor: colors.accent.lime,
+    borderRadius: 10,
+    height: 20,
+    justifyContent: 'center',
+    width: 20,
+  },
+  benefitText: {
+    flex: 1,
+    fontSize: 14,
+    lineHeight: 19,
+  },
+  debugNotice: {
+    backgroundColor: 'rgba(31, 23, 34, 0.18)',
+    borderRadius: radii.md,
+    padding: spacing.sm,
+  },
+  debugText: {
+    opacity: 0.88,
   },
 });

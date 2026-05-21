@@ -1,5 +1,7 @@
 import type { GuestCaseLocal, GuestMigrationPayload } from '../../types/shared';
 import { supabase } from '../../lib/supabase/client';
+import { nowIso } from '../../shared/utils/date';
+import { useAiVerdictStore } from '../../store/aiVerdictStore';
 import { useAuthStore } from '../../store/authStore';
 import { useGuestStore } from '../../store/guestStore';
 
@@ -69,6 +71,7 @@ export const migrationService = {
       try {
         const remoteCaseId = await findRemoteCaseId(auth.user.id, item.localId);
         const caseId = remoteCaseId ?? (await createRemoteCase(auth.user.id, item));
+        preserveMigratedAiVerdict(item, caseId);
 
         for (const update of item.updates) {
           const { data: matchingUpdates, error: updateLookupError } = await supabase
@@ -115,6 +118,24 @@ export const migrationService = {
     return { migrated, skipped, failed };
   },
 };
+
+function preserveMigratedAiVerdict(item: GuestCaseLocal, remoteCaseId: string) {
+  if (!item.aiVerdict) {
+    return;
+  }
+
+  const timestamp = nowIso();
+  useAiVerdictStore.getState().setAiVerdict(remoteCaseId, {
+    ...item.aiVerdict,
+    updatedAt: timestamp,
+  });
+  useAiVerdictStore.getState().setRequestState(remoteCaseId, {
+    status: 'cache',
+    message: 'Moved from your guest case.',
+    access: item.aiVerdict.access,
+    updatedAt: timestamp,
+  });
+}
 
 async function findRemoteCaseId(userId: string, localCaseId: string): Promise<string | null> {
   if (!supabase) {

@@ -857,15 +857,15 @@ describe('Gemini AI verdict provider', () => {
                 parts: [
                   {
                     text: JSON.stringify({
-	                      verdictLabel: 'mild_delusion',
-	                      delusionScore: 55,
-	                      displayLabel: 'Thin Plot',
-	                      explanationText: 'This is thin, but not imaginary.',
-	                      evidenceCheckText: 'The receipt is a vague maybe, not a plan.',
-	                      overreadingText: 'You are giving a foggy sentence a full production budget.',
-	                      whatMattersText: 'A real plan gives you a day and time.',
-	                      nextMoveText: 'Wait for a real plan before reacting.',
-	                      verdictVersion: 1,
+                      verdictLabel: 'mild_delusion',
+                      delusionScore: 55,
+                      displayLabel: 'Thin Plot',
+                      explanationText: 'This is thin, but not imaginary.',
+                      evidenceCheckText: 'The receipt is a vague maybe, not a plan.',
+                      overreadingText: 'You are giving a foggy sentence a full production budget.',
+                      whatMattersText: 'A real plan gives you a day and time.',
+                      nextMoveText: 'Wait for a real plan before reacting.',
+                      verdictVersion: 1,
                     }),
                   },
                 ],
@@ -882,21 +882,24 @@ describe('Gemini AI verdict provider', () => {
     expect(result).toEqual({
       ok: true,
       verdict: {
-	        verdictLabel: 'mild_delusion',
-	        delusionScore: 55,
-	        displayLabel: 'Thin Plot',
-	        explanationText: 'This is thin, but not imaginary.',
-	        evidenceCheckText: 'The receipt is a vague maybe, not a plan.',
-	        overreadingText: 'You are giving a foggy sentence a full production budget.',
-	        whatMattersText: 'A real plan gives you a day and time.',
-	        nextMoveText: 'Wait for a real plan before reacting.',
-	        verdictVersion: 1,
+        verdictLabel: 'mild_delusion',
+        delusionScore: 55,
+        displayLabel: 'Thin Plot',
+        explanationText: 'This is thin, but not imaginary.',
+        evidenceCheckText: 'The receipt is a vague maybe, not a plan.',
+        overreadingText: 'You are giving a foggy sentence a full production budget.',
+        whatMattersText: 'A real plan gives you a day and time.',
+        nextMoveText: 'Wait for a real plan before reacting.',
+        verdictVersion: 1,
       },
       modelVersion: 'gemini-test-version',
     });
     expect(global.fetch).toHaveBeenCalledTimes(2);
     const secondBody = JSON.parse((global.fetch as jest.Mock).mock.calls[1][1].body);
     expect(secondBody.contents[0].parts[0].text).toContain('STRICT RETRY MODE');
+    expect(secondBody.contents[0].parts[0].text).toContain('If the user was clearly included');
+    expect(secondBody.contents[0].parts[0].text).toContain('never start with "What matters is"');
+    expect(secondBody.generationConfig.temperature).toBe(0.8);
     expect(secondBody.generationConfig.maxOutputTokens).toBe(2048);
     expect(secondBody.generationConfig.responseSchema).toBeDefined();
     expect(secondBody.generationConfig.responseJsonSchema).toBeUndefined();
@@ -913,14 +916,14 @@ describe('Gemini AI verdict provider', () => {
               parts: [
                 {
                   text: JSON.stringify({
-	                    verdictLabel: 'slight_reach',
-	                    delusionScore: '34',
-	                    displayLabel: 'Tiny Reach',
-	                    explanationText: 'There is a signal, just not a full case.',
-	                    evidenceCheckText: 'The signal exists, but it is still not a real ask.',
-	                    overreadingText: 'You are trying to make a maybe clock in as proof.',
-	                    whatMattersText: 'The next real evidence is whether they make a plan.',
-	                    nextMoveText: 'Ask once, then let the answer be the answer.',
+                    verdictLabel: 'slight_reach',
+                    delusionScore: '34',
+                    displayLabel: 'Tiny Reach',
+                    explanationText: 'There is a signal, just not a full case.',
+                    evidenceCheckText: 'The signal exists, but it is still not a real ask.',
+                    overreadingText: 'You are trying to make a maybe clock in as proof.',
+                    whatMattersText: 'The next real evidence is whether they make a plan.',
+                    nextMoveText: 'Ask once, then let the answer be the answer.',
                   }),
                 },
               ],
@@ -935,14 +938,62 @@ describe('Gemini AI verdict provider', () => {
     expect(result).toEqual({
       ok: true,
       verdict: {
-	        verdictLabel: 'slight_reach',
-	        delusionScore: 34,
-	        displayLabel: 'Tiny Reach',
-	        explanationText: 'There is a signal, just not a full case.',
-	        evidenceCheckText: 'The signal exists, but it is still not a real ask.',
-	        overreadingText: 'You are trying to make a maybe clock in as proof.',
-	        whatMattersText: 'The next real evidence is whether they make a plan.',
-	        nextMoveText: 'Ask once, then let the answer be the answer.',
+        verdictLabel: 'slight_reach',
+        delusionScore: 34,
+        displayLabel: 'Tiny Reach',
+        explanationText: 'There is a signal, just not a full case.',
+        evidenceCheckText: 'The signal exists, but it is still not a real ask.',
+        overreadingText: 'You are trying to make a maybe clock in as proof.',
+        whatMattersText: 'The next real evidence is whether they make a plan.',
+        nextMoveText: 'Ask once, then let the answer be the answer.',
+        verdictVersion: 1,
+      },
+      modelVersion: 'gemini-test-version',
+    });
+  });
+
+  it('strips markdown markers and banned What Matters opener from Gemini text fields', async () => {
+    global.fetch = jest.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        modelVersion: 'gemini-test-version',
+        candidates: [
+          {
+            content: {
+              parts: [
+                {
+                  text: JSON.stringify({
+                    verdictLabel: 'slight_reach',
+                    delusionScore: 34,
+                    displayLabel: '`Tiny` *Reach*',
+                    explanationText: 'This is *friendly*, not a proposal in a trench coat.',
+                    evidenceCheckText: 'The receipt is `banter`, not a signed confession.',
+                    overreadingText: 'You are turning _laughing_ into a rom-com trailer.',
+                    whatMattersText: 'What matters is the actual ask, not sparkle-font eye contact.',
+                    nextMoveText: 'Ask once for a low-stakes plan, then stop doing screenplay math.',
+                    verdictVersion: 1,
+                  }),
+                },
+              ],
+            },
+          },
+        ],
+      }),
+    })) as unknown as typeof fetch;
+
+    const result = await generateAiVerdictWithGemini({ targetType: 'case', row: caseRow() }, 'api-key');
+
+    expect(result).toEqual({
+      ok: true,
+      verdict: {
+        verdictLabel: 'slight_reach',
+        delusionScore: 34,
+        displayLabel: 'Tiny Reach',
+        explanationText: 'This is friendly, not a proposal in a trench coat.',
+        evidenceCheckText: 'The receipt is banter, not a signed confession.',
+        overreadingText: 'You are turning laughing into a rom-com trailer.',
+        whatMattersText: 'the actual ask, not sparkle-font eye contact.',
+        nextMoveText: 'Ask once for a low-stakes plan, then stop doing screenplay math.',
         verdictVersion: 1,
       },
       modelVersion: 'gemini-test-version',

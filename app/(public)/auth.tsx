@@ -21,6 +21,7 @@ export default function AuthRoute() {
   const [appleAvailable, setAppleAvailable] = useState(false);
   const [appleLoading, setAppleLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [signupSuccessEmail, setSignupSuccessEmail] = useState<string | null>(null);
 
   useEffect(() => {
     if (sessionMode === 'authenticated' && pathname !== '/reset-password') {
@@ -56,6 +57,14 @@ export default function AuthRoute() {
         ? await authService.signInWithEmailPassword(trimmedEmail, password)
         : await authService.signUpWithEmailPassword(trimmedEmail, password);
     setEmailLoading(false);
+
+    if (result.ok && authMode === 'sign_up' && result.message) {
+      setEmail('');
+      setPassword('');
+      setAuthMode('sign_in');
+      setSignupSuccessEmail(trimmedEmail);
+      return;
+    }
 
     if (!result.ok || result.message) {
       Alert.alert(authMode === 'sign_in' ? 'Email sign-in' : 'Create account', result.message ?? 'Try again.');
@@ -96,17 +105,28 @@ export default function AuthRoute() {
         </View>
       </View>
 
-      <View style={styles.copy}>
-        <AppText variant="eyebrow">Optional login</AppText>
-        <AppText variant="display" style={styles.title}>
-          Save your <AppText variant="display" color={colors.brand.pink} style={styles.script}>case file</AppText>.
-        </AppText>
-        <AppText variant="subtitle" style={styles.subtitle}>
-          Sync cases, keep Premium attached to your account, and come back to the evidence later.
-        </AppText>
-      </View>
-
       <View style={styles.authPanel}>
+        <View style={styles.panelHeader}>
+          <View style={styles.panelHeaderCopy}>
+            <AppText variant="eyebrow" style={styles.panelKicker}>
+              {authMode === 'sign_in' ? 'Welcome back' : 'New account'}
+            </AppText>
+            <AppText variant="title" style={styles.panelTitle} numberOfLines={2}>
+              {authMode === 'sign_in' ? 'Sign in' : 'Create your case file'}
+            </AppText>
+            <AppText variant="meta" style={styles.panelSubtitle} numberOfLines={1}>
+              Save cases and keep Premium attached.
+            </AppText>
+          </View>
+          <View style={styles.panelIcon}>
+            {authMode === 'sign_in' ? (
+              <LogIn color={colors.brand.pink} size={18} strokeWidth={2.7} />
+            ) : (
+              <UserPlus color={colors.brand.pink} size={18} strokeWidth={2.7} />
+            )}
+          </View>
+        </View>
+
         <View style={styles.modeSwitch}>
           <Pressable
             accessibilityRole="button"
@@ -121,7 +141,10 @@ export default function AuthRoute() {
           <Pressable
             accessibilityRole="button"
             accessibilityState={{ selected: authMode === 'sign_up' }}
-            onPress={() => setAuthMode('sign_up')}
+            onPress={() => {
+              setAuthMode('sign_up');
+              setSignupSuccessEmail(null);
+            }}
             style={[styles.modeButton, authMode === 'sign_up' && styles.modeButtonActive]}
           >
             <AppText variant="eyebrow" color={authMode === 'sign_up' ? colors.text.onBrand : colors.text.secondary} style={styles.modeText}>
@@ -129,6 +152,20 @@ export default function AuthRoute() {
             </AppText>
           </Pressable>
         </View>
+
+        {signupSuccessEmail ? (
+          <View style={styles.successNotice}>
+            <Mail color={colors.brand.pink} size={18} strokeWidth={2.5} />
+            <View style={styles.successCopy}>
+              <AppText variant="body" style={styles.successTitle}>
+                Check your email
+              </AppText>
+              <AppText variant="meta" style={styles.successBody}>
+                Confirm {signupSuccessEmail}, then sign in here.
+              </AppText>
+            </View>
+          </View>
+        ) : null}
 
         <View style={styles.form}>
           <View style={styles.field}>
@@ -281,22 +318,6 @@ const styles = StyleSheet.create({
     fontSize: 10,
     letterSpacing: 1.5,
   },
-  copy: {
-    gap: spacing.sm,
-    marginBottom: spacing.xl,
-  },
-  title: {
-    fontSize: 38,
-    lineHeight: 41,
-  },
-  script: {
-    fontFamily: typography.family.editorial,
-  },
-  subtitle: {
-    fontFamily: typography.family.body,
-    fontSize: 15,
-    lineHeight: 22,
-  },
   authPanel: {
     backgroundColor: colors.bg.surface,
     borderColor: colors.brand.ink,
@@ -309,6 +330,65 @@ const styles = StyleSheet.create({
     shadowOpacity: 1,
     shadowRadius: 0,
     elevation: 6,
+  },
+  panelHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.md,
+    justifyContent: 'space-between',
+  },
+  panelHeaderCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  panelKicker: {
+    color: colors.text.secondary,
+    fontFamily: typography.family.displayBold,
+    fontSize: 9,
+    letterSpacing: 1.5,
+  },
+  panelTitle: {
+    color: colors.text.primary,
+    fontFamily: typography.family.displayBold,
+    fontSize: 22,
+    lineHeight: 27,
+    marginTop: 2,
+  },
+  panelSubtitle: {
+    marginTop: 4,
+  },
+  panelIcon: {
+    alignItems: 'center',
+    backgroundColor: '#FDE8F6',
+    borderColor: colors.ui.border,
+    borderRadius: 14,
+    borderWidth: 1,
+    height: 42,
+    justifyContent: 'center',
+    width: 42,
+  },
+  successNotice: {
+    alignItems: 'center',
+    backgroundColor: '#FDE8F6',
+    borderColor: colors.ui.border,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  successCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  successTitle: {
+    fontFamily: typography.family.displaySemiBold,
+    fontSize: 14,
+    lineHeight: 18,
+  },
+  successBody: {
+    lineHeight: 16,
   },
   form: {
     gap: spacing.lg,

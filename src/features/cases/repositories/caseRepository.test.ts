@@ -198,6 +198,31 @@ describe('caseRepository authenticated sync behavior', () => {
     expect(builder.is).toHaveBeenCalledWith('deleted_at', null);
   });
 
+  it('normalizes and sorts remote timestamps newest first on the client', async () => {
+    const builder = listBuilder([
+      caseRow({
+        id: 'older-case',
+        title: 'Older',
+        created_at: '2026-05-21T11:50:00',
+        updated_at: '2026-05-21T11:50:00',
+        last_analyzed_at: '2026-05-21T11:50:00',
+      }),
+      caseRow({
+        id: 'newer-case',
+        title: 'Newer',
+        created_at: '2026-05-21T11:58:00',
+        updated_at: '2026-05-21T11:58:00',
+        last_analyzed_at: '2026-05-21T11:58:00',
+      }),
+    ]);
+    mockSupabase.from.mockReturnValue(builder);
+
+    const cases = await caseRepository.listCases();
+
+    expect(cases.map((item) => ('id' in item ? item.id : item.localId))).toEqual(['newer-case', 'older-case']);
+    expect(cases[0].createdAt).toBe('2026-05-21T11:58:00.000Z');
+  });
+
   it('resolves a migrated local case id to the remote case id in authenticated mode', async () => {
     useGuestStore.setState({
       migratedCaseMap: {

@@ -302,7 +302,7 @@ type AiVerdictResponse =
 
 const MODEL_PROVIDER = 'gemini';
 const MODEL_NAME = 'gemini-2.5-flash';
-const PROMPT_VERSION = 2;
+const PROMPT_VERSION = 3;
 const RESPONSE_SCHEMA_VERSION = 2;
 const SIGNED_IN_FREE_DAILY_LIMIT = 2;
 const GUEST_LIFETIME_LIMIT = 2;
@@ -1070,7 +1070,9 @@ function aiVerdictJsonSchema() {
       explanationText: stringField('The Read: a short, concrete, roast-first verdict using exact case details.'),
       evidenceCheckText: stringField('Evidence Check: what the actual receipts prove or fail to prove.'),
       overreadingText: stringField("You're Overreading: the specific fantasy or spiral the user is adding."),
-      whatMattersText: stringField('What Matters: the decisive standard for this exact case, not generic advice.'),
+      whatMattersText: stringField(
+        'What Matters: the decisive case-specific standard using a concrete receipt; do not start with "What matters is".',
+      ),
       nextMoveText: stringField('Do This: one practical next move, written as a direct instruction.'),
       verdictVersion: {
         type: 'integer',
@@ -1152,7 +1154,25 @@ Tone:
 - no generic AI hedging
 - use details from the case
 - each text field must reference or clearly depend on the exact case details
+- every field except nextMoveText needs a sharp image, punchline, or roast of the weak evidence
+- avoid soft validation, advice-column language, career-coach phrasing, and corporate performance-review voice
 - avoid reusable lines like "concrete actions matter," "direct words and follow-through," or "making the maybe louder"
+- never use markdown formatting characters like asterisks, underscores, backticks, or code fences
+
+Grounded-case calibration:
+- If the user was clearly included in the invite, group chat, group plan, or event, score 21-40 unless there is direct exclusion evidence.
+- If the only evidence is smiling, laughing, warmth, eye contact, or friendly banter, score 30-50 unless there is a direct ask or concrete follow-through.
+- If a workplace case has praise but no bigger tasks, title change, raise, written plan, or metrics, score 45-60 and roast the corporate confetti.
+- If someone ghosted for weeks then returns with a late-night like, emoji, vague flirt, or low-effort reply, score 71-90.
+- If there is explicit direct interest, apology, invitation, or a real plan, lower the score hard; do not punish grounded evidence.
+
+Field style:
+- displayLabel: screenshot-worthy, not generic.
+- explanationText: lead with the roast, then the useful read.
+- evidenceCheckText: name the actual receipt and what it does or does not prove.
+- overreadingText: call out the exact fantasy the user is building.
+- whatMattersText: case-specific standard using the concrete receipt; never start with "What matters is" or "The important thing is".
+- nextMoveText: direct, useful, and short; this is the only field allowed to sound practical.
 
 Length:
 - displayLabel: 2-5 words, max ${AI_VERDICT_FIELD_LIMITS.displayLabel} characters
@@ -1206,16 +1226,32 @@ function extractJsonObjectText(value: string): string | null {
   return trimmed.slice(start, end + 1);
 }
 
+function normalizeGeneratedText(value: string): string {
+  return value
+    .replace(/```+/g, '')
+    .replace(/[*_`]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function sanitizeWhatMattersText(value: string): string {
+  return normalizeGeneratedText(value)
+    .replace(/^what matters is\s+/i, '')
+    .replace(/^the important thing is\s+/i, '')
+    .replace(/^the thing that matters is\s+/i, '')
+    .trim();
+}
+
 function sanitizeAiVerdictOutput(value: AiVerdictOutput): AiVerdictOutput {
   return {
     verdictLabel: value.verdictLabel,
     delusionScore: value.delusionScore,
-    displayLabel: value.displayLabel.trim().slice(0, AI_VERDICT_FIELD_LIMITS.displayLabel),
-    explanationText: value.explanationText.trim().slice(0, AI_VERDICT_FIELD_LIMITS.explanationText),
-    evidenceCheckText: value.evidenceCheckText.trim().slice(0, AI_VERDICT_FIELD_LIMITS.evidenceCheckText),
-    overreadingText: value.overreadingText.trim().slice(0, AI_VERDICT_FIELD_LIMITS.overreadingText),
-    whatMattersText: value.whatMattersText.trim().slice(0, AI_VERDICT_FIELD_LIMITS.whatMattersText),
-    nextMoveText: value.nextMoveText.trim().slice(0, AI_VERDICT_FIELD_LIMITS.nextMoveText),
+    displayLabel: normalizeGeneratedText(value.displayLabel).slice(0, AI_VERDICT_FIELD_LIMITS.displayLabel),
+    explanationText: normalizeGeneratedText(value.explanationText).slice(0, AI_VERDICT_FIELD_LIMITS.explanationText),
+    evidenceCheckText: normalizeGeneratedText(value.evidenceCheckText).slice(0, AI_VERDICT_FIELD_LIMITS.evidenceCheckText),
+    overreadingText: normalizeGeneratedText(value.overreadingText).slice(0, AI_VERDICT_FIELD_LIMITS.overreadingText),
+    whatMattersText: sanitizeWhatMattersText(value.whatMattersText).slice(0, AI_VERDICT_FIELD_LIMITS.whatMattersText),
+    nextMoveText: normalizeGeneratedText(value.nextMoveText).slice(0, AI_VERDICT_FIELD_LIMITS.nextMoveText),
     verdictVersion: value.verdictVersion,
   };
 }
@@ -1405,7 +1441,7 @@ export async function generateAiVerdictWithGemini(
             },
           ],
           generationConfig: {
-            temperature: 0.55,
+            temperature: 0.8,
             topP: 0.9,
             maxOutputTokens: 2048,
             responseMimeType: 'application/json',

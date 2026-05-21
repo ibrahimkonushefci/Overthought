@@ -5,7 +5,7 @@ import { getCaseId } from '../types';
 import { AppText } from '../../../shared/ui/Text';
 import { colors, radii, spacing, typography } from '../../../shared/theme/tokens';
 import { categoryIcons, categoryLabels, scoreToneBackground, scoreColor, verdictIcons, verdictLabels } from '../../../shared/utils/verdict';
-import { relativeTime } from '../../../shared/utils/date';
+import { parseAppTimestamp, relativeTime } from '../../../shared/utils/date';
 
 interface CaseCardProps {
   item: CaseEntity;
@@ -14,6 +14,9 @@ interface CaseCardProps {
 export function CaseCard({ item }: CaseCardProps) {
   const router = useRouter();
   const id = getCaseId(item);
+  const listTimestamp = [item.updatedAt, item.createdAt, item.lastAnalyzedAt].reduce((latest, candidate) =>
+    parseAppTimestamp(candidate) > parseAppTimestamp(latest) ? candidate : latest,
+  );
 
   return (
     <Pressable
@@ -31,7 +34,7 @@ export function CaseCard({ item }: CaseCardProps) {
       </View>
       <View style={styles.body}>
         <AppText variant="meta">
-          {categoryIcons[item.category]} {categoryLabels[item.category]} · {relativeTime(item.updatedAt)}
+          {categoryIcons[item.category]} {categoryLabels[item.category]} · {relativeTime(listTimestamp)}
         </AppText>
         <AppText variant="body" style={styles.title} numberOfLines={2}>
           {item.title ?? item.inputText}
