@@ -61,5 +61,16 @@ target 'Overthought' do
       :mac_catalyst_enabled => false,
       :ccache_enabled => ccache_enabled?(podfile_properties),
     )
+
+    if podfile_properties['expo.useHermesV1'] == 'true'
+      Dir.glob(File.join(__dir__, 'Pods/Target Support Files/Pods-Overthought/Pods-Overthought.*.xcconfig')).each do |xcconfig_path|
+        text = File.read(xcconfig_path)
+        text.gsub!(
+          /^HERMES_CLI_PATH = .+$/,
+          'HERMES_CLI_PATH = $(PODS_ROOT)/hermes-engine/destroot/bin/hermesc',
+        )
+        File.write(xcconfig_path, text)
+      end
+    end
   end
 end
