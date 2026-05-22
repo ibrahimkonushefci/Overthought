@@ -139,6 +139,29 @@ export default function CaseDetailRoute() {
   }, [aiVerdictsByCaseId, record]);
 
   useEffect(() => {
+    if (!record || isGuestCase(record) || deepReadStatus === 'loading' || deepReadStatus === 'ready') {
+      return;
+    }
+
+    let cancelled = false;
+
+    void deepReadService.loadStoredCaseDeepRead(record).then((storedDeepRead) => {
+      if (cancelled || !storedDeepRead) {
+        return;
+      }
+
+      setDeepReadResult(storedDeepRead);
+      setDeepReadFailureAccess(null);
+      setDeepReadMessage(null);
+      setDeepReadStatus('ready');
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [deepReadStatus, record]);
+
+  useEffect(() => {
     if (!record) {
       return;
     }
@@ -267,8 +290,13 @@ export default function CaseDetailRoute() {
   const aiVerdictDeepReadLocked = Boolean(deepReadLockRequestState);
   const quotaUpgradeEligible = isUpgradeEligibleAiQuotaState(aiVerdictRequest);
   const quotaRetryAlreadyAttempted = quotaRetryAttemptedCaseIds.has(caseId);
+  const migratedGuestQuotaRetryEligible =
+    !isGuestCase(record) && aiVerdictRequest?.status === 'quota_exceeded' && aiVerdictRequest.access?.accessTier === 'guest';
   const quotaRetryEligible =
-    !shouldPresentNewResult && !quotaRetryAlreadyAttempted && isRetryEligibleAiQuotaState(aiVerdictRequest) && !aiVerdict;
+    !shouldPresentNewResult &&
+    !quotaRetryAlreadyAttempted &&
+    (isRetryEligibleAiQuotaState(aiVerdictRequest) || migratedGuestQuotaRetryEligible) &&
+    !aiVerdict;
   const shouldShowDeepRead =
     !isAiVerdictVisible &&
     (verdictSource === 'basic' || deepReadStatus === 'loading' || deepReadStatus === 'ready' || aiVerdictDeepReadLocked);
@@ -1182,8 +1210,8 @@ function DeepReadContent({
   if (status === 'quota') {
     const quotaCopy =
       failureAccess?.limit === null || failureAccess?.limit === undefined
-        ? "You've used today's free Deep Reads."
-        : `You've used today's free Deep Reads (${failureAccess.remaining} of ${failureAccess.limit} left).`;
+        ? "You've used today's AI reads."
+        : `You've used today's AI reads (${failureAccess.remaining} of ${failureAccess.limit} left).`;
 
     return (
       <View style={styles.deepStateStack}>

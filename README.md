@@ -1,6 +1,6 @@
 # Overthought
 
-iOS-first Expo React Native foundation for Overthought, a case-based app for analyzing social overthinking. The v1 foundation keeps verdicts fully client-side, supports guest mode, and scaffolds optional Supabase auth/sync plus RevenueCat-ready premium boundaries.
+iOS-first Expo React Native foundation for Overthought, a case-based app for analyzing social overthinking. The current v1 flow uses AI Verdict first when quota/access allows, keeps the deterministic Basic Verdict as local fallback, supports guest mode, and scaffolds optional Supabase auth/sync plus RevenueCat-ready premium boundaries.
 
 ## Run Locally With A Development Build
 
@@ -123,6 +123,12 @@ The EAS `production` profile sets `APP_VARIANT=production`, which makes `app.con
 
 Local development leaves `APP_VARIANT` unset, so Expo config uses `com.ibrahim.overthought.dev` and disables premium/RevenueCat even if RevenueCat keys exist in a local `.env`. Production/TestFlight builds use `APP_VARIANT=production`; premium is only enabled there when `EXPO_PUBLIC_ENABLE_PREMIUM=true`.
 
+Production iOS builds use Hermes V1. The post-hardening production build was created with a clean EAS cache and submitted successfully to TestFlight. Keep `ios/Podfile.properties.json` set to `"expo.useHermesV1": "true"` and keep `babel-preset-expo` on the Expo 55-compatible line (`~55.0.22`) until the whole Expo SDK is upgraded. After native dependency or Hermes changes, prefer a clean EAS retry:
+
+```sh
+npx eas build --profile production --platform ios --clear-cache
+```
+
 ### Production/TestFlight auth environment
 
 Before the next TestFlight build that ships Apple and Google sign-in, set the production EAS environment to:
@@ -156,9 +162,9 @@ APP_VARIANT=production npx expo config --type public
 - Palette-backed theme tokens and reusable UI primitives.
 - Guest persistence with Zustand, `persist`, and `react-native-mmkv`.
 - Supabase client wiring with environment handling.
-- Auth/session scaffolding for guest, email magic-link, native Apple Sign In, and native Google Sign-In.
+- Auth/session scaffolding for guest, email/password, forgot/reset password, native Apple Sign In, and native Google Sign-In.
 - Repository/service boundaries for cases, updates, profiles, premium, migration, share payloads, and deterministic analysis.
-- Local verdict engine integration without changing scoring behavior.
+- AI Verdict integration with local Basic Verdict fallback.
 - Base screens aligned to the supplied design references: welcome, home, new case, cases, case detail/result, add update, stats, profile, delete account.
 
 ## Native setup still required
@@ -169,7 +175,7 @@ APP_VARIANT=production npx expo config --type public
 - Enable the Supabase Apple provider and add both bundle IDs as allowed native client IDs before setting `EXPO_PUBLIC_ENABLE_APPLE_AUTH=true`.
 - Configure Google OAuth client IDs, the reversed iOS URL scheme, and the Supabase Google provider before setting `EXPO_PUBLIC_ENABLE_GOOGLE_AUTH=true`. For native iOS Google Sign-In, the Supabase Google provider must have `Skip nonce check` enabled.
 - Rebuild the native iOS app after changing `EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME`; the scheme is embedded in `Info.plist`.
-- Add RevenueCat SDK/API key and wire restore/purchase calls.
+- Configure RevenueCat products/API keys for TestFlight and validate purchase/restore end to end.
 - Add a secured Supabase Edge Function for final `auth.users` deletion.
 - Rebuild the iOS development build after changing native auth credentials or config plugins.
 
@@ -192,6 +198,6 @@ npm test
 
 ## Next build pass
 
-- Finish App Store account-deletion backend with a secured Supabase Edge Function.
-- Wire RevenueCat purchases/restores once products and API keys are available.
-- Broaden authenticated sync tests once a test Supabase project is configured.
+- Validate premium AI Verdict quota behavior on a TestFlight account whose `premium_states.entitlement_status` is `premium`.
+- Plan richer profile fields as a schema + type + repository + UI phase.
+- Investigate Supabase email deliverability/custom SMTP if confirmation emails continue going to junk.

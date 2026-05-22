@@ -115,8 +115,8 @@ const MODEL_PROVIDER = 'gemini';
 const MODEL_NAME = 'gemini-2.5-flash';
 const PROMPT_VERSION = 2;
 const RESPONSE_SCHEMA_VERSION = 1;
-const FREE_DAILY_LIMIT = 2;
-const PREMIUM_DAILY_FAIR_USE_LIMIT = 100;
+const SIGNED_IN_FREE_DAILY_LIMIT = 2;
+const PREMIUM_DAILY_LIMIT = 50;
 const GEMINI_TIMEOUT_MS = 12_000;
 const GEMINI_MAX_ATTEMPTS = 2;
 const GEMINI_RETRY_DELAY_MS = 750;
@@ -151,6 +151,23 @@ function bearerToken(request: Request): string | null {
 
 function todayUtcBucket(): string {
   return new Date().toISOString().slice(0, 10);
+}
+
+function positiveIntegerEnv(name: string, fallback: number): number {
+  const raw = Deno.env.get(name)?.trim();
+
+  if (!raw) {
+    return fallback;
+  }
+
+  const parsed = Number(raw);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function dailyLimitForTier(accessTier: DeepReadAccessTier): number {
+  return accessTier === 'premium'
+    ? positiveIntegerEnv('AI_VERDICT_PREMIUM_DAILY_LIMIT', PREMIUM_DAILY_LIMIT)
+    : positiveIntegerEnv('AI_VERDICT_SIGNED_IN_FREE_DAILY_LIMIT', SIGNED_IN_FREE_DAILY_LIMIT);
 }
 
 function normalizeInputText(value: string): string {
@@ -197,7 +214,7 @@ function accessState(
   allowed = true,
   reason?: 'daily_limit' | 'fair_use',
 ) {
-  const limit = accessTier === 'premium' ? PREMIUM_DAILY_FAIR_USE_LIMIT : FREE_DAILY_LIMIT;
+  const limit = dailyLimitForTier(accessTier);
 
   return {
     accessTier,
@@ -826,6 +843,39 @@ async function finalizeUsageSucceeded(
     .eq('id', usageEventId);
 }
 
+async function countActiveUsage(
+  adminClient: ReturnType<typeof createClient>,
+  tableName: 'ai_case_verdict_usage_events' | 'ai_deep_read_usage_events',
+  userId: string,
+  accessTier: DeepReadAccessTier,
+  quotaBucket: string,
+  nowIso: string,
+): Promise<number> {
+  const [succeededResult, reservedResult] = await Promise.all([
+    adminClient
+      .from(tableName)
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('access_tier', accessTier)
+      .eq('quota_bucket', quotaBucket)
+      .eq('status', 'succeeded'),
+    adminClient
+      .from(tableName)
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('access_tier', accessTier)
+      .eq('quota_bucket', quotaBucket)
+      .eq('status', 'reserved')
+      .gt('expires_at', nowIso),
+  ]);
+
+  if (succeededResult.error || reservedResult.error) {
+    throw succeededResult.error ?? reservedResult.error;
+  }
+
+  return (succeededResult.count ?? 0) + (reservedResult.count ?? 0);
+}
+
 function isUniqueViolation(error: unknown): boolean {
   return Boolean(error && typeof error === 'object' && (error as { code?: unknown }).code === '23505');
 }
@@ -950,33 +1000,12 @@ Deno.serve(async (request) => {
     }
 
     const nowIso = new Date().toISOString();
-    const { count: succeededCount, error: succeededCountError } = await adminClient
-      .from('ai_deep_read_usage_events')
-      .select('id', { count: 'exact', head: true })
-      .eq('user_id', userId)
-      .eq('access_tier', accessTier)
-      .eq('quota_bucket', quotaBucket)
-      .eq('status', 'succeeded');
-
-    if (succeededCountError) {
-      throw succeededCountError;
-    }
-
-    const { count: reservedCount, error: reservedCountError } = await adminClient
-      .from('ai_deep_read_usage_events')
-      .select('id', { count: 'exact', head: true })
-      .eq('user_id', userId)
-      .eq('access_tier', accessTier)
-      .eq('quota_bucket', quotaBucket)
-      .eq('status', 'reserved')
-      .gt('expires_at', nowIso);
-
-    if (reservedCountError) {
-      throw reservedCountError;
-    }
-
-    const used = (succeededCount ?? 0) + (reservedCount ?? 0);
-    const limit = accessTier === 'premium' ? PREMIUM_DAILY_FAIR_USE_LIMIT : FREE_DAILY_LIMIT;
+    const [aiVerdictUsed, deepReadUsed] = await Promise.all([
+      countActiveUsage(adminClient, 'ai_case_verdict_usage_events', userId, accessTier, quotaBucket, nowIso),
+      countActiveUsage(adminClient, 'ai_deep_read_usage_events', userId, accessTier, quotaBucket, nowIso),
+    ]);
+    const used = aiVerdictUsed + deepReadUsed;
+    const limit = dailyLimitForTier(accessTier);
 
     if (used >= limit) {
       const reason = accessTier === 'premium' ? 'fair_use' : 'daily_limit';
@@ -987,7 +1016,7 @@ Deno.serve(async (request) => {
           message:
             accessTier === 'premium'
               ? 'Deep Read is temporarily limited for fair use.'
-              : 'Daily Deep Reads are used up.',
+              : 'Daily AI reads are used up.',
           access: accessState(accessTier, used, quotaBucket, false, reason),
         },
         429,

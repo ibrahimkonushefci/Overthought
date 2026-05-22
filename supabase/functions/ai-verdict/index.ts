@@ -147,6 +147,39 @@ function reservationFailureCode(reason: string | null): Extract<
   return 'quota_exceeded';
 }
 
+async function countAuthenticatedActiveUsage(
+  adminClient: ReturnType<typeof createClient>,
+  tableName: 'ai_case_verdict_usage_events' | 'ai_deep_read_usage_events',
+  userId: string,
+  accessTier: 'free' | 'premium',
+  quotaBucket: string,
+  nowIso: string,
+): Promise<number> {
+  const [succeededResult, reservedResult] = await Promise.all([
+    adminClient
+      .from(tableName)
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('access_tier', accessTier)
+      .eq('quota_bucket', quotaBucket)
+      .eq('status', 'succeeded'),
+    adminClient
+      .from(tableName)
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('access_tier', accessTier)
+      .eq('quota_bucket', quotaBucket)
+      .eq('status', 'reserved')
+      .gt('expires_at', nowIso),
+  ]);
+
+  if (succeededResult.error || reservedResult.error) {
+    throw succeededResult.error ?? reservedResult.error;
+  }
+
+  return (succeededResult.count ?? 0) + (reservedResult.count ?? 0);
+}
+
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -302,31 +335,32 @@ Deno.serve(async (request) => {
             });
           }
 
-          const [succeededResult, reservedResult] = await Promise.all([
-            adminClient
-              .from('ai_case_verdict_usage_events')
-              .select('id', { count: 'exact', head: true })
-              .eq('user_id', input.userId)
-              .eq('access_tier', input.accessTier)
-              .eq('quota_bucket', input.quotaBucket)
-              .eq('status', 'succeeded'),
-            adminClient
-              .from('ai_case_verdict_usage_events')
-              .select('id', { count: 'exact', head: true })
-              .eq('user_id', input.userId)
-              .eq('access_tier', input.accessTier)
-              .eq('quota_bucket', input.quotaBucket)
-              .eq('status', 'reserved')
-              .gt('expires_at', nowIso),
-          ]);
-
-          if (succeededResult.error || reservedResult.error) {
-            throw succeededResult.error ?? reservedResult.error;
+          if (!input.userId) {
+            throw new Error('Authenticated usage access requires user_id.');
           }
+
+          const [aiVerdictUsed, deepReadUsed] = await Promise.all([
+            countAuthenticatedActiveUsage(
+              adminClient,
+              'ai_case_verdict_usage_events',
+              input.userId,
+              input.accessTier,
+              input.quotaBucket,
+              nowIso,
+            ),
+            countAuthenticatedActiveUsage(
+              adminClient,
+              'ai_deep_read_usage_events',
+              input.userId,
+              input.accessTier,
+              input.quotaBucket,
+              nowIso,
+            ),
+          ]);
 
           return accessFromCounts({
             accessTier: input.accessTier,
-            used: (succeededResult.count ?? 0) + (reservedResult.count ?? 0),
+            used: aiVerdictUsed + deepReadUsed,
             limit: input.limit,
             quotaScope: 'daily',
             quotaBucket: input.quotaBucket,

@@ -435,10 +435,9 @@ Important fields:
 ### Quota rules
 Cache hits should return before spending quota.
 
-Only `succeeded` usage events count against quota:
-- guest: 1 total AI Deep Read
-- free signed-in: 2 successful AI Deep Reads per UTC day
-- premium: generous access with internal fair-use protection
+AI Verdict and Deep Read use the same signed-in daily AI pool. For authenticated users, both Edge paths count successful and active reserved events from both `ai_case_verdict_usage_events` and `ai_deep_read_usage_events`:
+- free signed-in: same daily limit as AI Verdict, default 2 total AI reads per UTC day
+- premium: same daily limit as AI Verdict, default 50 total AI reads per UTC day
 
 Failed calls must not count against quota. Timeout, provider errors, malformed JSON, validation errors, and cache write failures should finalize the event as `failed`.
 

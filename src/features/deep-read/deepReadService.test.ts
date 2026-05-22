@@ -4,8 +4,11 @@ import { useAuthStore } from '../../store/authStore';
 import type { DeepReadResponse } from '../../types/shared';
 import { deepReadService } from './deepReadService';
 
+var mockSupabaseFrom = jest.fn();
+
 jest.mock('../../lib/supabase/client', () => ({
   supabase: {
+    from: (...args: unknown[]) => mockSupabaseFrom(...args),
     functions: {
       invoke: jest.fn(),
     },
@@ -13,6 +16,7 @@ jest.mock('../../lib/supabase/client', () => ({
 }));
 
 const mockSupabase = supabase as unknown as {
+  from: jest.Mock;
   functions: {
     invoke: jest.Mock;
   };
@@ -54,6 +58,7 @@ function successResponse(overrides: Partial<Extract<DeepReadResponse, { ok: true
 describe('deepReadService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockSupabaseFrom.mockReset();
     useAuthStore.getState().resetSession();
     useAiVerdictStore.getState().clearAllAiVerdicts();
   });
@@ -98,6 +103,81 @@ describe('deepReadService', () => {
         },
       },
     });
+  });
+
+  it('loads a cached Deep Read for an authenticated case without invoking the Edge Function', async () => {
+    useAuthStore.getState().setAuthenticated({
+      id: 'user-1',
+      email: 'person@example.com',
+      provider: 'email',
+    });
+    const maybeSingle = jest.fn(async () => ({
+      data: {
+        id: 'deep-read-1',
+        target_type: 'case',
+        target_fingerprint: 'fingerprint-1',
+        model_provider: 'gemini',
+        model_name: 'gemini-2.5-flash',
+        model_version: null,
+        prompt_version: 2,
+        response_schema_version: 1,
+        response_json: {
+          whatsActuallyHappening: 'The situation is ambiguous.',
+          whatYoureOverreading: 'You are treating a vibe like a plan.',
+          whatEvidenceActuallyMatters: 'Direct follow-through matters most.',
+          whatToDoNext: 'Wait for clearer evidence.',
+          roastLine: 'The group chat needs receipts.',
+        },
+        category: 'romance',
+        local_verdict_label: 'mild_delusion',
+        local_delusion_score: 61,
+        local_verdict_version: 1,
+        created_at: '2026-04-29T10:00:00.000Z',
+      },
+      error: null,
+    }));
+    const query: {
+      eq: jest.Mock;
+      order: jest.Mock;
+      limit: jest.Mock;
+    } = {
+      eq: jest.fn(),
+      order: jest.fn(),
+      limit: jest.fn(() => ({ maybeSingle })),
+    };
+    query.eq.mockReturnValue(query);
+    query.order.mockReturnValue(query);
+    const select = jest.fn(() => query);
+    mockSupabaseFrom.mockReturnValue({ select });
+
+    const result = await deepReadService.loadStoredCaseDeepRead({
+      id: 'case-1',
+      userId: 'user-1',
+      title: 'Maybe sometime',
+      category: 'romance',
+      inputText: 'He said maybe sometime.',
+      verdictLabel: 'mild_delusion',
+      delusionScore: 61,
+      explanationText: 'Local fallback.',
+      nextMoveText: 'Wait for evidence.',
+      verdictVersion: 1,
+      outcomeStatus: 'unknown',
+      lastAnalyzedAt: '2026-04-29T10:00:00.000Z',
+      createdAt: '2026-04-29T10:00:00.000Z',
+      updatedAt: '2026-04-29T10:00:00.000Z',
+      archivedAt: null,
+      deletedAt: null,
+    });
+
+    expect(result?.ok).toBe(true);
+    expect(result?.cache.source).toBe('cache');
+    expect(result?.deepRead.roastLine).toBe('The group chat needs receipts.');
+    expect(mockSupabaseFrom).toHaveBeenCalledWith('ai_deep_reads');
+    expect(query.eq).toHaveBeenCalledWith('case_id', 'case-1');
+    expect(query.eq).toHaveBeenCalledWith('local_verdict_label', 'mild_delusion');
+    expect(query.eq).toHaveBeenCalledWith('local_delusion_score', 61);
+    expect(query.eq).toHaveBeenCalledWith('local_verdict_version', 1);
+    expect(mockSupabase.functions.invoke).not.toHaveBeenCalled();
   });
 
   it('blocks Deep Read locally when AI verdict quota is exhausted for the account', async () => {

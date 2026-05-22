@@ -51,6 +51,7 @@ export function isAiVerdictDeepReadAccountLocked(requestState?: AiVerdictRequest
     requestState &&
       accountDeepReadLockStatuses.has(requestState.status) &&
       requestState.access?.allowed === false &&
+      requestState.access.accessTier !== 'guest' &&
       isCurrentDailyQuotaState(requestState),
   );
 }

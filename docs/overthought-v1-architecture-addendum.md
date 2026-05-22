@@ -126,3 +126,30 @@ Optional `ai-verdict` quota cap environment variables:
   - `country_code text`
 - Display naming should remain backwards-compatible: prefer nickname if present, then full name, then existing `display_name`, then email prefix.
 - Implementation should update the shared `Profile` type, `profileRepository`, auth session profile mapping, profile edit UI, and repository tests in the same phase as the migration.
+
+## 9. Current stabilization and build status
+
+This section records the late v1 stabilization pass completed before the next handoff.
+
+- AI Verdict is the main enhanced output when quota/access allows; the deterministic local Basic Verdict remains the fallback.
+- AI Verdict prompt version is `3`, Gemini temperature is `0.8`, and generated AI text is cleaned for markdown artifacts before display/storage.
+- `ai-verdict` was deployed after the stabilization commit containing quota, tone, and fallback fixes.
+- Guest and signed-in free quota UX now shows upgrade/retry prompts for `quota_exceeded` cases without auto-consuming AI quota when old cases are reopened.
+- Old Basic fallback cases caused by AI quota exhaustion can show "Try AI Verdict" after quota reset.
+- Deep Read is derived from durable AI Verdict request/fallback state and remains locked after restart when AI Verdict quota/cap/fallback state blocks extra AI access.
+- Case list ordering and relative time display were normalized; list score/verdict display overlays saved AI Verdict snapshots where present.
+- Guest-to-account migration preserves the visible guest AI Verdict snapshot locally where possible instead of silently downgrading the visible result to Basic.
+- Auth create-account success UX now clears fields, switches back to Sign In, and avoids an error-like success alert.
+- New Case defaults back to Romance for a fresh case; category pills were tightened.
+- Paywall copy/layout was improved for TestFlight without changing RevenueCat purchase internals.
+- RevenueCat restore/purchase validation confirmed that Premium follows the App Store/RevenueCat receipt for the current Apple ID. Restoring or upgrading while signed into another Overthought account on the same Apple ID can mark that account premium too; this is accepted for v1 as normal restore behavior.
+- `sync-premium-state` successfully updates `premium_states.entitlement_status` to `premium` after RevenueCat reports an active entitlement for the currently signed-in Supabase user. Because `ai-verdict` reads `premium_states`, that user receives the premium AI Verdict tier after sync.
+- AI Verdict and Deep Read now use the same signed-in daily AI pool in both directions. Premium users get 50 total generated AI reads per UTC day by default across AI Verdict and Deep Read combined; cached AI/Deep Read results reopen without spending quota.
+- The production iOS build was rebuilt with `--clear-cache`, submitted successfully to TestFlight, and opens correctly on physical TestFlight devices.
+- Expo SDK patch packages are aligned on the Expo 55 line. Production iOS uses Hermes V1 via `ios/Podfile.properties.json` (`expo.useHermesV1=true`) and `ios/Podfile.lock` records `hermes-engine 250829098.0.4`.
+- `babel-preset-expo` must stay on the Expo 55-compatible line (`~55.0.22`) unless the whole Expo SDK is upgraded.
+
+Known remaining open items:
+- Email confirmation messages going to junk are likely Supabase email deliverability/custom SMTP/DNS work, not an app-code bug unless redirect URLs are wrong.
+- Richer profile fields are not implemented in the frontend and should be handled as a schema + type + repository + UI phase.
+- Stricter one-subscription-to-one-Overthought-account transfer handling is deferred unless the v1 product policy changes.
