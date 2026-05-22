@@ -1,5 +1,6 @@
 import { supabase } from '../../lib/supabase/client';
 import { useAuthStore } from '../../store/authStore';
+import { isPremiumStateActive, usePremiumStore } from '../../store/premiumStore';
 import { getAiVerdictDeepReadLockState } from '../ai-verdict/aiVerdictAccess';
 import type { DeepReadCacheMetadata, DeepReadFailureCode, DeepReadOutput, DeepReadResponse } from '../../types/shared';
 import type { CaseEntity } from '../cases/types';
@@ -223,7 +224,8 @@ export const deepReadService = {
       return failure('case_not_found', 'Case not found.');
     }
 
-    const aiVerdictLockState = getAiVerdictDeepReadLockState(trimmedCaseId);
+    const premiumActive = isPremiumStateActive(usePremiumStore.getState().premiumState);
+    const aiVerdictLockState = getAiVerdictDeepReadLockState(trimmedCaseId, { premiumActive });
 
     if (aiVerdictLockState?.status === 'fair_use_exceeded') {
       return failure('fair_use_exceeded', 'AI reads are temporarily limited for fair use. Try again later.');

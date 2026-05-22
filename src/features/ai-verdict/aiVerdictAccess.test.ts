@@ -57,4 +57,28 @@ describe('aiVerdictAccess', () => {
     expect(isAiVerdictDeepReadAccountLocked(freeQuotaState)).toBe(true);
     expect(findAiVerdictDeepReadAccountLock()).toEqual(freeQuotaState);
   });
+
+  it('ignores stale signed-in free quota locks after the current account is premium', () => {
+    const freeQuotaState = {
+      status: 'quota_exceeded' as const,
+      code: 'quota_exceeded' as const,
+      message: 'Free AI verdicts are used up.',
+      access: {
+        accessTier: 'free' as const,
+        allowed: false,
+        used: 2,
+        remaining: 0,
+        limit: 2,
+        quotaScope: 'daily' as const,
+        quotaBucket: new Date().toISOString().slice(0, 10),
+        reason: 'daily_limit' as const,
+      },
+      updatedAt: new Date().toISOString(),
+    };
+
+    useAiVerdictStore.getState().setRequestState('free-case', freeQuotaState);
+
+    expect(isAiVerdictDeepReadAccountLocked(freeQuotaState, { premiumActive: true })).toBe(false);
+    expect(findAiVerdictDeepReadAccountLock({ premiumActive: true })).toBeUndefined();
+  });
 });

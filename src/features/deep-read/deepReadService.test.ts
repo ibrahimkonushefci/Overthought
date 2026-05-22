@@ -1,6 +1,7 @@
 import { supabase } from '../../lib/supabase/client';
 import { useAiVerdictStore } from '../../store/aiVerdictStore';
 import { useAuthStore } from '../../store/authStore';
+import { usePremiumStore } from '../../store/premiumStore';
 import type { DeepReadResponse } from '../../types/shared';
 import { deepReadService } from './deepReadService';
 
@@ -61,11 +62,13 @@ describe('deepReadService', () => {
     mockSupabaseFrom.mockReset();
     useAuthStore.getState().resetSession();
     useAiVerdictStore.getState().clearAllAiVerdicts();
+    usePremiumStore.getState().reset();
   });
 
   afterEach(() => {
     useAuthStore.getState().resetSession();
     useAiVerdictStore.getState().clearAllAiVerdicts();
+    usePremiumStore.getState().reset();
   });
 
   it('returns not_authenticated without invoking Supabase for guests', async () => {
@@ -209,6 +212,67 @@ describe('deepReadService', () => {
       message: 'AI verdict quota is used up for now. Deep Read stays locked for this case.',
     });
     expect(mockSupabase.functions.invoke).not.toHaveBeenCalled();
+  });
+
+  it('ignores stale free quota locks when the current account is premium', async () => {
+    useAuthStore.getState().setAuthenticated({
+      id: 'user-1',
+      email: 'person@example.com',
+      provider: 'email',
+    });
+    usePremiumStore.getState().setPremiumState({
+      userId: 'user-1',
+      entitlementStatus: 'premium',
+      source: 'revenuecat',
+      entitlementId: 'premium',
+      productId: 'overthought_premium_monthly',
+      expiresAt: null,
+      updatedAt: new Date().toISOString(),
+    });
+    useAiVerdictStore.getState().setRequestState('other-case', {
+      status: 'quota_exceeded',
+      code: 'quota_exceeded',
+      message: 'Free AI verdicts are used up.',
+      access: {
+        accessTier: 'free',
+        allowed: false,
+        used: 2,
+        remaining: 0,
+        limit: 2,
+        quotaScope: 'daily',
+        quotaBucket: new Date().toISOString().slice(0, 10),
+        reason: 'daily_limit',
+      },
+      updatedAt: new Date().toISOString(),
+    });
+    mockSupabase.functions.invoke.mockResolvedValue({
+      data: successResponse({
+        access: {
+          accessTier: 'premium',
+          allowed: true,
+          remaining: 49,
+          limit: 50,
+          quotaBucket: '2026-04-29',
+        },
+      }),
+      error: null,
+    });
+
+    await expect(deepReadService.requestCaseDeepRead('case-1')).resolves.toMatchObject({
+      ok: true,
+      access: {
+        accessTier: 'premium',
+        remaining: 49,
+      },
+    });
+    expect(mockSupabase.functions.invoke).toHaveBeenCalledWith('deep-read', {
+      body: {
+        target: {
+          targetType: 'case',
+          caseId: 'case-1',
+        },
+      },
+    });
   });
 
   it('passes through valid quota failures from the Edge Function', async () => {

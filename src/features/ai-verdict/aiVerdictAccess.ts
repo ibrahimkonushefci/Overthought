@@ -2,6 +2,10 @@ import type { AiVerdictRequestState } from '../../types/shared';
 import { parseAppTimestamp } from '../../shared/utils/date';
 import { useAiVerdictStore } from '../../store/aiVerdictStore';
 
+interface AiVerdictLockOptions {
+  premiumActive?: boolean;
+}
+
 const caseDeepReadLockStatuses = new Set<AiVerdictRequestState['status']>([
   'quota_exceeded',
   'fair_use_exceeded',
@@ -42,31 +46,58 @@ function isCurrentDailyQuotaState(requestState: AiVerdictRequestState): boolean 
   return access.quotaBucket === utcTodayBucket();
 }
 
-export function isAiVerdictDeepReadCaseLocked(requestState?: AiVerdictRequestState): boolean {
-  return Boolean(requestState && caseDeepReadLockStatuses.has(requestState.status));
+function isStaleFreeQuotaLockForPremium(
+  requestState: AiVerdictRequestState,
+  options: AiVerdictLockOptions = {},
+): boolean {
+  return Boolean(
+    options.premiumActive &&
+      requestState.status === 'quota_exceeded' &&
+      requestState.access?.accessTier === 'free',
+  );
 }
 
-export function isAiVerdictDeepReadAccountLocked(requestState?: AiVerdictRequestState): boolean {
+export function isAiVerdictDeepReadCaseLocked(
+  requestState?: AiVerdictRequestState,
+  options: AiVerdictLockOptions = {},
+): boolean {
+  return Boolean(
+    requestState &&
+      caseDeepReadLockStatuses.has(requestState.status) &&
+      !isStaleFreeQuotaLockForPremium(requestState, options),
+  );
+}
+
+export function isAiVerdictDeepReadAccountLocked(
+  requestState?: AiVerdictRequestState,
+  options: AiVerdictLockOptions = {},
+): boolean {
   return Boolean(
     requestState &&
       accountDeepReadLockStatuses.has(requestState.status) &&
       requestState.access?.allowed === false &&
       requestState.access.accessTier !== 'guest' &&
+      !isStaleFreeQuotaLockForPremium(requestState, options) &&
       isCurrentDailyQuotaState(requestState),
   );
 }
 
-export function findAiVerdictDeepReadAccountLock(): AiVerdictRequestState | undefined {
+export function findAiVerdictDeepReadAccountLock(
+  options: AiVerdictLockOptions = {},
+): AiVerdictRequestState | undefined {
   const requestStates = Object.values(useAiVerdictStore.getState().requestByCaseId);
-  return requestStates.find(isAiVerdictDeepReadAccountLocked);
+  return requestStates.find((requestState) => isAiVerdictDeepReadAccountLocked(requestState, options));
 }
 
-export function getAiVerdictDeepReadLockState(caseId: string): AiVerdictRequestState | undefined {
+export function getAiVerdictDeepReadLockState(
+  caseId: string,
+  options: AiVerdictLockOptions = {},
+): AiVerdictRequestState | undefined {
   const requestState = useAiVerdictStore.getState().requestByCaseId[caseId];
 
-  if (isAiVerdictDeepReadCaseLocked(requestState)) {
+  if (isAiVerdictDeepReadCaseLocked(requestState, options)) {
     return requestState;
   }
 
-  return findAiVerdictDeepReadAccountLock();
+  return findAiVerdictDeepReadAccountLock(options);
 }

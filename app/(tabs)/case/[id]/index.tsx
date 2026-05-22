@@ -55,6 +55,7 @@ import {
 } from '../../../../src/shared/utils/verdict';
 import { relativeTime } from '../../../../src/shared/utils/date';
 import { useAiVerdictStore } from '../../../../src/store/aiVerdictStore';
+import { isPremiumStateActive, usePremiumStore } from '../../../../src/store/premiumStore';
 
 const detailScrollByCaseId = new Map<string, number>();
 const quotaUpgradePromptedCaseIds = new Set<string>();
@@ -80,6 +81,7 @@ export default function CaseDetailRoute() {
   const [, setQuotaRetryAttemptVersion] = useState(0);
   const aiVerdictsByCaseId = useAiVerdictStore((state) => state.byCaseId);
   const aiVerdictRequestsByCaseId = useAiVerdictStore((state) => state.requestByCaseId);
+  const premiumState = usePremiumStore((state) => state.premiumState);
   const shareCardRef = useRef<ViewShot | null>(null);
   const deepReadRequestInFlightRef = useRef(false);
   const shouldPresentNewResult = fromAnalysis === '1';
@@ -266,6 +268,7 @@ export default function CaseDetailRoute() {
   const caseId = getCaseId(record);
   const aiVerdict = aiVerdictsByCaseId[caseId] ?? (isGuestCase(record) ? record.aiVerdict : undefined);
   const aiVerdictRequest = aiVerdictRequestsByCaseId[caseId];
+  const premiumActive = isPremiumStateActive(premiumState);
   const aiVerdictLoading = aiVerdictRequest?.status === 'loading';
   const localVerdict = {
     verdictLabel: record.verdictLabel,
@@ -283,12 +286,14 @@ export default function CaseDetailRoute() {
         : 'ai'
       : 'basic';
   const isAiVerdictVisible = verdictSource === 'ai' || verdictSource === 'cache';
-  const accountDeepReadLockState = Object.values(aiVerdictRequestsByCaseId).find(isAiVerdictDeepReadAccountLocked);
-  const deepReadLockRequestState = isAiVerdictDeepReadCaseLocked(aiVerdictRequest)
+  const accountDeepReadLockState = Object.values(aiVerdictRequestsByCaseId).find((requestState) =>
+    isAiVerdictDeepReadAccountLocked(requestState, { premiumActive }),
+  );
+  const deepReadLockRequestState = isAiVerdictDeepReadCaseLocked(aiVerdictRequest, { premiumActive })
     ? aiVerdictRequest
     : accountDeepReadLockState;
   const aiVerdictDeepReadLocked = Boolean(deepReadLockRequestState);
-  const quotaUpgradeEligible = isUpgradeEligibleAiQuotaState(aiVerdictRequest);
+  const quotaUpgradeEligible = !premiumActive && isUpgradeEligibleAiQuotaState(aiVerdictRequest);
   const quotaRetryAlreadyAttempted = quotaRetryAttemptedCaseIds.has(caseId);
   const migratedGuestQuotaRetryEligible =
     !isGuestCase(record) && aiVerdictRequest?.status === 'quota_exceeded' && aiVerdictRequest.access?.accessTier === 'guest';
