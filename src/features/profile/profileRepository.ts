@@ -1,6 +1,8 @@
 import type { AuthProvider, Profile } from '../../types/shared';
 import { supabase } from '../../lib/supabase/client';
 
+const DISPLAY_NAME_MAX_LENGTH = 40;
+
 interface ProfileRow {
   id: string;
   email: string | null;
@@ -27,6 +29,20 @@ function mapProfile(row: ProfileRow): Profile {
   };
 }
 
+function normalizeDisplayName(value: string): string | null {
+  const trimmed = value.trim();
+
+  if (!trimmed) {
+    return null;
+  }
+
+  if (trimmed.length > DISPLAY_NAME_MAX_LENGTH) {
+    throw new Error(`Display name must be ${DISPLAY_NAME_MAX_LENGTH} characters or fewer.`);
+  }
+
+  return trimmed;
+}
+
 export const profileRepository = {
   async getCurrentProfile(): Promise<Profile | null> {
     if (!supabase) {
@@ -47,5 +63,31 @@ export const profileRepository = {
     }
 
     return data ? mapProfile(data as ProfileRow) : null;
+  },
+  async updateCurrentProfile({ displayName }: { displayName: string }): Promise<Profile> {
+    if (!supabase) {
+      throw new Error('Supabase is not configured.');
+    }
+
+    const { data: sessionData } = await supabase.auth.getSession();
+    const userId = sessionData.session?.user.id;
+
+    if (!userId) {
+      throw new Error('Sign in again before updating your profile.');
+    }
+
+    const normalizedDisplayName = normalizeDisplayName(displayName);
+    const { data, error } = await supabase
+      .from('profiles')
+      .update({ display_name: normalizedDisplayName })
+      .eq('id', userId)
+      .select('*')
+      .single();
+
+    if (error || !data) {
+      throw error ?? new Error('Profile update returned no data.');
+    }
+
+    return mapProfile(data as ProfileRow);
   },
 };

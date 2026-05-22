@@ -1,12 +1,13 @@
-import { Alert, Linking, Pressable, StyleSheet, View } from 'react-native';
+import { Alert, Linking, Modal, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import type { ComponentType } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { Bell, ChevronRight, LogIn, Shield, Trash2, Crown, FileText, Sparkles } from 'lucide-react-native';
+import { Bell, ChevronRight, LogIn, Shield, Trash2, Crown, FileText, Sparkles, User } from 'lucide-react-native';
 import type { LucideProps } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useCallback, useState } from 'react';
 import { authService } from '../../src/features/auth/authService';
 import { premiumService } from '../../src/features/premium/premiumService';
+import { profileRepository } from '../../src/features/profile/profileRepository';
 import { isPremiumStateActive, usePremiumStore } from '../../src/store/premiumStore';
 import { Screen } from '../../src/shared/ui/Screen';
 import { AppText } from '../../src/shared/ui/Text';
@@ -25,8 +26,12 @@ export default function ProfileRoute() {
   const premiumLoading = usePremiumStore((state) => state.loading);
   const { cases, refresh } = useCases();
   const [deletingCases, setDeletingCases] = useState(false);
+  const [profileEditorVisible, setProfileEditorVisible] = useState(false);
+  const [displayNameDraft, setDisplayNameDraft] = useState('');
+  const [savingProfile, setSavingProfile] = useState(false);
   const isGuest = auth.sessionMode !== 'authenticated';
   const hasPremium = isPremiumStateActive(premiumState);
+  const accountDisplayName = isGuest ? 'Guest' : auth.profile?.displayName ?? auth.user?.email?.split('@')[0] ?? 'Account';
 
   useFocusEffect(
     useCallback(() => {
@@ -48,6 +53,33 @@ export default function ProfileRoute() {
             : 'Could not restore';
 
     Alert.alert(title, result.message);
+  };
+
+  const openProfileEditor = () => {
+    if (isGuest) {
+      router.push('/auth');
+      return;
+    }
+
+    setDisplayNameDraft(auth.profile?.displayName ?? '');
+    setProfileEditorVisible(true);
+  };
+
+  const saveProfile = async () => {
+    if (savingProfile) {
+      return;
+    }
+
+    setSavingProfile(true);
+    try {
+      const profile = await profileRepository.updateCurrentProfile({ displayName: displayNameDraft });
+      useAuthStore.getState().setProfile(profile);
+      setProfileEditorVisible(false);
+    } catch (error) {
+      Alert.alert('Could not update profile', error instanceof Error ? error.message : 'Try again.');
+    } finally {
+      setSavingProfile(false);
+    }
   };
 
   const deleteAllCases = () => {
@@ -116,7 +148,7 @@ export default function ProfileRoute() {
           </View>
           <View style={styles.accountCopy}>
             <AppText variant="title" style={styles.accountTitle} numberOfLines={1}>
-              {isGuest ? 'Guest' : auth.profile?.displayName ?? 'Account'}
+              {accountDisplayName}
             </AppText>
             <AppText variant="subtitle" style={styles.accountSubtitle} numberOfLines={1}>
               {cases.length} cases · {isGuest ? 'local only' : 'synced'}
@@ -163,6 +195,12 @@ export default function ProfileRoute() {
       </LinearGradient>
 
       <View style={styles.settings}>
+        <SettingsRow
+          icon={User}
+          title="Display name"
+          value={isGuest ? 'Sign in' : accountDisplayName}
+          onPress={openProfileEditor}
+        />
         <SettingsRow icon={Bell} title="Notifications" value="Off" />
         <SettingsRow
           icon={Shield}
@@ -206,6 +244,39 @@ export default function ProfileRoute() {
       <AppText variant="meta" center style={styles.footer}>
         Overthought · v0.1 · Made with ❤️ and concerning questions
       </AppText>
+
+      <Modal
+        animationType="fade"
+        transparent
+        visible={profileEditorVisible}
+        onRequestClose={() => setProfileEditorVisible(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.profileModal}>
+            <AppText variant="title" style={styles.profileModalTitle}>
+              Display name
+            </AppText>
+            <TextInput
+              autoCapitalize="words"
+              autoCorrect={false}
+              maxLength={40}
+              onChangeText={setDisplayNameDraft}
+              placeholder="Account"
+              placeholderTextColor={colors.text.secondary}
+              returnKeyType="done"
+              style={styles.profileInput}
+              value={displayNameDraft}
+            />
+            <AppText variant="meta" color={colors.text.secondary} style={styles.profileHelp}>
+              Leave blank to use your email name.
+            </AppText>
+            <View style={styles.profileModalActions}>
+              <Button title="Cancel" variant="outline" disabled={savingProfile} onPress={() => setProfileEditorVisible(false)} />
+              <Button title="Save" variant="accent" loading={savingProfile} onPress={() => void saveProfile()} />
+            </View>
+          </View>
+        </View>
+      </Modal>
     </Screen>
   );
 }
@@ -377,5 +448,45 @@ const styles = StyleSheet.create({
   },
   footer: {
     marginTop: spacing.xl,
+  },
+  modalBackdrop: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(31, 23, 34, 0.52)',
+    flex: 1,
+    justifyContent: 'center',
+    padding: spacing.xl,
+  },
+  profileModal: {
+    backgroundColor: colors.bg.surface,
+    borderColor: colors.brand.ink,
+    borderRadius: radii.lg,
+    borderWidth: 2,
+    gap: spacing.md,
+    padding: spacing.lg,
+    width: '100%',
+    ...shadows.hard,
+  },
+  profileModalTitle: {
+    fontFamily: typography.family.displaySemiBold,
+    fontSize: 22,
+    lineHeight: 27,
+  },
+  profileInput: {
+    backgroundColor: colors.bg.muted,
+    borderColor: colors.ui.border,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    color: colors.text.primary,
+    fontFamily: typography.family.body,
+    fontSize: 17,
+    minHeight: 52,
+    paddingHorizontal: spacing.md,
+  },
+  profileHelp: {
+    marginTop: -spacing.xs,
+  },
+  profileModalActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
   },
 });

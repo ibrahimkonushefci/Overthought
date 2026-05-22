@@ -171,6 +171,8 @@ Use Supabase tables:
 - `ai_deep_reads` for authenticated cached AI enrichment
 - `ai_deep_read_usage_events` for server-side quota accounting
 
+Minimal v1 profile editing uses `profiles.display_name` only. Authenticated clients may update their own row through the existing RLS policy; blank display names should be stored as `null`, and richer profile fields require a later schema migration.
+
 ---
 
 ## 6. Create-case flow contract

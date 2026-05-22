@@ -118,6 +118,7 @@ Optional `ai-verdict` quota cap environment variables:
 ## 8. Profile fields decision
 
 - Extra profile fields are deferred for the current TestFlight/v1 pass.
+- Minimal v1 profile editing uses the existing nullable `profiles.display_name` column only. Authenticated users can update display name from the Profile screen; blank values are stored as `null`, and the app falls back to email prefix, then `Account`.
 - Do not add first name, last name, nickname, country, or broader profile settings without a schema migration.
 - Minimal future migration should add nullable profile columns only, preserving existing accounts:
   - `first_name text`
@@ -144,12 +145,13 @@ This section records the late v1 stabilization pass completed before the next ha
 - Paywall copy/layout was improved for TestFlight without changing RevenueCat purchase internals.
 - RevenueCat restore/purchase validation confirmed that Premium follows the App Store/RevenueCat receipt for the current Apple ID. Restoring or upgrading while signed into another Overthought account on the same Apple ID can mark that account premium too; this is accepted for v1 as normal restore behavior.
 - `sync-premium-state` successfully updates `premium_states.entitlement_status` to `premium` after RevenueCat reports an active entitlement for the currently signed-in Supabase user. Because `ai-verdict` reads `premium_states`, that user receives the premium AI Verdict tier after sync.
-- AI Verdict and Deep Read now use the same signed-in daily AI pool in both directions. Premium users get 50 total generated AI reads per UTC day by default across AI Verdict and Deep Read combined; cached AI/Deep Read results reopen without spending quota.
+- AI Verdict and Deep Read now use the same signed-in daily AI pool in both directions. Premium users get 50 total generated AI reads per UTC day by default across AI Verdict and Deep Read combined; cached AI/Deep Read results reopen without spending quota. Migration `0006_unified_ai_read_quota.sql` has been applied, and the updated `ai-verdict` Edge Function has been deployed.
+- The client-side fix that ignores stale free-tier quota locks after a premium upgrade is committed for the next TestFlight build. The guest -> free user -> premium upgrade retest is intentionally deferred.
 - The production iOS build was rebuilt with `--clear-cache`, submitted successfully to TestFlight, and opens correctly on physical TestFlight devices.
 - Expo SDK patch packages are aligned on the Expo 55 line. Production iOS uses Hermes V1 via `ios/Podfile.properties.json` (`expo.useHermesV1=true`) and `ios/Podfile.lock` records `hermes-engine 250829098.0.4`.
 - `babel-preset-expo` must stay on the Expo 55-compatible line (`~55.0.22`) unless the whole Expo SDK is upgraded.
 
 Known remaining open items:
 - Email confirmation messages going to junk are likely Supabase email deliverability/custom SMTP/DNS work, not an app-code bug unless redirect URLs are wrong.
-- Richer profile fields are not implemented in the frontend and should be handled as a schema + type + repository + UI phase.
+- Richer profile fields beyond `display_name` are not implemented and should be handled as a schema + type + repository + UI phase.
 - Stricter one-subscription-to-one-Overthought-account transfer handling is deferred unless the v1 product policy changes.

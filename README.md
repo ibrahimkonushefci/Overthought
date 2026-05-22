@@ -198,6 +198,7 @@ npm test
 
 ## Next build pass
 
-- Validate premium AI Verdict quota behavior on a TestFlight account whose `premium_states.entitlement_status` is `premium`.
-- Plan richer profile fields as a schema + type + repository + UI phase.
+- The unified AI quota migration has been applied and the updated `ai-verdict` Edge Function has been deployed.
+- The latest client-side premium/quota stale-state fix and display-name profile editor are ready for the next TestFlight build, but TestFlight retest is intentionally deferred.
+- Keep richer profile fields as a future schema + type + repository + UI phase.
 - Investigate Supabase email deliverability/custom SMTP if confirmation emails continue going to junk.
