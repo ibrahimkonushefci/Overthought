@@ -146,8 +146,9 @@ This section records the late v1 stabilization pass completed before the next ha
 - RevenueCat restore/purchase validation confirmed that Premium follows the App Store/RevenueCat receipt for the current Apple ID. Restoring or upgrading while signed into another Overthought account on the same Apple ID can mark that account premium too; this is accepted for v1 as normal restore behavior.
 - `sync-premium-state` successfully updates `premium_states.entitlement_status` to `premium` after RevenueCat reports an active entitlement for the currently signed-in Supabase user. Because `ai-verdict` reads `premium_states`, that user receives the premium AI Verdict tier after sync.
 - AI Verdict and Deep Read now use the same signed-in daily AI pool in both directions. Premium users get 50 total generated AI reads per UTC day by default across AI Verdict and Deep Read combined; cached AI/Deep Read results reopen without spending quota. Migration `0006_unified_ai_read_quota.sql` has been applied, and the updated `ai-verdict` Edge Function has been deployed.
-- The client-side fix that ignores stale free-tier quota locks after a premium upgrade is committed for the next TestFlight build. The guest -> free user -> premium upgrade retest is intentionally deferred.
-- The production iOS build was rebuilt with `--clear-cache`, submitted successfully to TestFlight, and opens correctly on physical TestFlight devices.
+- The client-side fix that ignores stale free-tier quota locks after a premium upgrade shipped in the latest TestFlight build and was manually verified on device.
+- The minimal `display_name` profile editor shipped in the latest TestFlight build and was manually verified on device.
+- The production iOS build was rebuilt and submitted successfully to TestFlight; current physical-device TestFlight checks pass.
 - Expo SDK patch packages are aligned on the Expo 55 line. Production iOS uses Hermes V1 via `ios/Podfile.properties.json` (`expo.useHermesV1=true`) and `ios/Podfile.lock` records `hermes-engine 250829098.0.4`.
 - `babel-preset-expo` must stay on the Expo 55-compatible line (`~55.0.22`) unless the whole Expo SDK is upgraded.
 

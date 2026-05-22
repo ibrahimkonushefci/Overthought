@@ -26,7 +26,7 @@ Use this file first before reading the rest of the project docs.
 Current v1 stabilization state:
 - Production iOS TestFlight build opens correctly on physical devices.
 - Unified signed-in AI quota is deployed: migration `0006_unified_ai_read_quota.sql` has been applied, and the updated `ai-verdict` Edge Function is deployed.
-- The latest client-side premium/quota stale-state fix and minimal display-name profile editor are ready for the next TestFlight build; retesting that build is intentionally deferred.
+- The latest TestFlight build includes the premium/quota stale-state fix and minimal display-name profile editor; both were manually verified on device.
 
 ---
 

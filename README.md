@@ -199,6 +199,6 @@ npm test
 ## Next build pass
 
 - The unified AI quota migration has been applied and the updated `ai-verdict` Edge Function has been deployed.
-- The latest client-side premium/quota stale-state fix and display-name profile editor are ready for the next TestFlight build, but TestFlight retest is intentionally deferred.
+- The latest TestFlight build includes the premium/quota stale-state fix and display-name profile editor. Both flows were manually verified on device.
 - Keep richer profile fields as a future schema + type + repository + UI phase.
 - Investigate Supabase email deliverability/custom SMTP if confirmation emails continue going to junk.
