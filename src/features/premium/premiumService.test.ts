@@ -19,6 +19,7 @@ jest.mock('./revenueCatClient', () => ({
     handleAuthUserChanged: jest.fn(),
     getOfferings: jest.fn(),
     getCustomerInfo: jest.fn(),
+    getProducts: jest.fn(),
     isAnonymous: jest.fn(),
     purchasePackage: jest.fn(),
     toPackageSummary: jest.fn(),
@@ -126,6 +127,17 @@ function monthlyPackage() {
   };
 }
 
+function monthlyStoreProduct() {
+  return {
+    identifier: 'overthought_monthly',
+    title: 'Overthought Premium',
+    priceString: '5,99 €',
+    price: 5.99,
+    currencyCode: 'EUR',
+    subscriptionPeriod: 'P1M',
+  };
+}
+
 function annualPackage() {
   return {
     identifier: '$rc_annual',
@@ -141,6 +153,17 @@ function annualPackage() {
   };
 }
 
+function annualStoreProduct() {
+  return {
+    identifier: 'overthought_yearly',
+    title: 'Overthought Premium Yearly',
+    priceString: '29.99 €',
+    price: 29.99,
+    currencyCode: 'EUR',
+    subscriptionPeriod: 'P1Y',
+  };
+}
+
 describe('premiumService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -150,6 +173,7 @@ describe('premiumService', () => {
     mockSupabase.functions.invoke.mockReset();
     jest.mocked(revenueCatClient.getOfferings).mockResolvedValue(null);
     jest.mocked(revenueCatClient.getCustomerInfo).mockResolvedValue(null);
+    jest.mocked(revenueCatClient.getProducts).mockResolvedValue([]);
     jest.mocked(revenueCatClient.isAnonymous).mockResolvedValue(true);
     jest.mocked(revenueCatClient.purchasePackage).mockResolvedValue({ customerInfo: customerInfo() } as never);
     jest.mocked(revenueCatClient.toPackageSummary).mockReturnValue({
@@ -159,7 +183,10 @@ describe('premiumService', () => {
       productIdentifier: 'overthought_monthly',
       title: 'Overthought Monthly',
       priceString: '$4.99',
+      currencyCode: 'USD',
+      price: 4.99,
       periodLabel: 'month',
+      subscriptionPeriod: 'P1M',
     });
     jest.mocked(revenueCatClient.restorePurchases).mockResolvedValue(customerInfo());
     jest.mocked(revenueCatClient.isConfigured).mockReturnValue(true);
@@ -334,6 +361,59 @@ describe('premiumService', () => {
     expect(revenueCatClient.toPackageSummary).toHaveBeenCalled();
   });
 
+  it('uses localized store product prices over offering package fallback prices', async () => {
+    useAuthStore.getState().setAuthenticated({
+      id: 'user-1',
+      email: 'person@example.com',
+      provider: 'email',
+    });
+    const monthly = monthlyPackage();
+
+    jest.mocked(revenueCatClient.getOfferings).mockResolvedValue({
+      current: {
+        monthly,
+        availablePackages: [monthly],
+      } as never,
+      fallback: null,
+    });
+    jest.mocked(revenueCatClient.getProducts).mockResolvedValue([monthlyStoreProduct() as never]);
+    jest.mocked(revenueCatClient.toPackageSummary).mockImplementation((aPackage, storeProduct) => ({
+      identifier: aPackage.identifier,
+      offeringIdentifier: aPackage.presentedOfferingContext.offeringIdentifier ?? null,
+      packageType: aPackage.packageType,
+      productIdentifier: aPackage.product.identifier,
+      title: storeProduct?.title ?? aPackage.product.title,
+      priceString: storeProduct?.priceString ?? aPackage.product.priceString ?? 'Price unavailable',
+      currencyCode: storeProduct?.currencyCode ?? null,
+      price: storeProduct?.price ?? null,
+      periodLabel: 'month',
+      subscriptionPeriod: storeProduct?.subscriptionPeriod ?? null,
+      packageProductPriceString: aPackage.product.priceString,
+      storeProductPriceString: storeProduct?.priceString ?? null,
+      storeProductFound: Boolean(storeProduct),
+      storeProductLookupUsedSubscriptionCategory: true,
+      finalDisplayPrice: storeProduct?.priceString ?? aPackage.product.priceString ?? 'Price unavailable',
+    }));
+
+    const result = await premiumService.getPaywallPackages();
+
+    expect(revenueCatClient.getProducts).toHaveBeenCalledWith('user-1', ['overthought_monthly']);
+    expect(result.ok).toBe(true);
+    expect(result.packages[0]?.priceString).toBe('5,99 €');
+    expect(result.packages[0]?.currencyCode).toBe('EUR');
+    expect(result.packages[0]?.subscriptionPeriod).toBe('P1M');
+    expect(`${result.packages[0]?.priceString} / ${result.packages[0]?.periodLabel}`).toBe('5,99 € / month');
+    expect(result.packages[0]?.packageProductPriceString).toBe('$4.99');
+    expect(result.packages[0]?.storeProductPriceString).toBe('5,99 €');
+    expect(result.packages[0]?.storeProductFound).toBe(true);
+    expect(result.packages[0]?.storeProductLookupUsedSubscriptionCategory).toBe(true);
+    expect(revenueCatClient.toPackageSummary).toHaveBeenCalledWith(
+      monthly,
+      monthlyStoreProduct(),
+      { storeProductLookupUsedSubscriptionCategory: true },
+    );
+  });
+
   it('loads monthly and annual paywall packages from the current offering', async () => {
     useAuthStore.getState().setAuthenticated({
       id: 'user-1',
@@ -358,7 +438,10 @@ describe('premiumService', () => {
       productIdentifier: aPackage.product.identifier,
       title: aPackage.product.title,
       priceString: aPackage.product.priceString,
+      currencyCode: aPackage.product.priceString.includes('$') ? 'USD' : null,
+      price: null,
       periodLabel: aPackage.packageType === 'ANNUAL' ? 'year' : 'month',
+      subscriptionPeriod: aPackage.packageType === 'ANNUAL' ? 'P1Y' : 'P1M',
     }));
 
     const result = await premiumService.getPaywallPackages();

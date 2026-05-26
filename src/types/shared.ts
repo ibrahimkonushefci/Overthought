@@ -83,7 +83,15 @@ export interface PremiumPackage {
   productIdentifier: string;
   title: string;
   priceString: string;
+  currencyCode: string | null;
+  price: number | null;
   periodLabel: string | null;
+  subscriptionPeriod: string | null;
+  packageProductPriceString?: string | null;
+  storeProductPriceString?: string | null;
+  storeProductFound?: boolean;
+  storeProductLookupUsedSubscriptionCategory?: boolean;
+  finalDisplayPrice?: string;
 }
 
 export interface DeepReadOutput {

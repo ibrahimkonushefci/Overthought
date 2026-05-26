@@ -78,6 +78,7 @@ jest.mock('react-native-purchases', () => {
         current: null,
         all: {},
       })),
+      getProducts: jest.fn(async () => []),
       getAppUserID: jest.fn(async () => '$RCAnonymousID:test'),
       getCustomerInfo: jest.fn(async () => defaultCustomerInfo),
       isAnonymous: jest.fn(async () => true),
@@ -92,6 +93,11 @@ jest.mock('react-native-purchases', () => {
     LOG_LEVEL: {
       DEBUG: 'DEBUG',
       INFO: 'INFO',
+    },
+    PRODUCT_CATEGORY: {
+      SUBSCRIPTION: 'SUBSCRIPTION',
+      NON_SUBSCRIPTION: 'NON_SUBSCRIPTION',
+      UNKNOWN: 'UNKNOWN',
     },
   };
 });

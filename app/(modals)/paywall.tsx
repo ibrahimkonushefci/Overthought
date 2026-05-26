@@ -21,6 +21,9 @@ const benefits = [
   'Priority access to future premium features',
 ];
 
+const SHOW_PAYWALL_PRICE_DEBUG = true;
+const shouldShowPaywallPriceDebug = __DEV__ || (env.appVariant === 'production' && SHOW_PAYWALL_PRICE_DEBUG);
+
 function isMonthlyPackage(aPackage: PremiumPackage): boolean {
   return aPackage.packageType === 'MONTHLY' || aPackage.periodLabel === 'month';
 }
@@ -41,7 +44,7 @@ function planTitle(aPackage: PremiumPackage): string {
   return aPackage.title || 'Premium';
 }
 
-function planPrice(aPackage: PremiumPackage): string {
+export function planPrice(aPackage: PremiumPackage): string {
   if (!aPackage.periodLabel) {
     return aPackage.priceString;
   }
@@ -301,6 +304,8 @@ export default function PaywallRoute() {
           canceled at least 24 hours before the end of the current period. You can manage or cancel subscriptions in your
           App Store account settings.
         </AppText>
+
+        {shouldShowPaywallPriceDebug ? <PaywallPriceDebugPanel packages={packages} /> : null}
       </View>
     </Screen>
   );
@@ -361,6 +366,46 @@ function PlanCard({
         {selected ? <Check color={colors.brand.ink} size={15} strokeWidth={3.2} /> : null}
       </View>
     </Pressable>
+  );
+}
+
+function PaywallPriceDebugPanel({ packages }: { packages: PremiumPackage[] }) {
+  if (packages.length === 0) {
+    return (
+      <View style={styles.debugPanel}>
+        <AppText variant="meta" style={styles.debugTitle}>
+          Paywall price debug: no packages loaded
+        </AppText>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.debugPanel}>
+      <AppText variant="meta" style={styles.debugTitle}>
+        Paywall price debug
+      </AppText>
+      {packages.map((aPackage) => (
+        <AppText
+          key={`${aPackage.identifier}:${aPackage.productIdentifier}:debug`}
+          variant="meta"
+          style={styles.debugLine}
+        >
+          {[
+            `pkg=${aPackage.identifier}`,
+            `product=${aPackage.productIdentifier}`,
+            `type=${aPackage.packageType}`,
+            `title=${aPackage.title}`,
+            `ui=${aPackage.priceString}`,
+            `period=${aPackage.periodLabel ?? 'none'}`,
+            `pkgPrice=${aPackage.packageProductPriceString ?? 'none'}`,
+            `directPrice=${aPackage.storeProductPriceString ?? 'none'}`,
+            `storeFound=${aPackage.storeProductFound ? 'yes' : 'no'}`,
+            `subscriptionLookup=${aPackage.storeProductLookupUsedSubscriptionCategory ? 'yes' : 'no'}`,
+          ].join(' | ')}
+        </AppText>
+      ))}
+    </View>
   );
 }
 
@@ -553,5 +598,22 @@ const styles = StyleSheet.create({
   disclaimer: {
     color: colors.text.secondary,
     opacity: 0.82,
+  },
+  debugPanel: {
+    backgroundColor: '#FFF7CC',
+    borderColor: colors.brand.ink,
+    borderRadius: radii.md,
+    borderWidth: 1.5,
+    gap: spacing.xs,
+    padding: spacing.md,
+  },
+  debugTitle: {
+    color: colors.text.primary,
+    fontFamily: typography.family.bodySemiBold,
+  },
+  debugLine: {
+    color: colors.text.primary,
+    fontSize: 10,
+    lineHeight: 13,
   },
 });

@@ -1,7 +1,8 @@
 import { Platform } from 'react-native';
-import Purchases, { LOG_LEVEL, PURCHASES_ERROR_CODE } from 'react-native-purchases';
-import type { CustomerInfo, PurchasesOffering, PurchasesPackage } from 'react-native-purchases';
+import Purchases, { LOG_LEVEL, PRODUCT_CATEGORY, PURCHASES_ERROR_CODE } from 'react-native-purchases';
+import type { CustomerInfo, PurchasesOffering, PurchasesPackage, PurchasesStoreProduct } from 'react-native-purchases';
 import { env } from '../../lib/env';
+import type { PremiumPackage } from '../../types/shared';
 
 let configured = false;
 let configuredApiKey: string | null = null;
@@ -105,6 +106,30 @@ function periodLabelFromPackage(aPackage: PurchasesPackage): string | null {
   }
 }
 
+function periodLabelFromSubscriptionPeriod(subscriptionPeriod: string | null): string | null {
+  switch (subscriptionPeriod) {
+    case 'P1M':
+      return 'month';
+    case 'P1Y':
+      return 'year';
+    case 'P1W':
+      return 'week';
+    case 'P2M':
+      return '2 months';
+    case 'P3M':
+      return '3 months';
+    case 'P6M':
+      return '6 months';
+    default:
+      return null;
+  }
+}
+
+function displayPriceFromProduct(product: PurchasesStoreProduct | null | undefined): string | null {
+  const priceString = product?.priceString;
+  return typeof priceString === 'string' && priceString.trim() ? priceString.trim() : null;
+}
+
 export const revenueCatClient = {
   isConfigured(): boolean {
     return Boolean(getRevenueCatApiKey());
@@ -148,6 +173,13 @@ export const revenueCatClient = {
 
     return Purchases.getCustomerInfo();
   },
+  async getProducts(appUserID: string, productIdentifiers: string[]): Promise<PurchasesStoreProduct[]> {
+    if (!(await ensureConfigured(appUserID))) {
+      return [];
+    }
+
+    return Purchases.getProducts(productIdentifiers, PRODUCT_CATEGORY.SUBSCRIPTION);
+  },
   async restorePurchases(appUserID: string): Promise<CustomerInfo> {
     if (!(await ensureConfigured(appUserID))) {
       throw new Error('RevenueCat is not configured for this build.');
@@ -169,15 +201,33 @@ export const revenueCatClient = {
 
     return Purchases.isAnonymous();
   },
-  toPackageSummary(aPackage: PurchasesPackage) {
+  toPackageSummary(
+    aPackage: PurchasesPackage,
+    storeProduct: PurchasesStoreProduct | null = null,
+    options: { storeProductLookupUsedSubscriptionCategory?: boolean } = {},
+  ): PremiumPackage {
+    const product = storeProduct ?? aPackage.product;
+    const periodLabel = periodLabelFromSubscriptionPeriod(product.subscriptionPeriod) ?? periodLabelFromPackage(aPackage);
+    const packageProductPriceString = displayPriceFromProduct(aPackage.product);
+    const storeProductPriceString = displayPriceFromProduct(storeProduct);
+    const finalDisplayPrice = storeProductPriceString ?? packageProductPriceString ?? 'Price unavailable';
+
     return {
       identifier: aPackage.identifier,
       offeringIdentifier: aPackage.presentedOfferingContext.offeringIdentifier ?? null,
       packageType: aPackage.packageType,
       productIdentifier: aPackage.product.identifier,
-      title: aPackage.product.title,
-      priceString: aPackage.product.priceString,
-      periodLabel: periodLabelFromPackage(aPackage),
+      title: product.title,
+      priceString: finalDisplayPrice,
+      currencyCode: product.currencyCode ?? null,
+      price: typeof product.price === 'number' ? product.price : null,
+      periodLabel,
+      subscriptionPeriod: product.subscriptionPeriod ?? null,
+      packageProductPriceString,
+      storeProductPriceString,
+      storeProductFound: Boolean(storeProduct),
+      storeProductLookupUsedSubscriptionCategory: Boolean(options.storeProductLookupUsedSubscriptionCategory),
+      finalDisplayPrice,
     };
   },
 };

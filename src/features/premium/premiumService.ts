@@ -1,4 +1,9 @@
-import type { CustomerInfo, PurchasesEntitlementInfo, PurchasesPackage } from 'react-native-purchases';
+import type {
+  CustomerInfo,
+  PurchasesEntitlementInfo,
+  PurchasesPackage,
+  PurchasesStoreProduct,
+} from 'react-native-purchases';
 import type { EntitlementStatus, PremiumPackage, PremiumState } from '../../types/shared';
 import { trackEvent } from '../../lib/analytics/analyticsService';
 import { supabase } from '../../lib/supabase/client';
@@ -227,6 +232,59 @@ function findPackageByIdentifier(packages: PurchasesPackage[], packageIdentifier
   return packages.find((aPackage) => aPackage.identifier === packageIdentifier) ?? null;
 }
 
+interface StoreProductLookupResult {
+  productsByIdentifier: Map<string, PurchasesStoreProduct>;
+  usedSubscriptionProductCategory: boolean;
+}
+
+async function storeProductsByIdentifier(
+  userId: string,
+  packages: PurchasesPackage[],
+): Promise<StoreProductLookupResult> {
+  const productIdentifiers = [...new Set(packages.map((aPackage) => aPackage.product.identifier))];
+
+  if (productIdentifiers.length === 0) {
+    return {
+      productsByIdentifier: new Map<string, PurchasesStoreProduct>(),
+      usedSubscriptionProductCategory: false,
+    };
+  }
+
+  try {
+    const products = await revenueCatClient.getProducts(userId, productIdentifiers);
+    return {
+      productsByIdentifier: new Map(products.map((product) => [product.identifier, product])),
+      usedSubscriptionProductCategory: true,
+    };
+  } catch {
+    return {
+      productsByIdentifier: new Map<string, PurchasesStoreProduct>(),
+      usedSubscriptionProductCategory: true,
+    };
+  }
+}
+
+function logPaywallPackageDiagnostics(aPackage: PremiumPackage) {
+  if (process.env.NODE_ENV === 'test') {
+    return;
+  }
+
+  console.info('[paywall-package]', {
+    packageIdentifier: aPackage.identifier,
+    productIdentifier: aPackage.productIdentifier,
+    packageType: aPackage.packageType,
+    priceString: aPackage.priceString,
+    currencyCode: aPackage.currencyCode,
+    price: aPackage.price,
+    subscriptionPeriod: aPackage.subscriptionPeriod,
+    packageProductPriceString: aPackage.packageProductPriceString,
+    storeProductPriceString: aPackage.storeProductPriceString,
+    storeProductFound: aPackage.storeProductFound,
+    storeProductLookupUsedSubscriptionCategory: aPackage.storeProductLookupUsedSubscriptionCategory,
+    finalDisplayPrice: aPackage.finalDisplayPrice,
+  });
+}
+
 function setPremiumState(premiumState: PremiumState) {
   usePremiumStore.getState().setPremiumState(premiumState);
 }
@@ -439,9 +497,23 @@ export const premiumService = {
         };
       }
 
+      const { productsByIdentifier, usedSubscriptionProductCategory } = await storeProductsByIdentifier(
+        auth.user.id,
+        packages,
+      );
+      const packageSummaries = packages.map((aPackage) => {
+        const summary = revenueCatClient.toPackageSummary(
+          aPackage,
+          productsByIdentifier.get(aPackage.product.identifier) ?? null,
+          { storeProductLookupUsedSubscriptionCategory: usedSubscriptionProductCategory },
+        );
+        logPaywallPackageDiagnostics(summary);
+        return summary;
+      });
+
       return {
         ok: true,
-        packages: packages.map((aPackage) => revenueCatClient.toPackageSummary(aPackage)),
+        packages: packageSummaries,
       };
     } catch (error) {
       return {
