@@ -126,6 +126,21 @@ function monthlyPackage() {
   };
 }
 
+function annualPackage() {
+  return {
+    identifier: '$rc_annual',
+    packageType: 'ANNUAL' as never,
+    product: {
+      identifier: 'overthought_yearly',
+      title: 'Overthought Yearly',
+      priceString: '$29.99',
+    },
+    presentedOfferingContext: {
+      offeringIdentifier: 'default',
+    },
+  };
+}
+
 describe('premiumService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -319,6 +334,86 @@ describe('premiumService', () => {
     expect(revenueCatClient.toPackageSummary).toHaveBeenCalled();
   });
 
+  it('loads monthly and annual paywall packages from the current offering', async () => {
+    useAuthStore.getState().setAuthenticated({
+      id: 'user-1',
+      email: 'person@example.com',
+      provider: 'email',
+    });
+    const monthly = monthlyPackage();
+    const annual = annualPackage();
+
+    jest.mocked(revenueCatClient.getOfferings).mockResolvedValue({
+      current: {
+        monthly,
+        annual,
+        availablePackages: [annual, monthly],
+      } as never,
+      fallback: null,
+    });
+    jest.mocked(revenueCatClient.toPackageSummary).mockImplementation((aPackage) => ({
+      identifier: aPackage.identifier,
+      offeringIdentifier: aPackage.presentedOfferingContext.offeringIdentifier ?? null,
+      packageType: aPackage.packageType,
+      productIdentifier: aPackage.product.identifier,
+      title: aPackage.product.title,
+      priceString: aPackage.product.priceString,
+      periodLabel: aPackage.packageType === 'ANNUAL' ? 'year' : 'month',
+    }));
+
+    const result = await premiumService.getPaywallPackages();
+
+    expect(result.ok).toBe(true);
+    expect(result.packages).toHaveLength(2);
+    expect(result.packages.map((aPackage) => aPackage.productIdentifier)).toEqual([
+      'overthought_monthly',
+      'overthought_yearly',
+    ]);
+  });
+
+  it('loads a one-package paywall when only monthly is available', async () => {
+    useAuthStore.getState().setAuthenticated({
+      id: 'user-1',
+      email: 'person@example.com',
+      provider: 'email',
+    });
+
+    jest.mocked(revenueCatClient.getOfferings).mockResolvedValue({
+      current: {
+        monthly: monthlyPackage(),
+        availablePackages: [monthlyPackage()],
+      } as never,
+      fallback: null,
+    });
+
+    const result = await premiumService.getPaywallPackages();
+
+    expect(result.ok).toBe(true);
+    expect(result.packages).toHaveLength(1);
+    expect(result.packages[0]?.productIdentifier).toBe('overthought_monthly');
+  });
+
+  it('fails safely when no offering package is available', async () => {
+    useAuthStore.getState().setAuthenticated({
+      id: 'user-1',
+      email: 'person@example.com',
+      provider: 'email',
+    });
+
+    jest.mocked(revenueCatClient.getOfferings).mockResolvedValue({
+      current: null,
+      fallback: {
+        availablePackages: [],
+      } as never,
+    });
+
+    const result = await premiumService.getPaywallPackages();
+
+    expect(result.ok).toBe(false);
+    expect(result.packages).toEqual([]);
+    expect(result.message).toContain('No purchasable package');
+  });
+
   it('falls back to the default offering when no current offering is returned', async () => {
     useAuthStore.getState().setAuthenticated({
       id: 'user-1',
@@ -375,6 +470,55 @@ describe('premiumService', () => {
     expect(result.state.entitlementStatus).toBe('premium');
     expect(revenueCatClient.purchasePackage).toHaveBeenCalled();
     expect(usePremiumStore.getState().premiumState?.entitlementStatus).toBe('premium');
+  });
+
+  it('purchases the selected annual package instead of monthly', async () => {
+    useAuthStore.getState().setAuthenticated({
+      id: 'user-1',
+      email: 'person@example.com',
+      provider: 'email',
+    });
+    const monthly = monthlyPackage();
+    const annual = annualPackage();
+
+    mockSupabase.from.mockReturnValue(createPremiumStateQuery(null));
+    mockSupabase.functions.invoke.mockResolvedValue({
+      data: { ok: false, code: 'sync_failed', message: 'sync failed' },
+      error: null,
+    });
+    jest.mocked(revenueCatClient.getOfferings).mockResolvedValue({
+      current: {
+        monthly,
+        annual,
+        availablePackages: [monthly, annual],
+      } as never,
+      fallback: null,
+    });
+    jest.mocked(revenueCatClient.purchasePackage).mockResolvedValue({
+      customerInfo: customerInfo({
+        entitlements: {
+          all: {
+            premium: entitlement({
+              identifier: 'premium',
+              productIdentifier: 'overthought_yearly',
+            }),
+          },
+          active: {
+            premium: entitlement({
+              identifier: 'premium',
+              productIdentifier: 'overthought_yearly',
+            }),
+          },
+          verification: 'NOT_REQUESTED' as never,
+        },
+      }),
+    } as never);
+
+    const result = await premiumService.purchasePaywallPackage('$rc_annual');
+
+    expect(result.ok).toBe(true);
+    expect(revenueCatClient.purchasePackage).toHaveBeenCalledWith('user-1', annual);
+    expect(result.state.productId).toBe('overthought_yearly');
   });
 
   it('blocks repeat purchase attempts when premium is already active locally', async () => {

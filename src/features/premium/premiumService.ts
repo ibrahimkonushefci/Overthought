@@ -1,4 +1,4 @@
-import type { CustomerInfo, PurchasesEntitlementInfo } from 'react-native-purchases';
+import type { CustomerInfo, PurchasesEntitlementInfo, PurchasesPackage } from 'react-native-purchases';
 import type { EntitlementStatus, PremiumPackage, PremiumState } from '../../types/shared';
 import { trackEvent } from '../../lib/analytics/analyticsService';
 import { supabase } from '../../lib/supabase/client';
@@ -40,6 +40,12 @@ export interface RestorePurchasesResult {
 export interface PremiumOfferingResult {
   ok: boolean;
   packageInfo: PremiumPackage | null;
+  message?: string;
+}
+
+export interface PremiumOfferingsResult {
+  ok: boolean;
+  packages: PremiumPackage[];
   message?: string;
 }
 
@@ -163,6 +169,62 @@ function mapRevenueCatState(userId: string, customerInfo: CustomerInfo): Premium
 
 function hasActivePremiumEntitlement(customerInfo: CustomerInfo): boolean {
   return Object.keys(customerInfo.entitlements.active).length > 0;
+}
+
+function packagePriority(aPackage: PurchasesPackage): number {
+  switch (aPackage.packageType) {
+    case 'MONTHLY':
+      return 1;
+    case 'ANNUAL':
+      return 2;
+    default:
+      return 3;
+  }
+}
+
+function sortPaywallPackages(packages: PurchasesPackage[]): PurchasesPackage[] {
+  return [...packages].sort((left, right) => {
+    const priorityDifference = packagePriority(left) - packagePriority(right);
+
+    if (priorityDifference !== 0) {
+      return priorityDifference;
+    }
+
+    return left.identifier.localeCompare(right.identifier);
+  });
+}
+
+function dedupePackages(packages: PurchasesPackage[]): PurchasesPackage[] {
+  const seen = new Set<string>();
+
+  return packages.filter((aPackage) => {
+    const key = `${aPackage.identifier}:${aPackage.product.identifier}`;
+
+    if (seen.has(key)) {
+      return false;
+    }
+
+    seen.add(key);
+    return true;
+  });
+}
+
+function offeringPackages(offering: Awaited<ReturnType<typeof revenueCatClient.getOfferings>>): PurchasesPackage[] {
+  const selectedOffering = offering?.current ?? offering?.fallback ?? null;
+
+  if (!selectedOffering) {
+    return [];
+  }
+
+  return sortPaywallPackages(dedupePackages(selectedOffering.availablePackages ?? []));
+}
+
+function findPackageByIdentifier(packages: PurchasesPackage[], packageIdentifier: string | null): PurchasesPackage | null {
+  if (!packageIdentifier) {
+    return packages[0] ?? null;
+  }
+
+  return packages.find((aPackage) => aPackage.identifier === packageIdentifier) ?? null;
 }
 
 function setPremiumState(premiumState: PremiumState) {
@@ -328,12 +390,21 @@ export const premiumService = {
     return this.canUseFeature(flag, state);
   },
   async getPaywallPackage(): Promise<PremiumOfferingResult> {
+    const result = await this.getPaywallPackages();
+
+    return {
+      ok: result.ok,
+      packageInfo: result.packages[0] ?? null,
+      message: result.message,
+    };
+  },
+  async getPaywallPackages(): Promise<PremiumOfferingsResult> {
     const auth = useAuthStore.getState();
 
     if (auth.sessionMode !== 'authenticated' || !auth.user) {
       return {
         ok: false,
-        packageInfo: null,
+        packages: [],
         message: 'Sign in to access Premium.',
       };
     }
@@ -343,7 +414,7 @@ export const premiumService = {
     if (isPremiumStateActive(currentState)) {
       return {
         ok: true,
-        packageInfo: null,
+        packages: [],
         message: 'Premium is already active on this account.',
       };
     }
@@ -351,37 +422,36 @@ export const premiumService = {
     if (!revenueCatClient.isConfigured()) {
       return {
         ok: false,
-        packageInfo: null,
+        packages: [],
         message: 'RevenueCat is not configured for this build.',
       };
     }
 
     try {
       const offerings = await revenueCatClient.getOfferings(auth.user.id);
-      const offering = offerings?.current ?? offerings?.fallback ?? null;
-      const aPackage = offering?.monthly ?? offering?.availablePackages[0] ?? null;
+      const packages = offeringPackages(offerings);
 
-      if (!aPackage) {
+      if (packages.length === 0) {
         return {
           ok: false,
-          packageInfo: null,
+          packages: [],
           message: 'No purchasable package is available right now. Make sure your default offering is configured.',
         };
       }
 
       return {
         ok: true,
-        packageInfo: revenueCatClient.toPackageSummary(aPackage),
+        packages: packages.map((aPackage) => revenueCatClient.toPackageSummary(aPackage)),
       };
     } catch (error) {
       return {
         ok: false,
-        packageInfo: null,
+        packages: [],
         message: error instanceof Error ? error.message : 'Unable to load Premium options right now.',
       };
     }
   },
-  async purchasePaywallPackage(): Promise<PremiumPurchaseResult> {
+  async purchasePaywallPackage(packageIdentifier: string | null = null): Promise<PremiumPurchaseResult> {
     const auth = useAuthStore.getState();
 
     if (auth.sessionMode !== 'authenticated' || !auth.user) {
@@ -413,14 +483,16 @@ export const premiumService = {
       }
 
       const offerings = await revenueCatClient.getOfferings(auth.user.id);
-      const offering = offerings?.current ?? offerings?.fallback ?? null;
-      const aPackage = offering?.monthly ?? offering?.availablePackages[0] ?? null;
+      const packages = offeringPackages(offerings);
+      const aPackage = findPackageByIdentifier(packages, packageIdentifier);
 
       if (!aPackage) {
         return {
           ok: false,
           state: await this.getPremiumState(),
-          message: 'No purchasable package is available right now. Make sure your default offering is configured.',
+          message: packageIdentifier
+            ? 'That Premium option is not available right now. Try another plan or restore purchases.'
+            : 'No purchasable package is available right now. Make sure your default offering is configured.',
         };
       }
 
