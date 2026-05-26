@@ -13,6 +13,7 @@ import {
   CircleHelp,
   Crown,
   Plus,
+  ScrollText,
   Share2,
   Sparkles,
   Trash2,
@@ -44,7 +45,7 @@ import { Screen } from '../../../../src/shared/ui/Screen';
 import { AppText } from '../../../../src/shared/ui/Text';
 import { Card } from '../../../../src/shared/ui/Card';
 import { EmptyState } from '../../../../src/shared/ui/EmptyState';
-import { colors, radii, spacing, typography } from '../../../../src/shared/theme/tokens';
+import { colors, radii, shadows, spacing, typography } from '../../../../src/shared/theme/tokens';
 import {
   categoryIcons,
   categoryLabels,
@@ -64,6 +65,10 @@ const caseDetailBackground = '#FBF9F2';
 const aiVerdictTimeoutRecoveryDelaysMs = [2_000, 5_000, 10_000];
 
 type DeepReadStatus = 'idle' | 'loading' | 'ready' | 'not_authenticated' | 'quota' | 'fair_use' | 'error';
+
+function sortUpdatesNewestFirst(items: CaseUpdateEntity[]): CaseUpdateEntity[] {
+  return [...items].sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime());
+}
 
 export default function CaseDetailRoute() {
   const router = useRouter();
@@ -97,7 +102,9 @@ export default function CaseDetailRoute() {
     try {
       const nextRecord = await caseRepository.getCase(id);
       setRecord(nextRecord);
-      setUpdates(nextRecord && isGuestCase(nextRecord) ? nextRecord.updates : await caseUpdateRepository.listUpdates(id));
+      const nextUpdates =
+        nextRecord && isGuestCase(nextRecord) ? nextRecord.updates : await caseUpdateRepository.listUpdates(id);
+      setUpdates(sortUpdatesNewestFirst(nextUpdates));
     } catch (error) {
       Alert.alert('Could not refresh case', error instanceof Error ? error.message : 'Try again.');
     } finally {
@@ -552,49 +559,73 @@ export default function CaseDetailRoute() {
 
           <SectionLabel title="Original Situation" />
           <View style={styles.quote}>
-            <AppText variant="subtitle" style={styles.quoteText}>
+            <AppText variant="body" style={styles.quoteText}>
               {record.inputText}
             </AppText>
           </View>
 
-          <View style={styles.sectionHeaderRow}>
-            <SectionLabel title={`Updates · ${updates.length}`} noMargin />
-            <Pressable accessibilityRole="button" onPress={() => router.push(`/case/${id}/add-update`)} style={styles.addUpdate}>
-              <Plus color={colors.brand.pink} size={19} strokeWidth={2.6} />
-              <AppText variant="body" color={colors.brand.pink} style={styles.addUpdateText}>
-                Add update
+          <View style={styles.plotHeader}>
+            <View style={styles.plotHeaderCopy}>
+              <AppText variant="title" style={styles.plotTitle}>
+                Plot Updates
               </AppText>
-            </Pressable>
+              <AppText variant="body" color={colors.text.secondary} style={styles.plotSubtitle}>
+                Receipts from what happened next
+              </AppText>
+            </View>
+            <View style={styles.receiptCountBadge}>
+              <AppText variant="eyebrow" color={colors.text.onAccent} style={styles.receiptCountText}>
+                {updates.length} {updates.length === 1 ? 'Receipt' : 'Receipts'}
+              </AppText>
+            </View>
           </View>
 
           {updates.length > 0 ? (
             <View style={styles.updateList}>
-              {updates.map((item) => (
-                <Card key={'localId' in item ? item.localId : item.id} style={styles.updateCard}>
-                  <AppText variant="meta">{relativeTime(item.createdAt)}</AppText>
-                  <AppText variant="body" style={styles.updateText}>
-                    {item.updateText}
-                  </AppText>
-                  {item.verdictLabel ? (
-                    <AppText variant="meta">
-                      {verdictLabels[item.verdictLabel]} · {item.delusionScore}/100
+              {updates.map((item, index) => (
+                <View key={'localId' in item ? item.localId : item.id} style={styles.timelineRow}>
+                  <View style={styles.timelineRail}>
+                    <View style={styles.timelineDot} />
+                    {index < updates.length - 1 ? <View style={styles.timelineLine} /> : null}
+                  </View>
+                  <Card style={styles.updateCard}>
+                    <AppText variant="meta" style={styles.updateTime}>
+                      {relativeTime(item.createdAt)}
                     </AppText>
-                  ) : null}
-                </Card>
+                    <AppText variant="body" style={styles.updateText}>
+                      {item.updateText}
+                    </AppText>
+                  </Card>
+                </View>
               ))}
             </View>
           ) : (
             <View style={styles.noUpdates}>
-              <AppText variant="subtitle" center style={styles.noUpdatesText}>
-                No updates yet. Plot still developing.
+              <AppText variant="body" center style={styles.noUpdatesText}>
+                No receipts yet.{'\n'}
+                Add what happened next when the plot moves.
               </AppText>
             </View>
           )}
 
-          <SectionLabel title="How Did It End?" />
+          <Pressable accessibilityRole="button" onPress={() => router.push(`/case/${id}/add-update`)} style={styles.addUpdate}>
+            <Plus color={colors.text.primary} size={18} strokeWidth={2.8} />
+            <AppText variant="body" color={colors.text.primary} style={styles.addUpdateText}>
+              Add a receipt
+            </AppText>
+          </Pressable>
+
+          <View style={styles.closeCaseHeader}>
+            <AppText variant="title" style={styles.closeCaseTitle}>
+              Close the case
+            </AppText>
+            <AppText variant="body" color={colors.text.secondary} style={styles.closeCaseSubtitle}>
+              Was your original read right?
+            </AppText>
+          </View>
           <View style={styles.outcomes}>
             <OutcomeButton icon={Check} label="I was right" selected={record.outcomeStatus === 'right'} onPress={() => void setOutcome('right')} />
-            <OutcomeButton icon={X} label="I was wrong" selected={record.outcomeStatus === 'wrong'} onPress={() => void setOutcome('wrong')} />
+            <OutcomeButton icon={X} label="I overthought" selected={record.outcomeStatus === 'wrong'} onPress={() => void setOutcome('wrong')} />
             <OutcomeButton icon={CircleHelp} label="Still unclear" selected={record.outcomeStatus === 'unclear'} onPress={() => void setOutcome('unclear')} />
           </View>
 
@@ -1351,9 +1382,12 @@ function CaseFileDivider() {
   return (
     <View style={styles.caseFileDivider}>
       <View style={styles.caseFileLine} />
-      <AppText variant="eyebrow" style={styles.caseFileLabel}>
-        Case File
-      </AppText>
+      <View style={styles.caseFileBadge}>
+        <ScrollText color={colors.text.primary} size={14} strokeWidth={2.3} />
+        <AppText variant="eyebrow" style={styles.caseFileLabel}>
+          Case File
+        </AppText>
+      </View>
       <View style={styles.caseFileLine} />
     </View>
   );
@@ -1382,7 +1416,9 @@ function OutcomeButton({
 
   return (
     <Pressable accessibilityRole="button" accessibilityState={{ selected }} onPress={onPress} style={[styles.outcome, selected && styles.outcomeSelected]}>
-      <Icon color={contentColor} size={18} strokeWidth={2.2} />
+      <View style={[styles.outcomeIconWrap, selected && styles.outcomeIconWrapSelected]}>
+        <Icon color={contentColor} size={18} strokeWidth={2.6} />
+      </View>
       <AppText variant="body" center color={contentColor} style={styles.outcomeLabel}>
         {label}
       </AppText>
@@ -1406,21 +1442,28 @@ const styles = StyleSheet.create({
   iconButton: {
     alignItems: 'center',
     backgroundColor: colors.bg.surface,
-    borderColor: colors.ui.border,
-    borderRadius: 16,
-    borderWidth: 1,
+    borderColor: colors.brand.ink,
+    borderRadius: radii.pill,
+    borderWidth: 2,
     height: 48,
     justifyContent: 'center',
     width: 48,
+    ...shadows.hardSmall,
   },
   categoryPill: {
-    backgroundColor: colors.bg.muted,
+    backgroundColor: '#F8C7D4',
+    borderColor: colors.brand.ink,
+    borderWidth: 2,
     borderRadius: radii.pill,
-    paddingHorizontal: spacing.lg,
+    minWidth: 128,
+    alignItems: 'center',
+    paddingHorizontal: spacing.xl,
     paddingVertical: spacing.sm,
+    ...shadows.hardSmall,
   },
   categoryText: {
-    fontFamily: typography.family.bodyMedium,
+    color: colors.text.primary,
+    fontFamily: typography.family.displayBold,
     fontSize: 14,
     lineHeight: 18,
   },
@@ -1449,13 +1492,14 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   aiPremiumCard: {
-    backgroundColor: '#090910',
-    borderColor: '#090910',
+    backgroundColor: '#0A0A0D',
+    borderColor: '#0A0A0D',
     borderRadius: radii.xl,
     borderWidth: 2,
-    gap: spacing.md,
-    padding: spacing.lg,
-    shadowColor: '#090910',
+    gap: spacing.lg,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.xl,
+    shadowColor: colors.brand.ink,
     shadowOffset: { width: 0, height: 5 },
     shadowOpacity: 1,
     shadowRadius: 0,
@@ -1464,14 +1508,14 @@ const styles = StyleSheet.create({
   aiPremiumHero: {
     alignItems: 'center',
     flexDirection: 'row',
-    gap: spacing.lg,
-    marginTop: spacing.xs,
+    gap: spacing.xl,
+    marginTop: spacing.sm,
   },
   aiPremiumRingWrap: {
     alignItems: 'center',
-    height: 112,
+    height: 106,
     justifyContent: 'center',
-    width: 112,
+    width: 106,
   },
   aiPremiumScoreCenter: {
     alignItems: 'center',
@@ -1479,8 +1523,8 @@ const styles = StyleSheet.create({
   },
   aiPremiumScore: {
     fontFamily: typography.family.displayBold,
-    fontSize: 38,
-    lineHeight: 41,
+    fontSize: 34,
+    lineHeight: 37,
   },
   aiPremiumScoreLabel: {
     fontFamily: typography.family.displaySemiBold,
@@ -1495,7 +1539,7 @@ const styles = StyleSheet.create({
   },
   aiPremiumVerdictPill: {
     alignSelf: 'flex-start',
-    backgroundColor: '#171720',
+    backgroundColor: 'rgba(210, 247, 61, 0.12)',
     borderRadius: radii.pill,
     maxWidth: '100%',
     paddingHorizontal: spacing.md,
@@ -1504,13 +1548,13 @@ const styles = StyleSheet.create({
   aiPremiumVerdictPillText: {
     fontFamily: typography.family.displayBold,
     fontSize: 8,
-    letterSpacing: 1.4,
+    letterSpacing: 1.1,
     lineHeight: 12,
   },
   aiPremiumTitle: {
     fontFamily: typography.family.displayBold,
-    fontSize: 20,
-    lineHeight: 25,
+    fontSize: 22,
+    lineHeight: 27,
   },
   aiPremiumCaseId: {
     fontFamily: typography.family.displayBold,
@@ -1592,12 +1636,12 @@ const styles = StyleSheet.create({
   },
   deepTitle: {
     fontFamily: typography.family.displayBold,
-    fontSize: 18,
-    lineHeight: 23,
+    fontSize: 24,
+    lineHeight: 29,
   },
   aiBadge: {
     alignItems: 'center',
-    backgroundColor: colors.accent.lime,
+    backgroundColor: colors.brand.pink,
     borderRadius: radii.pill,
     flexDirection: 'row',
     gap: 3,
@@ -1619,8 +1663,8 @@ const styles = StyleSheet.create({
   },
   deepSubtitle: {
     fontFamily: typography.family.body,
-    fontSize: 11,
-    lineHeight: 17,
+    fontSize: 15,
+    lineHeight: 20,
   },
   deepButton: {
     alignItems: 'center',
@@ -1644,13 +1688,11 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   groupChatRead: {
-    backgroundColor: '#111119',
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    borderRadius: radii.lg,
-    borderWidth: 1,
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.lg,
-    paddingTop: spacing.xl,
+    backgroundColor: '#101014',
+    borderRadius: radii.xl,
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.xl,
+    paddingTop: spacing.xxl,
     position: 'relative',
   },
   groupChatBadge: {
@@ -1670,8 +1712,8 @@ const styles = StyleSheet.create({
   },
   groupChatText: {
     fontFamily: typography.family.displayBold,
-    fontSize: 17,
-    lineHeight: 24,
+    fontSize: 16,
+    lineHeight: 23,
   },
   deepSections: {
     borderBottomColor: 'rgba(255, 255, 255, 0.09)',
@@ -1699,8 +1741,8 @@ const styles = StyleSheet.create({
   },
   deepFieldBody: {
     fontFamily: typography.family.body,
-    fontSize: 14,
-    lineHeight: 21,
+    fontSize: 15,
+    lineHeight: 23,
   },
   deepTakeawayLabel: {
     fontFamily: typography.family.displayBold,
@@ -1710,14 +1752,14 @@ const styles = StyleSheet.create({
   },
   roastLine: {
     backgroundColor: colors.accent.lime,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.lg,
+    borderRadius: radii.xl,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.xl,
   },
   roastLineText: {
     fontFamily: typography.family.displayBold,
-    fontSize: 15,
-    lineHeight: 20,
+    fontSize: 16,
+    lineHeight: 22,
   },
   deepStateStack: {
     gap: spacing.md,
@@ -1731,82 +1773,176 @@ const styles = StyleSheet.create({
   deepStateTextCompact: {
     marginTop: -spacing.sm,
   },
-  sectionHeaderRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: spacing.xl,
-  },
   caseFileSection: {
     backgroundColor: caseDetailBackground,
     marginHorizontal: -spacing.xl,
-    marginTop: spacing.xl,
+    marginTop: spacing.xxl,
     paddingBottom: spacing.md,
     paddingHorizontal: spacing.xl,
   },
   quote: {
-    backgroundColor: '#F0ECE5',
-    borderRadius: radii.lg,
-    paddingHorizontal: spacing.lg,
+    backgroundColor: '#F8C7D4',
+    borderColor: colors.brand.ink,
+    borderRadius: radii.xl,
+    borderWidth: 2,
+    paddingHorizontal: spacing.xl,
     paddingVertical: spacing.lg,
+    ...shadows.hardSmall,
   },
   quoteText: {
     color: colors.text.primary,
+    fontFamily: typography.family.displayBold,
+    fontSize: 15,
+    lineHeight: 21,
+  },
+  plotHeader: {
+    alignItems: 'flex-end',
+    flexDirection: 'row',
+    gap: spacing.lg,
+    justifyContent: 'space-between',
+    marginTop: spacing.xxl,
+  },
+  plotHeaderCopy: {
+    flex: 1,
+    gap: 3,
+    minWidth: 0,
+  },
+  plotTitle: {
+    color: colors.text.primary,
+    fontFamily: typography.family.displayBold,
+    fontSize: 20,
+    lineHeight: 25,
+  },
+  plotSubtitle: {
     fontFamily: typography.family.body,
-    fontSize: 13,
-    lineHeight: 20,
+    fontSize: 14,
+    lineHeight: 18,
+  },
+  receiptCountBadge: {
+    backgroundColor: colors.accent.lime,
+    borderColor: colors.brand.ink,
+    borderRadius: radii.pill,
+    borderWidth: 2,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xs,
+  },
+  receiptCountText: {
+    fontFamily: typography.family.displayBold,
+    fontSize: 10,
+    letterSpacing: 1,
+    lineHeight: 13,
   },
   addUpdate: {
     alignItems: 'center',
+    borderColor: colors.text.secondary,
+    borderRadius: radii.xl,
+    borderStyle: 'dashed',
+    borderWidth: 1.5,
     flexDirection: 'row',
-    gap: spacing.xs,
+    gap: spacing.sm,
+    justifyContent: 'center',
+    marginTop: spacing.md,
+    minHeight: 46,
+    paddingHorizontal: spacing.lg,
   },
   addUpdateText: {
-    fontFamily: typography.family.bodyMedium,
-    fontSize: 13,
+    fontFamily: typography.family.displayBold,
+    fontSize: 15,
+    lineHeight: 20,
   },
   updateList: {
     gap: spacing.md,
     marginTop: spacing.md,
   },
+  timelineRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  timelineRail: {
+    alignItems: 'center',
+    width: 16,
+  },
+  timelineDot: {
+    backgroundColor: colors.accent.lime,
+    borderColor: colors.brand.ink,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    height: 12,
+    marginTop: 18,
+    width: 12,
+  },
+  timelineLine: {
+    backgroundColor: '#C9BFAE',
+    flex: 1,
+    marginTop: 2,
+    minHeight: 48,
+    width: 1,
+  },
   updateCard: {
-    padding: spacing.lg,
+    borderColor: colors.brand.ink,
+    borderRadius: radii.xl,
+    borderWidth: 2,
+    flex: 1,
+    minHeight: 82,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    ...shadows.hardSmall,
+  },
+  updateTime: {
+    color: colors.text.secondary,
+    fontFamily: typography.family.displayBold,
+    fontSize: 9,
+    letterSpacing: 1.5,
+    lineHeight: 13,
   },
   updateText: {
-    fontFamily: typography.family.body,
-    fontSize: 14,
-    lineHeight: 21,
-    marginVertical: spacing.sm,
+    fontFamily: typography.family.displaySemiBold,
+    fontSize: 15,
+    lineHeight: 20,
+    marginTop: spacing.sm,
   },
   noUpdates: {
-    borderColor: colors.ui.border,
-    borderRadius: radii.lg,
+    borderColor: colors.text.secondary,
+    borderRadius: radii.xl,
     borderStyle: 'dashed',
-    borderWidth: 1,
-    marginTop: spacing.sm,
+    borderWidth: 1.5,
+    marginTop: spacing.md,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.xl,
   },
   noUpdatesText: {
     fontFamily: typography.family.bodyMedium,
-    fontSize: 14,
-    lineHeight: 19,
+    fontSize: 15,
+    lineHeight: 20,
   },
   caseFileDivider: {
     alignItems: 'center',
     flexDirection: 'row',
-    gap: spacing.md,
+    gap: 0,
     marginTop: 0,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.xl,
     paddingTop: spacing.sm,
   },
   caseFileLine: {
-    backgroundColor: colors.ui.border,
+    backgroundColor: colors.brand.ink,
     flex: 1,
-    height: 1,
+    height: 2,
+  },
+  caseFileBadge: {
+    alignItems: 'center',
+    backgroundColor: caseDetailBackground,
+    borderColor: colors.brand.ink,
+    borderRadius: radii.pill,
+    borderWidth: 2,
+    flexDirection: 'row',
+    gap: spacing.xs,
+    marginHorizontal: -1,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    ...shadows.hardSmall,
   },
   caseFileLabel: {
-    color: colors.text.secondary,
+    color: colors.text.primary,
     fontFamily: typography.family.displayBold,
     fontSize: 10,
     letterSpacing: 2.1,
@@ -1820,9 +1956,9 @@ const styles = StyleSheet.create({
   outcome: {
     alignItems: 'center',
     backgroundColor: colors.bg.surface,
-    borderColor: colors.ui.border,
-    borderRadius: radii.md,
-    borderWidth: 1,
+    borderColor: colors.brand.ink,
+    borderRadius: radii.xl,
+    borderWidth: 2,
     flex: 1,
     minHeight: 78,
     justifyContent: 'center',
@@ -1830,15 +1966,44 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xs,
     paddingVertical: spacing.sm,
   },
+  outcomeIconWrap: {
+    alignItems: 'center',
+    borderColor: colors.brand.ink,
+    borderRadius: radii.pill,
+    borderWidth: 2,
+    height: 30,
+    justifyContent: 'center',
+    width: 30,
+  },
+  outcomeIconWrapSelected: {
+    backgroundColor: colors.bg.surface,
+  },
   outcomeLabel: {
-    fontFamily: typography.family.displayMedium,
-    fontSize: 12,
-    lineHeight: 16,
+    fontFamily: typography.family.displayBold,
+    fontSize: 10,
+    lineHeight: 14,
   },
   outcomeSelected: {
     backgroundColor: colors.accent.lime,
     borderColor: colors.brand.ink,
     borderWidth: 2,
+    ...shadows.hardSmall,
+  },
+  closeCaseHeader: {
+    gap: 3,
+    marginTop: spacing.xxl,
+    marginBottom: spacing.md,
+  },
+  closeCaseTitle: {
+    color: colors.text.primary,
+    fontFamily: typography.family.displayBold,
+    fontSize: 20,
+    lineHeight: 25,
+  },
+  closeCaseSubtitle: {
+    fontFamily: typography.family.body,
+    fontSize: 14,
+    lineHeight: 18,
   },
   deleteAction: {
     alignItems: 'center',

@@ -5,7 +5,6 @@ import { nowIso } from '../../../shared/utils/date';
 import { createId } from '../../../shared/utils/id';
 import { useAuthStore } from '../../../store/authStore';
 import { useGuestStore } from '../../../store/guestStore';
-import { analysisService } from '../../analysis/analysisService';
 import type { CaseUpdateEntity } from '../types';
 import { isGuestCase } from '../types';
 import { mapCaseUpdateRow, type CaseUpdateRow } from './caseMappers';
@@ -20,7 +19,7 @@ async function listRemoteUpdates(caseId: string): Promise<CaseUpdateEntity[]> {
     .from('case_updates')
     .select('*')
     .eq('case_id', caseId)
-    .order('created_at', { ascending: true });
+    .order('created_at', { ascending: false });
 
   if (error) {
     throw error;
@@ -60,23 +59,6 @@ export const caseUpdateRepository = {
       throw new Error('Case not found.');
     }
 
-    const updates = isGuestCase(parentCase)
-      ? parentCase.updates
-      : await listRemoteUpdates(parentCase.id);
-
-    const analysis = await analysisService.analyzeCase({
-      category: parentCase.category,
-      inputText: parentCase.inputText,
-      updateText,
-      previousCaseContext: {
-        originalInputText: parentCase.inputText,
-        priorScore: parentCase.delusionScore,
-        priorVerdictLabel: parentCase.verdictLabel,
-        priorTriggeredSignals: parentCase.triggeredSignals ?? [],
-        priorUpdateCount: updates.length,
-      },
-    });
-
     const timestamp = nowIso();
 
     if (isGuestCase(parentCase)) {
@@ -84,11 +66,11 @@ export const caseUpdateRepository = {
         localId: createId('update'),
         localCaseId: parentCase.localId,
         updateText,
-        verdictLabel: analysis.verdictLabel,
-        delusionScore: analysis.delusionScore,
-        explanationText: analysis.explanationText,
-        nextMoveText: analysis.nextMoveText,
-        verdictVersion: analysis.verdictVersion,
+        verdictLabel: null,
+        delusionScore: null,
+        explanationText: null,
+        nextMoveText: null,
+        verdictVersion: null,
         createdAt: timestamp,
       };
 
@@ -112,11 +94,6 @@ export const caseUpdateRepository = {
       .insert({
         case_id: parentCase.id,
         update_text: updateText,
-        verdict_label: analysis.verdictLabel,
-        delusion_score: analysis.delusionScore,
-        explanation_text: analysis.explanationText,
-        next_move_text: analysis.nextMoveText,
-        verdict_version: analysis.verdictVersion,
         created_at: timestamp,
       })
       .select('*')
@@ -124,36 +101,6 @@ export const caseUpdateRepository = {
 
     if (error) {
       throw error;
-    }
-
-    const { error: updateError } = await supabase
-      .from('cases')
-      .update({
-        verdict_label: analysis.verdictLabel,
-        delusion_score: analysis.delusionScore,
-        explanation_text: analysis.explanationText,
-        next_move_text: analysis.nextMoveText,
-        latest_verdict_version: analysis.verdictVersion,
-        last_analyzed_at: timestamp,
-      })
-      .eq('id', parentCase.id)
-      .eq('user_id', auth.user.id)
-      .is('deleted_at', null);
-
-    if (updateError) {
-      const { error: rollbackError } = await supabase
-        .from('case_updates')
-        .delete()
-        .eq('id', (data as CaseUpdateRow).id)
-        .eq('case_id', parentCase.id);
-
-      if (rollbackError) {
-        throw new Error(
-          `Update was saved but the parent case could not be refreshed: ${updateError.message}. Cleanup also failed: ${rollbackError.message}`,
-        );
-      }
-
-      throw updateError;
     }
 
     trackEvent('case_update_added', { mode: 'authenticated' });

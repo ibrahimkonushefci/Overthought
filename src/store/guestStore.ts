@@ -124,13 +124,7 @@ export const useGuestStore = create<GuestState>()(
             item.localId === caseId
               ? {
                   ...item,
-                  updates: [...item.updates, update],
-                  verdictLabel: update.verdictLabel ?? item.verdictLabel,
-                  delusionScore: update.delusionScore ?? item.delusionScore,
-                  explanationText: update.explanationText ?? item.explanationText,
-                  nextMoveText: update.nextMoveText ?? item.nextMoveText,
-                  verdictVersion: update.verdictVersion ?? item.verdictVersion,
-                  lastAnalyzedAt: timestamp,
+                  updates: [update, ...item.updates],
                   updatedAt: timestamp,
                 }
               : item,

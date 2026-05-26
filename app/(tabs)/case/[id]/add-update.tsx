@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Alert, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, Sparkles } from 'lucide-react-native';
+import { ArrowLeft, Plus } from 'lucide-react-native';
 import { caseRepository } from '../../../../src/features/cases/repositories/caseRepository';
 import { caseUpdateRepository } from '../../../../src/features/cases/repositories/caseUpdateRepository';
 import type { CaseEntity } from '../../../../src/features/cases/types';
@@ -61,15 +61,15 @@ export default function AddUpdateRoute() {
         <Pressable accessibilityRole="button" onPress={returnToCase} style={styles.backButton}>
           <ArrowLeft color={colors.text.primary} size={20} />
         </Pressable>
-        <AppText variant="eyebrow">Add update</AppText>
+        <AppText variant="eyebrow">Add receipt</AppText>
         <View style={styles.backButtonPlaceholder} />
       </View>
       <AppText variant="display">
-        What <AppText variant="display" color={colors.brand.pink} style={styles.script}>changed</AppText>?
+        What <AppText variant="display" color={colors.brand.pink} style={styles.script}>happened</AppText>?
       </AppText>
       {record ? (
         <AppText variant="subtitle" style={styles.subtitle} numberOfLines={2}>
-          Updating: {record.title ?? record.inputText}
+          Case file: {record.title ?? record.inputText}
         </AppText>
       ) : null}
 
@@ -81,7 +81,7 @@ export default function AddUpdateRoute() {
             setText(value);
             setUpdateDraft(id, value);
           }}
-          placeholder="e.g. Now they actually picked a date..."
+          placeholder="e.g. They picked a date and followed through..."
           placeholderTextColor={colors.ui.placeholder}
           style={styles.input}
           textAlignVertical="top"
@@ -95,8 +95,8 @@ export default function AddUpdateRoute() {
 
       <View style={styles.submitWrap}>
         <Button
-          title={loading ? 'Updating...' : 'Update the verdict'}
-          icon={Sparkles}
+          title={loading ? 'Saving...' : 'Save receipt'}
+          icon={Plus}
           loading={loading}
           disabled={loading || text.trim().length < 8}
           onPress={() => void submit()}

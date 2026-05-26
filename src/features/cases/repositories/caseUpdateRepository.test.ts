@@ -1,4 +1,4 @@
-import type { AnalysisOutput, GuestCaseLocal } from '../../../types/shared';
+import type { GuestCaseLocal } from '../../../types/shared';
 import { useAuthStore } from '../../../store/authStore';
 import { useGuestStore } from '../../../store/guestStore';
 import { supabase } from '../../../lib/supabase/client';
@@ -21,22 +21,9 @@ jest.mock('../../analysis/analysisService', () => ({
 const mockSupabase = supabase as unknown as {
   from: jest.Mock;
 };
-
 const mockAnalysisService = analysisService as unknown as {
   analyzeCase: jest.Mock;
 };
-
-function analysisOutput(overrides: Partial<AnalysisOutput> = {}): AnalysisOutput {
-  return {
-    verdictLabel: 'dangerous_overthinking',
-    delusionScore: 79,
-    explanationText: 'The new context raises the score.',
-    nextMoveText: 'Ask directly instead of decoding hints.',
-    verdictVersion: 1,
-    triggeredSignals: ['new_context'],
-    ...overrides,
-  };
-}
 
 function caseRow(overrides: Partial<CaseRow> = {}): CaseRow {
   return {
@@ -65,11 +52,11 @@ function updateRow(overrides: Partial<CaseUpdateRow> = {}): CaseUpdateRow {
     id: 'remote-update-1',
     case_id: 'remote-case-1',
     update_text: 'Now they asked to hang out.',
-    verdict_label: 'dangerous_overthinking',
-    delusion_score: 79,
-    explanation_text: 'The new context raises the score.',
-    next_move_text: 'Ask directly instead of decoding hints.',
-    verdict_version: 1,
+    verdict_label: null,
+    delusion_score: null,
+    explanation_text: null,
+    next_move_text: null,
+    verdict_version: null,
     created_at: '2026-04-23T10:00:00.000Z',
     ...overrides,
   };
@@ -143,32 +130,6 @@ function insertUpdateBuilder(row: CaseUpdateRow) {
   return builder;
 }
 
-function parentUpdateBuilder(error: Error | null = null) {
-  const builder = {
-    update: jest.fn(),
-    eq: jest.fn(),
-    is: jest.fn(),
-  };
-
-  builder.update.mockReturnValue(builder);
-  builder.eq.mockReturnValue(builder);
-  builder.is.mockResolvedValue({ error });
-
-  return builder;
-}
-
-function rollbackBuilder(error: Error | null = null) {
-  const builder = {
-    delete: jest.fn(),
-    eq: jest.fn(),
-  };
-
-  builder.delete.mockReturnValue(builder);
-  builder.eq.mockReturnValueOnce(builder).mockResolvedValueOnce({ error });
-
-  return builder;
-}
-
 describe('caseUpdateRepository authenticated sync behavior', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -178,7 +139,6 @@ describe('caseUpdateRepository authenticated sync behavior', () => {
       email: 'person@example.com',
       provider: 'email',
     });
-    mockAnalysisService.analyzeCase.mockResolvedValue(analysisOutput());
   });
 
   afterEach(() => {
@@ -201,18 +161,13 @@ describe('caseUpdateRepository authenticated sync behavior', () => {
     expect(updates).toHaveLength(1);
     expect(getCase.eq).toHaveBeenCalledWith('id', 'remote-case-1');
     expect(listUpdates.eq).toHaveBeenCalledWith('case_id', 'remote-case-1');
+    expect(listUpdates.order).toHaveBeenCalledWith('created_at', { ascending: false });
   });
 
-  it('adds an authenticated update only after the parent case refresh succeeds', async () => {
+  it('adds an authenticated update as a timeline entry without refreshing parent verdict fields', async () => {
     const getCase = getCaseBuilder(caseRow());
-    const listUpdates = listUpdatesBuilder([]);
     const insertUpdate = insertUpdateBuilder(updateRow());
-    const updateParent = parentUpdateBuilder();
-    mockSupabase.from
-      .mockReturnValueOnce(getCase)
-      .mockReturnValueOnce(listUpdates)
-      .mockReturnValueOnce(insertUpdate)
-      .mockReturnValueOnce(updateParent);
+    mockSupabase.from.mockReturnValueOnce(getCase).mockReturnValueOnce(insertUpdate);
 
     const result = await caseUpdateRepository.addUpdate('remote-case-1', 'Now they asked to hang out.');
 
@@ -221,56 +176,62 @@ describe('caseUpdateRepository authenticated sync behavior', () => {
       expect.objectContaining({
         case_id: 'remote-case-1',
         update_text: 'Now they asked to hang out.',
-        verdict_label: 'dangerous_overthinking',
       }),
     );
-    expect(updateParent.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        verdict_label: 'dangerous_overthinking',
-        delusion_score: 79,
-        explanation_text: 'The new context raises the score.',
-        next_move_text: 'Ask directly instead of decoding hints.',
-        latest_verdict_version: 1,
-      }),
-    );
-  });
-
-  it('rolls back the inserted update and throws when the parent case update fails', async () => {
-    const getCase = getCaseBuilder(caseRow());
-    const listUpdates = listUpdatesBuilder([]);
-    const insertUpdate = insertUpdateBuilder(updateRow());
-    const updateParent = parentUpdateBuilder(new Error('parent update failed'));
-    const rollback = rollbackBuilder();
-    mockSupabase.from
-      .mockReturnValueOnce(getCase)
-      .mockReturnValueOnce(listUpdates)
-      .mockReturnValueOnce(insertUpdate)
-      .mockReturnValueOnce(updateParent)
-      .mockReturnValueOnce(rollback);
-
-    await expect(caseUpdateRepository.addUpdate('remote-case-1', 'Now they asked to hang out.')).rejects.toThrow(
-      'parent update failed',
-    );
-
-    expect(rollback.delete).toHaveBeenCalled();
-    expect(rollback.eq).toHaveBeenCalledWith('id', 'remote-update-1');
-    expect(rollback.eq).toHaveBeenCalledWith('case_id', 'remote-case-1');
+    expect(insertUpdate.insert.mock.calls[0][0]).not.toHaveProperty('verdict_label');
+    expect(insertUpdate.insert.mock.calls[0][0]).not.toHaveProperty('delusion_score');
+    expect(insertUpdate.insert.mock.calls[0][0]).not.toHaveProperty('explanation_text');
+    expect(insertUpdate.insert.mock.calls[0][0]).not.toHaveProperty('next_move_text');
+    expect(insertUpdate.insert.mock.calls[0][0]).not.toHaveProperty('verdict_version');
+    expect(mockSupabase.from.mock.calls.map((call) => call[0])).toEqual(['cases', 'case_updates']);
+    expect(mockAnalysisService.analyzeCase).not.toHaveBeenCalled();
   });
 
   it('does not mutate a same-id guest case while adding an authenticated update', async () => {
     useGuestStore.getState().addCase(guestCase('remote-case-1'));
     const getCase = getCaseBuilder(caseRow());
-    const listUpdates = listUpdatesBuilder([]);
     const insertUpdate = insertUpdateBuilder(updateRow());
-    const updateParent = parentUpdateBuilder();
-    mockSupabase.from
-      .mockReturnValueOnce(getCase)
-      .mockReturnValueOnce(listUpdates)
-      .mockReturnValueOnce(insertUpdate)
-      .mockReturnValueOnce(updateParent);
+    mockSupabase.from.mockReturnValueOnce(getCase).mockReturnValueOnce(insertUpdate);
 
     await caseUpdateRepository.addUpdate('remote-case-1', 'Now they asked to hang out.');
 
     expect(useGuestStore.getState().cases[0].updates).toHaveLength(0);
+  });
+});
+
+describe('caseUpdateRepository guest update ordering', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    useGuestStore.getState().clearAllLocalData();
+    useAuthStore.getState().setGuest();
+  });
+
+  afterEach(() => {
+    useGuestStore.getState().clearAllLocalData();
+    useAuthStore.getState().resetSession();
+  });
+
+  it('stores newest guest updates first without changing parent verdict fields', async () => {
+    useGuestStore.getState().addCase(guestCase('local-case-1'));
+    const before = useGuestStore.getState().cases[0];
+
+    await caseUpdateRepository.addUpdate('local-case-1', 'He picked a day and invited me.');
+    await caseUpdateRepository.addUpdate('local-case-1', 'Never mind, he ghosted.');
+
+    const after = useGuestStore.getState().cases[0];
+    expect(after.updates.map((item) => item.updateText)).toEqual([
+      'Never mind, he ghosted.',
+      'He picked a day and invited me.',
+    ]);
+    expect(after.updates[0].verdictLabel).toBeNull();
+    expect(after.updates[0].delusionScore).toBeNull();
+    expect(after.updates[0].explanationText).toBeNull();
+    expect(after.updates[0].nextMoveText).toBeNull();
+    expect(after.verdictLabel).toBe(before.verdictLabel);
+    expect(after.delusionScore).toBe(before.delusionScore);
+    expect(after.explanationText).toBe(before.explanationText);
+    expect(after.nextMoveText).toBe(before.nextMoveText);
+    expect(after.lastAnalyzedAt).toBe(before.lastAnalyzedAt);
+    expect(mockAnalysisService.analyzeCase).not.toHaveBeenCalled();
   });
 });
