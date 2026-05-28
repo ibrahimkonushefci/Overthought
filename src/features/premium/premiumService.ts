@@ -264,27 +264,6 @@ async function storeProductsByIdentifier(
   }
 }
 
-function logPaywallPackageDiagnostics(aPackage: PremiumPackage) {
-  if (process.env.NODE_ENV === 'test') {
-    return;
-  }
-
-  console.info('[paywall-package]', {
-    packageIdentifier: aPackage.identifier,
-    productIdentifier: aPackage.productIdentifier,
-    packageType: aPackage.packageType,
-    priceString: aPackage.priceString,
-    currencyCode: aPackage.currencyCode,
-    price: aPackage.price,
-    subscriptionPeriod: aPackage.subscriptionPeriod,
-    packageProductPriceString: aPackage.packageProductPriceString,
-    storeProductPriceString: aPackage.storeProductPriceString,
-    storeProductFound: aPackage.storeProductFound,
-    storeProductLookupUsedSubscriptionCategory: aPackage.storeProductLookupUsedSubscriptionCategory,
-    finalDisplayPrice: aPackage.finalDisplayPrice,
-  });
-}
-
 function setPremiumState(premiumState: PremiumState) {
   usePremiumStore.getState().setPremiumState(premiumState);
 }
@@ -507,7 +486,6 @@ export const premiumService = {
           productsByIdentifier.get(aPackage.product.identifier) ?? null,
           { storeProductLookupUsedSubscriptionCategory: usedSubscriptionProductCategory },
         );
-        logPaywallPackageDiagnostics(summary);
         return summary;
       });
 
