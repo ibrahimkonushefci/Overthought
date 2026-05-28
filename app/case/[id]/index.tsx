@@ -27,25 +27,25 @@ import type {
   DeepReadAccessState,
   DeepReadResponse,
   OutcomeStatus,
-} from '../../../../src/types/shared';
-import { caseRepository } from '../../../../src/features/cases/repositories/caseRepository';
-import { caseUpdateRepository } from '../../../../src/features/cases/repositories/caseUpdateRepository';
-import { aiVerdictService } from '../../../../src/features/ai-verdict/aiVerdictService';
+} from '../../../src/types/shared';
+import { caseRepository } from '../../../src/features/cases/repositories/caseRepository';
+import { caseUpdateRepository } from '../../../src/features/cases/repositories/caseUpdateRepository';
+import { aiVerdictService } from '../../../src/features/ai-verdict/aiVerdictService';
 import {
   isAiVerdictDeepReadAccountLocked,
   isAiVerdictDeepReadCaseLocked,
-} from '../../../../src/features/ai-verdict/aiVerdictAccess';
-import { deepReadService } from '../../../../src/features/deep-read/deepReadService';
-import type { CaseEntity, CaseUpdateEntity } from '../../../../src/features/cases/types';
-import { getCaseId, isGuestCase } from '../../../../src/features/cases/types';
-import { ScorePanel } from '../../../../src/features/cases/components/ScorePanel';
-import { ShareResultCard } from '../../../../src/features/share/ShareResultCard';
-import type { ShareCardPayload } from '../../../../src/features/share/shareTypes';
-import { Screen } from '../../../../src/shared/ui/Screen';
-import { AppText } from '../../../../src/shared/ui/Text';
-import { Card } from '../../../../src/shared/ui/Card';
-import { EmptyState } from '../../../../src/shared/ui/EmptyState';
-import { colors, radii, shadows, spacing, typography } from '../../../../src/shared/theme/tokens';
+} from '../../../src/features/ai-verdict/aiVerdictAccess';
+import { deepReadService } from '../../../src/features/deep-read/deepReadService';
+import type { CaseEntity, CaseUpdateEntity } from '../../../src/features/cases/types';
+import { getCaseId, isGuestCase } from '../../../src/features/cases/types';
+import { ScorePanel } from '../../../src/features/cases/components/ScorePanel';
+import { ShareResultCard } from '../../../src/features/share/ShareResultCard';
+import type { ShareCardPayload } from '../../../src/features/share/shareTypes';
+import { Screen } from '../../../src/shared/ui/Screen';
+import { AppText } from '../../../src/shared/ui/Text';
+import { Card } from '../../../src/shared/ui/Card';
+import { EmptyState } from '../../../src/shared/ui/EmptyState';
+import { colors, radii, shadows, spacing, typography } from '../../../src/shared/theme/tokens';
 import {
   categoryIcons,
   categoryLabels,
@@ -53,10 +53,10 @@ import {
   scoreColor,
   verdictIcons,
   verdictLabels,
-} from '../../../../src/shared/utils/verdict';
-import { relativeTime } from '../../../../src/shared/utils/date';
-import { useAiVerdictStore } from '../../../../src/store/aiVerdictStore';
-import { isPremiumStateActive, usePremiumStore } from '../../../../src/store/premiumStore';
+} from '../../../src/shared/utils/verdict';
+import { relativeTime } from '../../../src/shared/utils/date';
+import { useAiVerdictStore } from '../../../src/store/aiVerdictStore';
+import { isPremiumStateActive, usePremiumStore } from '../../../src/store/premiumStore';
 
 const detailScrollByCaseId = new Map<string, number>();
 const quotaUpgradePromptedCaseIds = new Set<string>();
@@ -341,6 +341,15 @@ export default function CaseDetailRoute() {
     });
   };
 
+  const goBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+      return;
+    }
+
+    router.replace('/cases');
+  };
+
   const retryAiVerdict = async () => {
     if (!record || aiVerdictLoading) {
       return;
@@ -474,7 +483,7 @@ export default function CaseDetailRoute() {
     >
       <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
         <View style={styles.topRow}>
-          <Pressable accessibilityRole="button" onPress={() => router.back()} style={styles.iconButton}>
+          <Pressable accessibilityRole="button" onPress={goBack} style={styles.iconButton}>
             <ArrowLeft color={colors.text.primary} size={21} strokeWidth={2.4} />
           </Pressable>
           <View style={styles.categoryPill}>

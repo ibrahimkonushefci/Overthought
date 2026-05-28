@@ -1,5 +1,5 @@
-import { Tabs } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { Tabs, useRouter } from 'expo-router';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { BarChart3, Home, Layers3, Plus, UserRound } from 'lucide-react-native';
 import { colors, typography } from '../../src/shared/theme/tokens';
 
@@ -13,6 +13,8 @@ function TabLabel({ focused, color, title }: { focused: boolean; color: string; 
 }
 
 export default function TabsLayout() {
+  const router = useRouter();
+
   return (
     <Tabs
       screenOptions={{
@@ -71,9 +73,19 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="new-case"
+        name="create"
         options={{
           title: '',
+          tabBarButton: ({ accessibilityState, children, style }) => (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={accessibilityState}
+              onPress={() => router.push('/new-case')}
+              style={style}
+            >
+              {children}
+            </Pressable>
+          ),
           tabBarIcon: ({ focused }) => (
             <View
               style={{
@@ -113,9 +125,6 @@ export default function TabsLayout() {
           tabBarIcon: ({ color, focused }) => <UserRound color={color} size={20} strokeWidth={focused ? 2.6 : 2} />,
         }}
       />
-      <Tabs.Screen name="case/[id]/index" options={{ href: null }} />
-      <Tabs.Screen name="case/[id]/add-update" options={{ href: null }} />
-      <Tabs.Screen name="account/profile/delete-account" options={{ href: null }} />
     </Tabs>
   );
 }

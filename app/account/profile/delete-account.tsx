@@ -2,13 +2,13 @@ import { useState } from 'react';
 import { Alert, Pressable, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, Trash2 } from 'lucide-react-native';
-import { authService } from '../../../../src/features/auth/authService';
-import { useAuthStore } from '../../../../src/store/authStore';
-import { Screen } from '../../../../src/shared/ui/Screen';
-import { AppText } from '../../../../src/shared/ui/Text';
-import { Button } from '../../../../src/shared/ui/Button';
-import { Card } from '../../../../src/shared/ui/Card';
-import { colors, radii, spacing, typography } from '../../../../src/shared/theme/tokens';
+import { authService } from '../../../src/features/auth/authService';
+import { useAuthStore } from '../../../src/store/authStore';
+import { Screen } from '../../../src/shared/ui/Screen';
+import { AppText } from '../../../src/shared/ui/Text';
+import { Button } from '../../../src/shared/ui/Button';
+import { Card } from '../../../src/shared/ui/Card';
+import { colors, radii, spacing, typography } from '../../../src/shared/theme/tokens';
 
 export default function DeleteAccountRoute() {
   const router = useRouter();

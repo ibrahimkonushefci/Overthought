@@ -2,18 +2,18 @@ import { useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, Sparkles } from 'lucide-react-native';
-import type { CaseCategory } from '../../src/types/shared';
-import { aiVerdictService } from '../../src/features/ai-verdict/aiVerdictService';
-import { caseRepository } from '../../src/features/cases/repositories/caseRepository';
-import { pickExamplePrompts } from '../../src/features/cases/examplePrompts';
-import { getCaseId } from '../../src/features/cases/types';
-import { CategoryPill } from '../../src/features/cases/components/CategoryPill';
-import { Button } from '../../src/shared/ui/Button';
-import { AppText } from '../../src/shared/ui/Text';
-import { Screen } from '../../src/shared/ui/Screen';
-import { colors, radii, spacing, typography } from '../../src/shared/theme/tokens';
-import { useAuthStore } from '../../src/store/authStore';
-import { useGuestStore } from '../../src/store/guestStore';
+import type { CaseCategory } from '../src/types/shared';
+import { aiVerdictService } from '../src/features/ai-verdict/aiVerdictService';
+import { caseRepository } from '../src/features/cases/repositories/caseRepository';
+import { pickExamplePrompts } from '../src/features/cases/examplePrompts';
+import { getCaseId } from '../src/features/cases/types';
+import { CategoryPill } from '../src/features/cases/components/CategoryPill';
+import { Button } from '../src/shared/ui/Button';
+import { AppText } from '../src/shared/ui/Text';
+import { Screen } from '../src/shared/ui/Screen';
+import { colors, radii, spacing, typography } from '../src/shared/theme/tokens';
+import { useAuthStore } from '../src/store/authStore';
+import { useGuestStore } from '../src/store/guestStore';
 
 const categories: CaseCategory[] = ['romance', 'friendship', 'social', 'general'];
 const ANALYZING_DELAY_MS = 2000;
@@ -33,6 +33,15 @@ export default function NewCaseRoute() {
   const [category, setCategory] = useState<CaseCategory>('romance');
   const [loading, setLoading] = useState(false);
   const [examples, setExamples] = useState(() => pickExamplePrompts(4));
+
+  const goBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+      return;
+    }
+
+    router.replace('/home');
+  };
 
   const submit = async () => {
     const trimmed = inputText.trim();
@@ -54,7 +63,7 @@ export default function NewCaseRoute() {
       setExamples(pickExamplePrompts(4));
       const [, aiResult] = await Promise.all([minimumAnalyzingTime, aiVerdictRequest]);
       const quotaParam = !aiResult.ok && aiResult.code === 'quota_exceeded' ? '&aiQuota=1' : '';
-      router.replace(`/case/${getCaseId(record)}?fromAnalysis=1${quotaParam}`);
+      router.push(`/case/${getCaseId(record)}?fromAnalysis=1${quotaParam}`);
     } catch (error) {
       Alert.alert('Could not save the case', error instanceof Error ? error.message : 'Try again.');
     } finally {
@@ -81,7 +90,7 @@ export default function NewCaseRoute() {
   return (
     <Screen>
       <View style={styles.topRow}>
-        <Pressable accessibilityRole="button" onPress={() => router.back()} style={styles.backButton}>
+        <Pressable accessibilityRole="button" onPress={goBack} style={styles.backButton}>
           <ArrowLeft color={colors.text.primary} size={20} />
         </Pressable>
         <AppText variant="eyebrow">New case</AppText>

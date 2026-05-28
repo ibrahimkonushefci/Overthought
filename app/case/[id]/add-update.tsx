@@ -2,14 +2,14 @@ import { useEffect, useState } from 'react';
 import { Alert, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Plus } from 'lucide-react-native';
-import { caseRepository } from '../../../../src/features/cases/repositories/caseRepository';
-import { caseUpdateRepository } from '../../../../src/features/cases/repositories/caseUpdateRepository';
-import type { CaseEntity } from '../../../../src/features/cases/types';
-import { Screen } from '../../../../src/shared/ui/Screen';
-import { AppText } from '../../../../src/shared/ui/Text';
-import { Button } from '../../../../src/shared/ui/Button';
-import { colors, radii, spacing, typography } from '../../../../src/shared/theme/tokens';
-import { useGuestStore } from '../../../../src/store/guestStore';
+import { caseRepository } from '../../../src/features/cases/repositories/caseRepository';
+import { caseUpdateRepository } from '../../../src/features/cases/repositories/caseUpdateRepository';
+import type { CaseEntity } from '../../../src/features/cases/types';
+import { Screen } from '../../../src/shared/ui/Screen';
+import { AppText } from '../../../src/shared/ui/Text';
+import { Button } from '../../../src/shared/ui/Button';
+import { colors, radii, spacing, typography } from '../../../src/shared/theme/tokens';
+import { useGuestStore } from '../../../src/store/guestStore';
 
 export default function AddUpdateRoute() {
   const router = useRouter();
@@ -21,6 +21,11 @@ export default function AddUpdateRoute() {
   const [loading, setLoading] = useState(false);
 
   const returnToCase = () => {
+    if (router.canGoBack()) {
+      router.back();
+      return;
+    }
+
     router.replace(`/case/${id}`);
   };
 
@@ -47,7 +52,7 @@ export default function AddUpdateRoute() {
       await caseUpdateRepository.addUpdate(id, trimmed);
       setUpdateDraft(id, '');
       setText('');
-      router.replace(`/case/${id}`);
+      returnToCase();
     } catch (error) {
       Alert.alert('Could not add update', error instanceof Error ? error.message : 'Try again.');
     } finally {

@@ -7,6 +7,7 @@ export default function PublicLayout() {
       screenOptions={{
         headerShown: false,
         contentStyle: { backgroundColor: colors.bg.base },
+        gestureEnabled: true,
       }}
     />
   );

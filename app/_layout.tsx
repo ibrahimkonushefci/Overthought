@@ -45,11 +45,16 @@ export default function RootLayout() {
         screenOptions={{
           headerShown: false,
           contentStyle: { backgroundColor: colors.bg.base },
+          gestureEnabled: true,
         }}
       >
         <Stack.Screen name="index" />
         <Stack.Screen name="(public)" />
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="new-case" />
+        <Stack.Screen name="case/[id]/index" />
+        <Stack.Screen name="case/[id]/add-update" />
+        <Stack.Screen name="account/profile/delete-account" />
         <Stack.Screen name="(modals)" options={{ presentation: 'modal' }} />
       </Stack>
       <MigrationPrompt />

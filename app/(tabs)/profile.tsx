@@ -1,7 +1,7 @@
 import { Alert, Linking, Modal, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import type { ComponentType } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { Bell, ChevronRight, LogIn, Shield, Trash2, Crown, FileText, Sparkles, User } from 'lucide-react-native';
+import { ChevronRight, LogIn, Shield, Trash2, Crown, FileText, Sparkles, User } from 'lucide-react-native';
 import type { LucideProps } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useCallback, useState } from 'react';
@@ -201,7 +201,6 @@ export default function ProfileRoute() {
           value={isGuest ? 'Sign in' : accountDisplayName}
           onPress={openProfileEditor}
         />
-        <SettingsRow icon={Bell} title="Notifications" value="Off" />
         <SettingsRow
           icon={Shield}
           title="Privacy"
