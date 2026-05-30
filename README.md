@@ -142,7 +142,10 @@ Before the next TestFlight build that ships Apple and Google sign-in, set the pr
 
 Also confirm external provider setup:
 
+- Supabase Auth Site URL is `https://overthought.app`, not a local Metro URL.
 - Supabase Auth redirect URLs include `overthought://auth` and `overthought://reset-password`.
+- Supabase Auth custom SMTP is enabled for production email, currently via the verified Resend domain `mail.overthought.app`.
+- Confirm Signup and Reset Password templates use `{{ .ConfirmationURL }}` and clearly say the link opens Overthought.
 - Password reset emails should contain `redirect_to=overthought://reset-password`, not a local Metro URL.
 - Apple Developer has Sign in with Apple enabled for `com.ibrahim.overthought`.
 - Supabase Apple provider allows the production bundle ID.
@@ -176,7 +179,7 @@ APP_VARIANT=production npx expo config --type public
 - Configure Google OAuth client IDs, the reversed iOS URL scheme, and the Supabase Google provider before setting `EXPO_PUBLIC_ENABLE_GOOGLE_AUTH=true`. For native iOS Google Sign-In, the Supabase Google provider must have `Skip nonce check` enabled.
 - Rebuild the native iOS app after changing `EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME`; the scheme is embedded in `Info.plist`.
 - Configure RevenueCat products/API keys for TestFlight and validate purchase/restore end to end.
-- Add a secured Supabase Edge Function for final `auth.users` deletion.
+- Verify the deployed `delete-account` Supabase Edge Function before each release build; it performs final `auth.users` deletion for authenticated account deletion.
 - Rebuild the iOS development build after changing native auth credentials or config plugins.
 
 ## Test immediately

@@ -14,6 +14,7 @@ import { trackEvent } from '../../lib/analytics/analyticsService';
 import { env } from '../../lib/env';
 import { supabase } from '../../lib/supabase/client';
 import { useAuthStore } from '../../store/authStore';
+import { useAiVerdictStore } from '../../store/aiVerdictStore';
 import { useGuestStore } from '../../store/guestStore';
 import { createId } from '../../shared/utils/id';
 import { premiumService } from '../premium/premiumService';
@@ -332,7 +333,7 @@ export const authService = {
 
     return {
       ok: true,
-      message: 'Account created. Check your email to confirm it, then sign in.',
+      message: 'Account created. Check your email to confirm it, then sign in. If it is not there, check Spam/Junk.',
     };
   },
   async requestPasswordReset(email: string): Promise<AuthActionResult> {
@@ -353,7 +354,7 @@ export const authService = {
       return { ok: false, message: error.message };
     }
 
-    return { ok: true, message: 'Check your email for the password reset link.' };
+    return { ok: true, message: 'Check your email for the password reset link. If it is not there, check Spam/Junk.' };
   },
   async updatePassword(password: string): Promise<AuthActionResult> {
     if (!supabase) {
@@ -552,6 +553,7 @@ export const authService = {
   async deleteAccount(): Promise<AuthActionResult> {
     if (useAuthStore.getState().sessionMode !== 'authenticated') {
       useGuestStore.getState().clearAllLocalData();
+      useAiVerdictStore.getState().clearAllAiVerdicts();
       useAuthStore.getState().resetSession();
       await premiumService.handleAuthStateChange(null);
       return { ok: true, message: 'Local data deleted.' };
@@ -590,6 +592,7 @@ export const authService = {
       }
 
       useGuestStore.getState().clearAllLocalData();
+      useAiVerdictStore.getState().clearAllAiVerdicts();
       useAuthStore.getState().resetSession();
       await premiumService.handleAuthStateChange(null);
       return {

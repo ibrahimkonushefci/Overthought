@@ -1,4 +1,5 @@
 import { useAuthStore } from '../../store/authStore';
+import { useAiVerdictStore } from '../../store/aiVerdictStore';
 import { useGuestStore } from '../../store/guestStore';
 import { supabase } from '../../lib/supabase/client';
 import { env } from '../../lib/env';
@@ -141,6 +142,50 @@ function buildGuestCase() {
   };
 }
 
+function buildAiVerdictSnapshot() {
+  const localFallback = {
+    verdictLabel: 'mild_delusion' as const,
+    delusionScore: 61,
+    explanationText: 'The facts are thin.',
+    nextMoveText: 'Wait for one more signal.',
+    verdictVersion: 1,
+    triggeredSignals: [],
+  };
+
+  return {
+    verdict: {
+      ...localFallback,
+      source: 'ai' as const,
+      displayLabel: 'Mild delusion',
+      evidenceCheckText: 'Thin evidence.',
+      overreadingText: 'You are overreading the timing.',
+      whatMattersText: 'Whether they follow through.',
+    },
+    localFallback,
+    cache: {
+      id: 'ai-verdict-1',
+      source: 'generated' as const,
+      targetFingerprint: 'fingerprint-1',
+      modelProvider: 'google',
+      modelName: 'gemini',
+      modelVersion: null,
+      promptVersion: 3,
+      responseSchemaVersion: 1,
+      createdAt: '2026-04-22T10:00:00.000Z',
+    },
+    access: {
+      accessTier: 'free' as const,
+      allowed: true,
+      used: 1,
+      remaining: 1,
+      limit: 2,
+      quotaBucket: '2026-04-22',
+      quotaScope: 'daily' as const,
+    },
+    updatedAt: '2026-04-22T10:00:00.000Z',
+  };
+}
+
 describe('authService.deleteAccount', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -149,6 +194,7 @@ describe('authService.deleteAccount', () => {
     mutableEnv.googleWebClientId = '';
     mutableEnv.googleIosClientId = '';
     useGuestStore.getState().clearAllLocalData();
+    useAiVerdictStore.getState().clearAllAiVerdicts();
     useAuthStore.getState().resetSession();
   });
 
@@ -158,12 +204,19 @@ describe('authService.deleteAccount', () => {
     useGuestStore.getState().ensureGuestSession();
     useGuestStore.getState().addCase(buildGuestCase());
     useGuestStore.getState().setCaseDraft('draft');
+    useAiVerdictStore.getState().setAiVerdict('case-local-1', buildAiVerdictSnapshot());
+    useAiVerdictStore.getState().setRequestState('case-local-1', {
+      status: 'quota_exceeded',
+      updatedAt: '2026-04-22T10:00:00.000Z',
+    });
 
     const result = await authService.deleteAccount();
 
     expect(result).toEqual({ ok: true, message: 'Local data deleted.' });
     expect(useGuestStore.getState().cases).toHaveLength(0);
     expect(useGuestStore.getState().drafts.caseText).toBe('');
+    expect(useAiVerdictStore.getState().byCaseId).toEqual({});
+    expect(useAiVerdictStore.getState().requestByCaseId).toEqual({});
     expect(useAuthStore.getState().sessionMode).toBe('guest');
     expect(useAuthStore.getState().hasCompletedEntry).toBe(false);
     expect(premiumService.handleAuthStateChange).toHaveBeenCalledWith(null);
@@ -177,6 +230,11 @@ describe('authService.deleteAccount', () => {
     });
     useGuestStore.getState().addCase(buildGuestCase());
     useGuestStore.getState().setCaseDraft('draft');
+    useAiVerdictStore.getState().setAiVerdict('remote-case-1', buildAiVerdictSnapshot());
+    useAiVerdictStore.getState().setRequestState('remote-case-1', {
+      status: 'quota_exceeded',
+      updatedAt: '2026-04-22T10:00:00.000Z',
+    });
     mockSupabase.functions.invoke.mockResolvedValue({ data: { ok: true }, error: null });
 
     const result = await authService.deleteAccount();
@@ -185,6 +243,8 @@ describe('authService.deleteAccount', () => {
     expect(mockSupabase.functions.invoke).toHaveBeenCalledWith('delete-account', { body: {} });
     expect(mockSupabase.auth.signOut).toHaveBeenCalledWith({ scope: 'local' });
     expect(useGuestStore.getState().cases).toHaveLength(0);
+    expect(useAiVerdictStore.getState().byCaseId).toEqual({});
+    expect(useAiVerdictStore.getState().requestByCaseId).toEqual({});
     expect(useAuthStore.getState().sessionMode).toBe('guest');
     expect(useAuthStore.getState().hasCompletedEntry).toBe(false);
     expect(premiumService.handleAuthStateChange).toHaveBeenCalledWith(null);
@@ -319,7 +379,7 @@ describe('authService email password auth', () => {
 
     expect(result).toEqual({
       ok: true,
-      message: 'Account created. Check your email to confirm it, then sign in.',
+      message: 'Account created. Check your email to confirm it, then sign in. If it is not there, check Spam/Junk.',
     });
     expect(useAuthStore.getState().sessionMode).toBe('guest');
     expect(premiumService.handleAuthStateChange).not.toHaveBeenCalled();
@@ -332,7 +392,7 @@ describe('authService email password auth', () => {
 
     expect(result).toEqual({
       ok: true,
-      message: 'Check your email for the password reset link.',
+      message: 'Check your email for the password reset link. If it is not there, check Spam/Junk.',
     });
     expect(mockSupabase.auth.resetPasswordForEmail).toHaveBeenCalledWith('person@example.com', {
       redirectTo: 'overthought://reset-password',

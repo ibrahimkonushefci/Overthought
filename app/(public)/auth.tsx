@@ -158,10 +158,10 @@ export default function AuthRoute() {
             <Mail color={colors.brand.pink} size={18} strokeWidth={2.5} />
             <View style={styles.successCopy}>
               <AppText variant="body" style={styles.successTitle}>
-                Check your email
+                Account created
               </AppText>
               <AppText variant="meta" style={styles.successBody}>
-                Confirm {signupSuccessEmail}, then sign in here.
+                Check {signupSuccessEmail} to confirm your account, then sign in here. If it is not there, check Spam/Junk.
               </AppText>
             </View>
           </View>

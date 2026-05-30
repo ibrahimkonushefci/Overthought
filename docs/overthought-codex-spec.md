@@ -180,7 +180,7 @@ Goal: make the product stable, review-safe, and expansion-ready.
 - implement soft premium gates / feature flags
 - improve empty states
 - improve error handling and retries
-- add account deletion flow
+- maintain and test account deletion flow
 - finalize analytics events
 - add e2e smoke tests
 - optimize loading / caching / offline handling
@@ -821,4 +821,3 @@ Never hardcode v1 assumptions in a way that blocks later category expansion, pre
 - do not create a chat system
 - do not overbuild settings or social features
 - optimize for a simple and polished first release
-

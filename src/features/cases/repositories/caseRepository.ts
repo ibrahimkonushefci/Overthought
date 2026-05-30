@@ -4,6 +4,7 @@ import { supabase } from '../../../lib/supabase/client';
 import { nowIso, parseAppTimestamp } from '../../../shared/utils/date';
 import { createId } from '../../../shared/utils/id';
 import { titleFromInput } from '../../../shared/utils/verdict';
+import { useAiVerdictStore } from '../../../store/aiVerdictStore';
 import { useAuthStore } from '../../../store/authStore';
 import { selectActiveGuestCases, useGuestStore } from '../../../store/guestStore';
 import { analysisService } from '../../analysis/analysisService';
@@ -281,6 +282,7 @@ export const caseRepository = {
       }
 
       useGuestStore.getState().archiveCase(caseId);
+      useAiVerdictStore.getState().clearAiVerdict(caseId);
       return;
     }
 
@@ -302,12 +304,15 @@ export const caseRepository = {
     if (error) {
       throw error;
     }
+
+    useAiVerdictStore.getState().clearAiVerdict(caseId);
   },
   async archiveAllCases(): Promise<void> {
     const auth = useAuthStore.getState();
 
     if (auth.sessionMode !== 'authenticated') {
       useGuestStore.getState().clearCases();
+      useAiVerdictStore.getState().clearAllAiVerdicts();
       return;
     }
 
@@ -329,5 +334,7 @@ export const caseRepository = {
     if (error) {
       throw error;
     }
+
+    useAiVerdictStore.getState().clearAllAiVerdicts();
   },
 };

@@ -1,9 +1,15 @@
 import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, View } from 'react-native';
+import { Alert, Linking, Pressable, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, Trash2 } from 'lucide-react-native';
 import { authService } from '../../../src/features/auth/authService';
+import {
+  accountDeletionConfirmationMessage,
+  accountDeletionDetailText,
+  APPLE_SUBSCRIPTIONS_URL,
+} from '../../../src/features/profile/accountDeletionCopy';
 import { useAuthStore } from '../../../src/store/authStore';
+import { isPremiumStateActive, usePremiumStore } from '../../../src/store/premiumStore';
 import { Screen } from '../../../src/shared/ui/Screen';
 import { AppText } from '../../../src/shared/ui/Text';
 import { Button } from '../../../src/shared/ui/Button';
@@ -13,11 +19,13 @@ import { colors, radii, spacing, typography } from '../../../src/shared/theme/to
 export default function DeleteAccountRoute() {
   const router = useRouter();
   const sessionMode = useAuthStore((state) => state.sessionMode);
+  const premiumState = usePremiumStore((state) => state.premiumState);
   const [loading, setLoading] = useState(false);
   const isGuest = sessionMode !== 'authenticated';
+  const hasPremium = !isGuest && isPremiumStateActive(premiumState);
 
   const submit = () => {
-    Alert.alert(isGuest ? 'Delete local data?' : 'Delete account?', 'This action cannot be undone from the app.', [
+    Alert.alert(isGuest ? 'Delete local data?' : 'Delete account?', accountDeletionConfirmationMessage(isGuest, hasPremium), [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete',
@@ -37,6 +45,14 @@ export default function DeleteAccountRoute() {
     ]);
   };
 
+  const openManageSubscriptions = async () => {
+    try {
+      await Linking.openURL(APPLE_SUBSCRIPTIONS_URL);
+    } catch {
+      Alert.alert('Subscriptions', 'Could not open App Store subscriptions right now.');
+    }
+  };
+
   return (
     <Screen>
       <View style={styles.topRow}>
@@ -50,10 +66,15 @@ export default function DeleteAccountRoute() {
       <Card>
         <AppText variant="title">{isGuest ? 'Local guest data' : 'Account deletion'}</AppText>
         <AppText variant="subtitle" style={styles.body}>
-          {isGuest
-            ? 'This clears guest cases, drafts, and local session markers from this device.'
-            : 'This permanently deletes your Overthought account, synced cases, and local session data, then signs you out on this device.'}
+          {accountDeletionDetailText(isGuest, hasPremium)}
         </AppText>
+        {hasPremium ? (
+          <Pressable accessibilityRole="link" onPress={() => void openManageSubscriptions()} style={styles.subscriptionLink}>
+            <AppText variant="body" color={colors.brand.pink} style={styles.subscriptionLinkText}>
+              Manage Apple subscription
+            </AppText>
+          </Pressable>
+        ) : null}
       </Card>
       <View style={styles.action}>
         <Button
@@ -89,6 +110,13 @@ const styles = StyleSheet.create({
   },
   body: {
     marginTop: spacing.md,
+  },
+  subscriptionLink: {
+    alignSelf: 'flex-start',
+    marginTop: spacing.lg,
+  },
+  subscriptionLinkText: {
+    fontFamily: typography.family.displaySemiBold,
   },
   action: {
     marginTop: spacing.xl,

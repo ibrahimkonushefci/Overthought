@@ -1,4 +1,5 @@
 import type { GuestCaseLocal } from '../../../types/shared';
+import { useAiVerdictStore } from '../../../store/aiVerdictStore';
 import { useAuthStore } from '../../../store/authStore';
 import { useGuestStore } from '../../../store/guestStore';
 import { supabase } from '../../../lib/supabase/client';
@@ -68,6 +69,50 @@ function guestCase(localId = 'local-case-1'): GuestCaseLocal {
     deletedAt: null,
     updates: [],
     syncStatus: 'local_only',
+  };
+}
+
+function buildAiVerdictSnapshot() {
+  const localFallback = {
+    verdictLabel: 'slight_reach' as const,
+    delusionScore: 41,
+    explanationText: 'Local explanation.',
+    nextMoveText: 'Local move.',
+    verdictVersion: 1,
+    triggeredSignals: [],
+  };
+
+  return {
+    verdict: {
+      ...localFallback,
+      source: 'ai' as const,
+      displayLabel: 'Slight reach',
+      evidenceCheckText: 'Evidence is mixed.',
+      overreadingText: 'You are reading timing too hard.',
+      whatMattersText: 'Whether the plan becomes real.',
+    },
+    localFallback,
+    cache: {
+      id: 'ai-verdict-1',
+      source: 'generated' as const,
+      targetFingerprint: 'fingerprint-1',
+      modelProvider: 'google',
+      modelName: 'gemini',
+      modelVersion: null,
+      promptVersion: 3,
+      responseSchemaVersion: 1,
+      createdAt: '2026-04-21T10:00:00.000Z',
+    },
+    access: {
+      accessTier: 'free' as const,
+      allowed: true,
+      used: 1,
+      remaining: 1,
+      limit: 2,
+      quotaScope: 'daily' as const,
+      quotaBucket: '2026-04-21',
+    },
+    updatedAt: '2026-04-21T10:00:00.000Z',
   };
 }
 
@@ -171,6 +216,7 @@ describe('caseRepository authenticated sync behavior', () => {
       triggeredSignals: [],
     });
     useGuestStore.getState().clearAllLocalData();
+    useAiVerdictStore.getState().clearAllAiVerdicts();
     useAuthStore.getState().setAuthenticated({
       id: 'user-1',
       email: 'person@example.com',
@@ -180,6 +226,7 @@ describe('caseRepository authenticated sync behavior', () => {
 
   afterEach(() => {
     useGuestStore.getState().clearAllLocalData();
+    useAiVerdictStore.getState().clearAllAiVerdicts();
     useAuthStore.getState().resetSession();
   });
 
@@ -254,12 +301,19 @@ describe('caseRepository authenticated sync behavior', () => {
 
   it('archives remote cases without touching guest cases in authenticated mode', async () => {
     useGuestStore.getState().addCase(guestCase('remote-case-1'));
+    useAiVerdictStore.getState().setAiVerdict('remote-case-1', buildAiVerdictSnapshot());
+    useAiVerdictStore.getState().setRequestState('remote-case-1', {
+      status: 'success',
+      updatedAt: '2026-04-21T10:00:00.000Z',
+    });
     const builder = updateBuilder();
     mockSupabase.from.mockReturnValue(builder);
 
     await caseRepository.archiveCase('remote-case-1');
 
     expect(useGuestStore.getState().cases[0].archivedAt).toBeNull();
+    expect(useAiVerdictStore.getState().byCaseId['remote-case-1']).toBeUndefined();
+    expect(useAiVerdictStore.getState().requestByCaseId['remote-case-1']).toBeUndefined();
     expect(builder.update).toHaveBeenCalledWith({ archived_at: expect.any(String) });
     expect(builder.eq).toHaveBeenCalledWith('id', 'remote-case-1');
   });
@@ -270,18 +324,31 @@ describe('caseRepository authenticated sync behavior', () => {
     useGuestStore.getState().addCase(guestCase('local-case-1'));
     useGuestStore.getState().addCase(guestCase('local-case-2'));
     useGuestStore.getState().setUpdateDraft('local-case-1', 'draft update');
+    useAiVerdictStore.getState().setAiVerdict('local-case-1', buildAiVerdictSnapshot());
+    useAiVerdictStore.getState().setAiVerdict('local-case-2', buildAiVerdictSnapshot());
+    useAiVerdictStore.getState().setRequestState('local-case-1', {
+      status: 'success',
+      updatedAt: '2026-04-21T10:00:00.000Z',
+    });
 
     await caseRepository.archiveAllCases();
 
     expect(useGuestStore.getState().localGuestId).toBe(localGuestId);
     expect(useGuestStore.getState().cases).toHaveLength(0);
     expect(useGuestStore.getState().drafts.updateTextByCaseId).toEqual({});
+    expect(useAiVerdictStore.getState().byCaseId).toEqual({});
+    expect(useAiVerdictStore.getState().requestByCaseId).toEqual({});
     expect(mockSupabase.from).not.toHaveBeenCalled();
   });
 
   it('bulk archives authenticated cases using the existing soft-delete model', async () => {
     const builder = bulkArchiveBuilder();
     mockSupabase.from.mockReturnValue(builder);
+    useAiVerdictStore.getState().setAiVerdict('remote-case-1', buildAiVerdictSnapshot());
+    useAiVerdictStore.getState().setRequestState('remote-case-1', {
+      status: 'success',
+      updatedAt: '2026-04-21T10:00:00.000Z',
+    });
 
     await caseRepository.archiveAllCases();
 
@@ -290,6 +357,8 @@ describe('caseRepository authenticated sync behavior', () => {
     expect(builder.eq).toHaveBeenCalledWith('user_id', 'user-1');
     expect(builder.is).toHaveBeenCalledWith('archived_at', null);
     expect(builder.is).toHaveBeenCalledWith('deleted_at', null);
+    expect(useAiVerdictStore.getState().byCaseId).toEqual({});
+    expect(useAiVerdictStore.getState().requestByCaseId).toEqual({});
   });
 
   it('normalizes authenticated case insert failures into Error instances with Supabase details', async () => {
@@ -322,11 +391,13 @@ describe('caseRepository guest outcome behavior', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     useGuestStore.getState().clearAllLocalData();
+    useAiVerdictStore.getState().clearAllAiVerdicts();
     useAuthStore.getState().setGuest();
   });
 
   afterEach(() => {
     useGuestStore.getState().clearAllLocalData();
+    useAiVerdictStore.getState().clearAllAiVerdicts();
     useAuthStore.getState().resetSession();
   });
 
@@ -343,5 +414,22 @@ describe('caseRepository guest outcome behavior', () => {
     expect(after.explanationText).toBe(before.explanationText);
     expect(after.nextMoveText).toBe(before.nextMoveText);
     expect(mockSupabase.from).not.toHaveBeenCalled();
+  });
+
+  it('clears local AI verdict state when a guest case is archived', async () => {
+    useGuestStore.getState().addCase(guestCase('local-case-1'));
+    useGuestStore.getState().addCase(guestCase('local-case-2'));
+    useAiVerdictStore.getState().setAiVerdict('local-case-1', buildAiVerdictSnapshot());
+    useAiVerdictStore.getState().setRequestState('local-case-1', {
+      status: 'success',
+      updatedAt: '2026-04-21T10:00:00.000Z',
+    });
+    useAiVerdictStore.getState().setAiVerdict('local-case-2', buildAiVerdictSnapshot());
+
+    await caseRepository.archiveCase('local-case-1');
+
+    expect(useAiVerdictStore.getState().byCaseId['local-case-1']).toBeUndefined();
+    expect(useAiVerdictStore.getState().requestByCaseId['local-case-1']).toBeUndefined();
+    expect(useAiVerdictStore.getState().byCaseId['local-case-2']).toBeDefined();
   });
 });

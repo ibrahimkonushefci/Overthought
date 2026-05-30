@@ -110,10 +110,12 @@ Optional `ai-verdict` quota cap environment variables:
 - Forgot password has its own public screen and uses Supabase password recovery with `overthought://reset-password` as the app redirect.
 - The password reset redirect is intentionally hardcoded in the app to avoid local Metro URLs such as `http://localhost:8081` leaking into reset emails.
 - Password recovery links create a temporary Supabase session; public auth screens must not auto-route that session to Home while `/reset-password` is active.
-- Supabase Auth redirect URLs must include `overthought://reset-password` before testing password reset links.
+- Supabase Auth Site URL should be `https://overthought.app` for production, not a local Metro URL.
+- Supabase Auth redirect URLs must include `overthought://auth` and `overthought://reset-password` before testing email confirmation and password reset links.
+- Production auth email should use custom SMTP through the verified Resend domain `mail.overthought.app`.
 - Magic-link email is no longer the primary app UI path.
 - If Supabase email confirmation is enabled, email/password sign-up may still require the user to confirm by email before signing in.
-- Email deliverability and confirmation-link polish remain later backlog unless they block manual testing.
+- Confirm Signup and Reset Password templates should use `{{ .ConfirmationURL }}` and state that the link opens Overthought. App-side success copy tells users to check Spam/Junk if the email is missing.
 
 ## 8. Profile fields decision
 
@@ -148,6 +150,7 @@ This section records the late v1 stabilization pass completed before the next ha
 - AI Verdict and Deep Read now use the same signed-in daily AI pool in both directions. Premium users get 50 total generated AI reads per UTC day by default across AI Verdict and Deep Read combined; cached AI/Deep Read results reopen without spending quota. Migration `0006_unified_ai_read_quota.sql` has been applied, and the updated `ai-verdict` Edge Function has been deployed.
 - The client-side fix that ignores stale free-tier quota locks after a premium upgrade shipped in the latest TestFlight build and was manually verified on device.
 - The minimal `display_name` profile editor shipped in the latest TestFlight build and was manually verified on device.
+- Authenticated account deletion uses the deployed `delete-account` Supabase Edge Function for final `auth.users` deletion. Premium users see an Apple subscription warning and manage-subscription link before deletion; subscription cancellation still happens through Apple.
 - The production iOS build was rebuilt and submitted successfully to TestFlight; current physical-device TestFlight checks pass.
 - Expo SDK patch packages are aligned on the Expo 55 line. Production iOS uses Hermes V1 via `ios/Podfile.properties.json` (`expo.useHermesV1=true`) and `ios/Podfile.lock` records `hermes-engine 250829098.0.4`.
 - `babel-preset-expo` must stay on the Expo 55-compatible line (`~55.0.22`) unless the whole Expo SDK is upgraded.

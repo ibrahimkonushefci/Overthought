@@ -35,8 +35,7 @@ export function MigrationPrompt() {
         text: 'Not now',
         style: 'cancel',
         onPress: () => {
-          useGuestStore.getState().markMigrationPromptSkipped(userId);
-          useGuestStore.getState().clearGuestSessionData();
+          skipGuestMigrationPrompt(userId);
           promptVisibleRef.current = false;
         },
       },
@@ -52,6 +51,10 @@ export function MigrationPrompt() {
   }, [hasMigratableCases, promptDecision, sessionMode, userId]);
 
   return null;
+}
+
+export function skipGuestMigrationPrompt(userId: string) {
+  useGuestStore.getState().markMigrationPromptSkipped(userId);
 }
 
 async function migrate(userId: string) {

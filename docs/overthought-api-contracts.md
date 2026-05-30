@@ -37,9 +37,15 @@ Owns:
 ### Edge Functions
 Use only where it simplifies architecture.
 
-Recommended v1 functions:
-1. `migrate-guest-cases`
-2. `revenuecat-webhook` (stub now, complete later)
+Current v1 functions:
+1. `ai-verdict`
+2. `deep-read`
+3. `delete-account`
+4. `sync-premium-state`
+
+Potential future functions:
+- `migrate-guest-cases` if guest migration moves server-side
+- `revenuecat-webhook` if subscription state sync moves from app-triggered sync to webhooks
 
 If Codex prefers, the deterministic verdict engine can also run on-device for guest mode and on the server for authenticated mode. The interface should stay the same either way.
 
@@ -320,7 +326,7 @@ For a case-level Deep Read:
 }
 ```
 
-For authenticated users, the future Edge Function should prefer `caseId` and fetch the case from Supabase before generation. Client-provided case text is useful for shared contracts, guest local caching, and tests, but authenticated ownership and active-case checks should use server data.
+For authenticated users, the Edge Function should prefer `caseId` and fetch the case from Supabase before generation. Client-provided case text is useful for shared contracts, guest local caching, and tests, but authenticated ownership and active-case checks should use server data.
 
 For guests, cases are local-only, so the client must provide the target snapshot. Guest AI output should remain local-only in v1; the backend may track hashed guest usage events without storing generated text.
 
@@ -448,7 +454,7 @@ Generation attempts may create a `reserved` event before calling the provider. A
 ### RLS and ownership
 Authenticated users may read their own cached Deep Reads only when the parent case is active and owned by them.
 
-Client writes to Deep Read tables should not be allowed. Future Edge Functions should use the service role after:
+Client writes to Deep Read tables should not be allowed. Edge Functions should use the service role after:
 - verifying the caller token
 - checking case ownership
 - rejecting archived/deleted cases
