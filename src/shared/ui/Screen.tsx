@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { useEffect, useRef } from 'react';
 import type { NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing } from '../theme/tokens';
 
@@ -53,6 +53,7 @@ export function Screen({
       <ScrollView
         ref={scrollRef}
         contentContainerStyle={[styles.content, { backgroundColor, paddingBottom: bottomInset }]}
+        keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
         keyboardShouldPersistTaps="handled"
         onScroll={onScrollYChange ? handleScroll : undefined}
         scrollEventThrottle={onScrollYChange ? 16 : undefined}

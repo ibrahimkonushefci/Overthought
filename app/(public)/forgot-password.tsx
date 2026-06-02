@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Alert, Keyboard, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, Mail, MailCheck, Sparkles } from 'lucide-react-native';
 import { authService } from '../../src/features/auth/authService';
@@ -22,6 +22,7 @@ export default function ForgotPasswordRoute() {
     }
 
     setLoading(true);
+    Keyboard.dismiss();
     const result = await authService.requestPasswordReset(trimmedEmail);
     setLoading(false);
 
@@ -69,7 +70,14 @@ export default function ForgotPasswordRoute() {
                 onChangeText={setEmail}
                 placeholder="you@example.com"
                 placeholderTextColor={colors.ui.placeholder}
+                returnKeyType="done"
                 style={styles.input}
+                submitBehavior="submit"
+                onSubmitEditing={() => {
+                  if (email.includes('@') && !loading) {
+                    void submit();
+                  }
+                }}
                 value={email}
               />
             </View>

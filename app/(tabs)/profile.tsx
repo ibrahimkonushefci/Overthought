@@ -29,6 +29,7 @@ export default function ProfileRoute() {
   const [profileEditorVisible, setProfileEditorVisible] = useState(false);
   const [displayNameDraft, setDisplayNameDraft] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   const isGuest = auth.sessionMode !== 'authenticated';
   const hasPremium = isPremiumStateActive(premiumState);
   const accountDisplayName = isGuest ? 'Guest' : auth.profile?.displayName ?? auth.user?.email?.split('@')[0] ?? 'Account';
@@ -80,6 +81,17 @@ export default function ProfileRoute() {
     } finally {
       setSavingProfile(false);
     }
+  };
+
+  const signOut = async () => {
+    if (signingOut) {
+      return;
+    }
+
+    setSigningOut(true);
+    await authService.signOut();
+    router.replace('/welcome');
+    setSigningOut(false);
   };
 
   const deleteAllCases = () => {
@@ -163,7 +175,7 @@ export default function ProfileRoute() {
             </View>
           ) : (
             <View style={styles.signInButton}>
-              <Button title="Sign out" variant="outline" onPress={() => void authService.signOut()} />
+              <Button title="Sign out" variant="outline" loading={signingOut} disabled={signingOut} onPress={() => void signOut()} />
             </View>
           )}
         </View>
@@ -182,7 +194,7 @@ export default function ProfileRoute() {
         <AppText variant="subtitle" color={colors.text.onBrand} style={styles.premiumSubtitle}>
           {hasPremium
             ? 'Premium is active on this account.'
-            : 'Get more AI reads for the cases you cannot stop replaying. Fair-use limits apply.'}
+            : 'Get more Smart reads for the cases you cannot stop replaying. Fair-use limits apply.'}
         </AppText>
         <View style={styles.premiumButton}>
           <Button
@@ -203,7 +215,7 @@ export default function ProfileRoute() {
         />
         <SettingsRow
           icon={Shield}
-          title="Privacy"
+          title="Privacy Policy"
           onPress={() => void openConfiguredUrl('Privacy Policy', env.privacyPolicyUrl, 'EXPO_PUBLIC_PRIVACY_POLICY_URL')}
         />
         <SettingsRow
@@ -263,7 +275,9 @@ export default function ProfileRoute() {
               placeholder="Account"
               placeholderTextColor={colors.text.secondary}
               returnKeyType="done"
+              submitBehavior="submit"
               style={styles.profileInput}
+              onSubmitEditing={() => void saveProfile()}
               value={displayNameDraft}
             />
             <AppText variant="meta" color={colors.text.secondary} style={styles.profileHelp}>

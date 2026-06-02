@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Alert, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Alert, Keyboard, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Plus } from 'lucide-react-native';
 import { caseRepository } from '../../../src/features/cases/repositories/caseRepository';
@@ -46,6 +46,7 @@ export default function AddUpdateRoute() {
       return;
     }
 
+    Keyboard.dismiss();
     setLoading(true);
 
     try {

@@ -15,7 +15,7 @@ import { Screen } from '../../src/shared/ui/Screen';
 import { colors, gradients, radii, shadows, spacing, typography } from '../../src/shared/theme/tokens';
 
 const benefits = [
-  'More AI Verdicts when free reads run out',
+  '50 Smart Verdicts per day when free reads run out',
   'Sharper Deep Reads with more context',
   'Premium access stays attached when signed in',
   'Priority access to future premium features',
@@ -68,6 +68,16 @@ export default function PaywallRoute() {
     [packages, selectedPackageIdentifier],
   );
   const hasMonthlyAndAnnual = packages.some(isMonthlyPackage) && packages.some(isAnnualPackage);
+
+  const routeToAuth = () => {
+    if (router.canDismiss()) {
+      router.dismissAll();
+    }
+
+    requestAnimationFrame(() => {
+      router.push('/auth');
+    });
+  };
 
   const loadPackages = useCallback(async () => {
     setLoadingPackages(true);
@@ -128,7 +138,7 @@ export default function PaywallRoute() {
     }
 
     if (isGuest) {
-      router.push('/auth');
+      routeToAuth();
       return;
     }
 
@@ -196,7 +206,7 @@ export default function PaywallRoute() {
           </AppText>
         </View>
         <AppText variant="display" color={colors.text.onBrand} style={styles.title}>
-          More AI Verdicts.
+          More Smart Verdicts.
         </AppText>
         <AppText variant="subtitle" color={colors.text.onBrand} style={styles.subtitle}>
           For the cases you cannot stop replaying.

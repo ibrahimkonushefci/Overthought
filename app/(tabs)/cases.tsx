@@ -48,7 +48,9 @@ export default function CasesRoute() {
           onChangeText={setQuery}
           placeholder="Search cases..."
           placeholderTextColor={colors.ui.placeholder}
+          returnKeyType="search"
           style={styles.searchInput}
+          submitBehavior="blurAndSubmit"
           value={query}
         />
       </View>

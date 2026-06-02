@@ -541,7 +541,7 @@ export default function CaseDetailRoute() {
               <RemainingReads remaining={deepReadResult?.access.remaining ?? null} />
             </View>
             <AppText variant="subtitle" color="rgba(255, 255, 255, 0.72)" style={styles.deepSubtitle}>
-              Extra context after a basic verdict: what is happening, what you are overreading, and what to do next.
+              Extra context after a Basic Verdict: what is happening, what you are overreading, and what to do next.
             </AppText>
             <DeepReadContent
               locked={aiVerdictDeepReadLocked}
@@ -759,7 +759,7 @@ function AiQuotaUpgradeModal({
           </Pressable>
           <Pressable accessibilityRole="button" onPress={onClose} style={styles.upgradeModalSecondary}>
             <AppText variant="body" center color={colors.text.secondary} style={styles.upgradeModalSecondaryText}>
-              Keep Basic verdict
+              Keep Basic Verdict
             </AppText>
           </Pressable>
         </View>
@@ -793,10 +793,10 @@ function quotaUpgradeCopy(requestState?: AiVerdictRequestState) {
   const isGuest = requestState?.access?.accessTier === 'guest';
 
   return {
-    title: isGuest ? 'Your free AI verdicts are used up.' : "Today's free AI verdicts are used up.",
+    title: isGuest ? 'Your free Smart Verdicts are used up.' : "Today's free Smart Verdicts are used up.",
     body: isGuest
-      ? 'Sign in to upgrade and get more AI verdicts for the cases you cannot stop replaying.'
-      : 'Upgrade to Premium for more AI verdicts and sharper reads when Basic is not enough.',
+      ? 'Sign in to upgrade and get more Smart Verdicts for the cases you cannot stop replaying.'
+      : 'Upgrade to Premium for more Smart Verdicts and sharper reads when Basic is not enough.',
     cta: isGuest ? 'Sign in to upgrade' : 'Upgrade',
   };
 }
@@ -811,14 +811,14 @@ function accessCopy({
   const access = requestState?.access;
 
   if (!access) {
-    return isGuest ? '2 free AI verdicts' : '2 AI verdicts/day';
+    return isGuest ? '2 free Smart Verdicts' : '2 Smart Verdicts/day';
   }
 
   if (access.accessTier === 'guest') {
-    return `${access.remaining} of ${access.limit} free AI verdicts left`;
+    return `${access.remaining} of ${access.limit} free Smart Verdicts left`;
   }
 
-  return `${access.remaining} of ${access.limit} AI verdicts left today`;
+  return `${access.remaining} of ${access.limit} Smart Verdicts left today`;
 }
 
 function aiVerdictStatusText({
@@ -832,8 +832,8 @@ function aiVerdictStatusText({
 }) {
   if (source === 'loading') {
     return {
-      label: 'AI verdict loading...',
-      body: `Showing a basic preview while AI writes the final verdict. If AI succeeds, this result will update. ${accessCopy({ requestState, isGuest })}.`,
+      label: 'Smart Verdict loading...',
+      body: `Showing a Basic Verdict preview while Smart Verdict finishes. If it succeeds, this result will update. ${accessCopy({ requestState, isGuest })}.`,
       loading: true,
       tone: 'loading' as const,
     };
@@ -841,7 +841,7 @@ function aiVerdictStatusText({
 
   if (source === 'ai' || source === 'cache') {
     return {
-      label: 'AI verdict',
+      label: 'Smart Verdict',
       body:
         source === 'cache'
           ? requestState?.message ?? `Cached result. ${accessCopy({ requestState, isGuest })}.`
@@ -853,8 +853,8 @@ function aiVerdictStatusText({
 
   if (!requestState || requestState.status === 'idle') {
     return {
-      label: 'Basic verdict',
-      body: isGuest ? 'AI verdict available for the first 2 guest cases.' : 'AI verdict available 2 times per day.',
+      label: 'Basic Verdict',
+      body: isGuest ? 'Smart Verdict is available for the first 2 guest cases.' : 'Smart Verdict is available 2 times per day.',
       loading: false,
       tone: 'basic' as const,
     };
@@ -863,28 +863,28 @@ function aiVerdictStatusText({
   const quotaExceededMessage =
     requestState.status === 'quota_exceeded' && requestState.access?.accessTier === 'guest'
       ? requestState.access.reason === 'guest_lifetime_limit'
-        ? "You've used your free guest AI verdicts. Sign in for daily AI verdicts."
-        : "You've used today's guest AI verdicts. Showing basic verdict."
-      : "You've used today's free AI verdicts. Showing basic verdict.";
+        ? "You've used your free guest Smart Verdicts. Sign in for daily Smart Verdicts."
+        : "You've used today's guest Smart Verdicts. Showing Basic Verdict."
+      : "You've used today's free Smart Verdicts. Showing Basic Verdict.";
 
   const fallbackMessageByStatus: Partial<Record<AiVerdictRequestState['status'], string>> = {
     quota_exceeded: quotaExceededMessage,
-    ip_daily_cap_exceeded: 'AI verdicts are temporarily limited. Showing basic verdict.',
-    global_daily_cap_exceeded: 'AI verdicts are temporarily limited. Showing basic verdict.',
-    ai_failed: 'AI could not load. Showing basic verdict.',
-    ai_timeout: 'AI timed out. Showing basic verdict.',
-    unauthenticated: 'Sign in to use AI verdicts. Showing basic verdict.',
-    guest_key_required: 'Guest AI access could not start. Showing basic verdict.',
-    invalid_ai_response: 'AI returned an invalid result. Showing basic verdict.',
-    case_not_found: 'AI could not find this case. Showing basic verdict.',
-    fair_use_exceeded: 'AI is temporarily limited for fair use. Showing basic verdict.',
-    cache_write_failed: 'AI could not save the result. Showing basic verdict.',
-    unknown: 'AI is unavailable right now. Showing basic verdict.',
+    ip_daily_cap_exceeded: 'Smart Verdicts are temporarily limited. Showing Basic Verdict.',
+    global_daily_cap_exceeded: 'Smart Verdicts are temporarily limited. Showing Basic Verdict.',
+    ai_failed: 'Smart Verdict could not load. Showing Basic Verdict.',
+    ai_timeout: 'Smart Verdict timed out. Showing Basic Verdict.',
+    unauthenticated: 'Sign in to use Smart Verdicts. Showing Basic Verdict.',
+    guest_key_required: 'Guest Smart Verdict access could not start. Showing Basic Verdict.',
+    invalid_ai_response: 'Smart Verdict returned an invalid result. Showing Basic Verdict.',
+    case_not_found: 'Smart Verdict could not find this case. Showing Basic Verdict.',
+    fair_use_exceeded: 'Smart Verdict is temporarily limited for fair use. Showing Basic Verdict.',
+    cache_write_failed: 'Smart Verdict could not save the result. Showing Basic Verdict.',
+    unknown: 'Smart Verdict is unavailable right now. Showing Basic Verdict.',
   };
 
   return {
-    label: 'Basic verdict',
-    body: fallbackMessageByStatus[requestState.status] ?? requestState.message ?? 'Showing basic verdict.',
+    label: 'Basic Verdict',
+    body: fallbackMessageByStatus[requestState.status] ?? requestState.message ?? 'Showing Basic Verdict.',
     loading: false,
     tone: 'basic' as const,
   };
@@ -912,7 +912,7 @@ function AiVerdictStatusStrip({
   });
   const upgradeCopy = onUpgrade ? quotaUpgradeCopy(requestState) : null;
   const bodyText = onRetry
-    ? 'AI quota may be available again. Try AI Verdict when you want to use one for this case.'
+    ? 'Smart Verdict quota may be available again. Try Smart Verdict when you want to use one for this case.'
     : statusText.body;
 
   return (
@@ -943,7 +943,7 @@ function AiVerdictStatusStrip({
       {upgradeCopy && onUpgrade ? (
         <QuotaUpgradeButton label={upgradeCopy.cta} onPress={onUpgrade} />
       ) : null}
-      {onRetry ? <QuotaUpgradeButton label="Try AI Verdict" onPress={onRetry} /> : null}
+      {onRetry ? <QuotaUpgradeButton label="Try Smart Verdict" onPress={onRetry} /> : null}
     </View>
   );
 }
@@ -1010,12 +1010,12 @@ function AiVerdictPremiumCard({
       <View style={styles.deepHeader}>
         <View style={styles.deepTitleRow}>
           <AppText variant="title" color={colors.text.onBrand} style={styles.deepTitle}>
-            AI Verdict
+            Smart Verdict
           </AppText>
           <View style={styles.aiBadge}>
             <Sparkles color={colors.text.onAccent} size={14} strokeWidth={2.8} />
             <AppText variant="eyebrow" color={colors.text.onAccent} style={styles.aiBadgeText}>
-              AI
+              Smart
             </AppText>
           </View>
         </View>
@@ -1176,14 +1176,14 @@ function DeepReadContent({
         <DeepReadStateText
           text={
             quotaRetryEligible
-              ? 'AI quota may be available again. Try AI Verdict before opening Deep Read for this case.'
+              ? 'Smart Verdict quota may be available again. Try Smart Verdict before opening Deep Read for this case.'
               : upgradeCopy
-                ? `${upgradeCopy.title} Your basic verdict is still available.`
-                : 'AI reads are locked for this case. Your basic verdict is still available.'
+                ? `${upgradeCopy.title} Your Basic Verdict is still available.`
+                : 'Smart reads are locked for this case. Your Basic Verdict is still available.'
           }
         />
         {upgradeCopy ? <DeepReadButton label={upgradeCopy.cta} onPress={onUpgrade} /> : null}
-        {quotaRetryEligible ? <DeepReadButton label="Try AI Verdict" onPress={onRetry} /> : null}
+        {quotaRetryEligible ? <DeepReadButton label="Try Smart Verdict" onPress={onRetry} /> : null}
       </View>
     );
   }
@@ -1246,7 +1246,7 @@ function DeepReadContent({
   if (status === 'not_authenticated') {
     return (
       <View style={styles.deepStateStack}>
-        <DeepReadStateText text="Sign in to use Deep Read. AI verdicts run first when available." />
+        <DeepReadStateText text="Sign in to use Deep Read. Smart Verdicts run first when available." />
         <DeepReadButton label="Sign in" onPress={onSignIn} />
       </View>
     );
@@ -1255,12 +1255,12 @@ function DeepReadContent({
   if (status === 'quota') {
     const quotaCopy =
       failureAccess?.limit === null || failureAccess?.limit === undefined
-        ? "You've used today's AI reads."
-        : `You've used today's AI reads (${failureAccess.remaining} of ${failureAccess.limit} left).`;
+        ? "You've used today's Smart reads."
+        : `You've used today's Smart reads (${failureAccess.remaining} of ${failureAccess.limit} left).`;
 
     return (
       <View style={styles.deepStateStack}>
-        <DeepReadStateText text={`${quotaCopy} Your basic verdict above is unchanged.`} />
+        <DeepReadStateText text={`${quotaCopy} Your Basic Verdict above is unchanged.`} />
       </View>
     );
   }

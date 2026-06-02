@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Keyboard, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, Sparkles } from 'lucide-react-native';
 import type { CaseCategory } from '../src/types/shared';
@@ -51,6 +51,7 @@ export default function NewCaseRoute() {
       return;
     }
 
+    Keyboard.dismiss();
     setLoading(true);
     const minimumAnalyzingTime = wait(ANALYZING_DELAY_MS);
 
@@ -80,7 +81,7 @@ export default function NewCaseRoute() {
             Getting verdict...
           </AppText>
           <AppText variant="subtitle" center style={styles.analyzingSubtitle}>
-            Trying AI first. Basic verdict is ready if AI is unavailable.
+            Trying Smart Verdict first. Basic Verdict is ready if it is unavailable.
           </AppText>
         </View>
       </Screen>
@@ -106,8 +107,8 @@ export default function NewCaseRoute() {
         <Sparkles color={colors.text.secondary} size={15} strokeWidth={2.5} />
         <AppText variant="meta" color={colors.text.secondary} style={styles.aiAccessText}>
           {sessionMode === 'authenticated'
-            ? 'AI verdicts run first when available: 2 free per day. Basic verdict is the fallback.'
-            : 'Guest trial includes 2 free AI verdicts. Sign in later for 2 AI verdicts per day.'}
+            ? 'Smart Verdicts run first when available: 2 free per day. Basic Verdict is the fallback.'
+            : 'Guest trial includes 2 free Smart Verdicts. Sign in later for 2 Smart Verdicts per day.'}
         </AppText>
       </View>
 

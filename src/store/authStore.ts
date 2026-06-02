@@ -38,7 +38,7 @@ export const useAuthStore = create<AuthState>()(
       setAuthenticated: (user, profile = null) =>
         set({ sessionMode: 'authenticated', user, profile, hasCompletedEntry: true }),
       setProfile: (profile) => set({ profile }),
-      signOutLocal: () => set({ sessionMode: 'guest', user: null, profile: null }),
+      signOutLocal: () => set({ sessionMode: 'guest', user: null, profile: null, hasCompletedEntry: false }),
       resetSession: () => set({ sessionMode: 'guest', user: null, profile: null, hasCompletedEntry: false }),
     }),
     {

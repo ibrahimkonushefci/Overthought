@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Alert, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { Alert, Keyboard, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { usePathname, useRouter } from 'expo-router';
 import { ArrowLeft, LockKeyhole, LogIn, Mail, Sparkles, UserPlus } from 'lucide-react-native';
 import { authService } from '../../src/features/auth/authService';
@@ -23,11 +23,21 @@ export default function AuthRoute() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [signupSuccessEmail, setSignupSuccessEmail] = useState<string | null>(null);
 
+  const routeHome = useCallback(() => {
+    if (router.canDismiss()) {
+      router.dismissAll();
+    }
+
+    requestAnimationFrame(() => {
+      router.replace('/home');
+    });
+  }, [router]);
+
   useEffect(() => {
     if (sessionMode === 'authenticated' && pathname !== '/reset-password') {
-      router.replace('/home');
+      routeHome();
     }
-  }, [pathname, router, sessionMode]);
+  }, [pathname, routeHome, sessionMode]);
 
   useEffect(() => {
     let isMounted = true;
@@ -52,6 +62,7 @@ export default function AuthRoute() {
     }
 
     setEmailLoading(true);
+    Keyboard.dismiss();
     const result =
       authMode === 'sign_in'
         ? await authService.signInWithEmailPassword(trimmedEmail, password)
@@ -185,6 +196,7 @@ export default function AuthRoute() {
                 placeholderTextColor={colors.ui.placeholder}
                 returnKeyType="next"
                 style={styles.input}
+                submitBehavior="submit"
                 value={email}
               />
             </View>
@@ -204,7 +216,14 @@ export default function AuthRoute() {
                 placeholderTextColor={colors.ui.placeholder}
                 secureTextEntry
                 style={styles.input}
+                returnKeyType="done"
+                submitBehavior="submit"
                 textContentType={authMode === 'sign_in' ? 'password' : 'newPassword'}
+                onSubmitEditing={() => {
+                  if (email.includes('@') && password.length >= 8 && !emailLoading && !appleLoading && !googleLoading) {
+                    void submit();
+                  }
+                }}
                 value={password}
               />
             </View>
@@ -276,7 +295,7 @@ export default function AuthRoute() {
           variant="ghost"
           onPress={() => {
             authService.continueAsGuest();
-            router.replace('/home');
+            routeHome();
           }}
         />
       </View>

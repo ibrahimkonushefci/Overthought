@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Alert, Keyboard, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, KeyRound, LockKeyhole, Sparkles } from 'lucide-react-native';
 import { authService } from '../../src/features/auth/authService';
@@ -35,6 +35,7 @@ export default function ResetPasswordRoute() {
     }
 
     setLoading(true);
+    Keyboard.dismiss();
     const result = await authService.updatePassword(password);
     setLoading(false);
 
@@ -100,6 +101,8 @@ export default function ResetPasswordRoute() {
                 placeholderTextColor={colors.ui.placeholder}
                 secureTextEntry
                 style={styles.input}
+                returnKeyType="next"
+                submitBehavior="submit"
                 textContentType="newPassword"
                 value={password}
               />
@@ -120,7 +123,14 @@ export default function ResetPasswordRoute() {
                 placeholderTextColor={colors.ui.placeholder}
                 secureTextEntry
                 style={styles.input}
+                returnKeyType="done"
+                submitBehavior="submit"
                 textContentType="newPassword"
+                onSubmitEditing={() => {
+                  if (canSubmit) {
+                    void submit();
+                  }
+                }}
                 value={confirmPassword}
               />
             </View>
