@@ -92,7 +92,7 @@ export default function WelcomeRoute() {
           Are you{'\n'}<AppText variant="display" color={colors.brand.pink} style={[styles.script, styles.welcomeScript]}>overthinking</AppText> it,{'\n'}or are you{'\n'}right?
         </AppText>
         <AppText variant="subtitle" style={styles.subtitle}>
-          Drop the situation. Get a verdict, a score, and one honest next move.
+          Drop the situation. Get the read, the score, and one honest next move.
         </AppText>
       </View>
 

@@ -17,6 +17,8 @@ import { useGuestStore } from '../src/store/guestStore';
 
 const categories: CaseCategory[] = ['romance', 'friendship', 'social', 'general'];
 const ANALYZING_DELAY_MS = 2000;
+const MIN_CASE_CHARACTERS = 30;
+const MIN_CASE_HELPER_COPY = "Give us at least 30 characters so there's enough drama to judge.";
 
 function wait(milliseconds: number) {
   return new Promise((resolve) => {
@@ -46,8 +48,8 @@ export default function NewCaseRoute() {
   const submit = async () => {
     const trimmed = inputText.trim();
 
-    if (!trimmed) {
-      Alert.alert('Add the situation', 'A sentence or two is enough.');
+    if (trimmed.length < MIN_CASE_CHARACTERS) {
+      Alert.alert('Add a little more', MIN_CASE_HELPER_COPY);
       return;
     }
 
@@ -78,7 +80,7 @@ export default function NewCaseRoute() {
         <View style={styles.analyzingScreen}>
           <ActivityIndicator color={colors.brand.pink} size="large" />
           <AppText variant="display" center style={styles.analyzingTitle}>
-            Getting verdict...
+            Getting the read...
           </AppText>
           <AppText variant="subtitle" center style={styles.analyzingSubtitle}>
             Trying Smart Verdict first. Basic Verdict is ready if it is unavailable.
@@ -101,7 +103,7 @@ export default function NewCaseRoute() {
         Spill the <AppText variant="display" color={colors.brand.pink} style={styles.script}>situation</AppText>.
       </AppText>
       <AppText variant="subtitle" style={styles.subtitle}>
-        1-3 sentences. No essays. We will judge accordingly.
+        A few details. No essay. We'll judge accordingly.
       </AppText>
       <View style={styles.aiAccessNote}>
         <Sparkles color={colors.text.secondary} size={15} strokeWidth={2.5} />
@@ -140,7 +142,9 @@ export default function NewCaseRoute() {
         />
         <View style={styles.inputMeta}>
           <AppText variant="meta">{inputText.length}/400</AppText>
-          <AppText variant="meta">{inputText.trim().length < 16 ? 'Keep going...' : 'Enough to judge.'}</AppText>
+          <AppText variant="meta" style={styles.inputHelper}>
+            {inputText.trim().length < MIN_CASE_CHARACTERS ? MIN_CASE_HELPER_COPY : 'Enough to judge.'}
+          </AppText>
         </View>
       </View>
 
@@ -167,10 +171,10 @@ export default function NewCaseRoute() {
 
       <View style={styles.submitWrap}>
         <Button
-          title="Get the verdict"
+          title="Judge this"
           icon={Sparkles}
           loading={loading}
-          disabled={loading || inputText.trim().length < 8}
+          disabled={loading || inputText.trim().length < MIN_CASE_CHARACTERS}
           onPress={() => void submit()}
         />
       </View>
@@ -249,8 +253,10 @@ const styles = StyleSheet.create({
     minHeight: 102,
   },
   inputMeta: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  inputHelper: {
+    lineHeight: 16,
   },
   examplesTitle: {
     marginTop: spacing.xl,

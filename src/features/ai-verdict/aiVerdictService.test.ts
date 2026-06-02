@@ -253,7 +253,7 @@ describe('aiVerdictService', () => {
     expect(result).toEqual({
       ok: false,
       code: 'unknown',
-      message: 'AI verdict is unavailable right now.',
+      message: 'Smart Verdict is unavailable right now.',
     });
     expect(useGuestStore.getState().cases[0].aiVerdict).toBeUndefined();
     expect(useAiVerdictStore.getState().requestByCaseId['local-case-1']).toMatchObject({
@@ -275,7 +275,7 @@ describe('aiVerdictService', () => {
     expect(result).toEqual({
       ok: false,
       code: 'ai_timeout',
-      message: 'AI verdict timed out. Showing basic verdict.',
+      message: 'Smart Verdict timed out. Showing Basic Verdict.',
     });
     expect(useGuestStore.getState().cases[0].aiVerdict).toBeUndefined();
     expect(useAiVerdictStore.getState().requestByCaseId['local-case-1']).toMatchObject({
@@ -358,7 +358,7 @@ describe('aiVerdictService', () => {
     expect(useAiVerdictStore.getState().byCaseId['remote-case-timeout'].verdict.explanationText).toBe('Late stored AI read.');
     expect(useAiVerdictStore.getState().requestByCaseId['remote-case-timeout']).toMatchObject({
       status: 'cache',
-      message: 'Saved AI verdict from your account.',
+      message: 'Saved Smart Verdict from your account.',
     });
   });
 
@@ -456,7 +456,7 @@ describe('aiVerdictService', () => {
     expect(useAiVerdictStore.getState().byCaseId['remote-case-1'].verdict.delusionScore).toBe(34);
     expect(useAiVerdictStore.getState().requestByCaseId['remote-case-1']).toMatchObject({
       status: 'cache',
-      message: 'Saved AI verdict from your account.',
+      message: 'Saved Smart Verdict from your account.',
     });
   });
 });

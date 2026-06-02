@@ -1,6 +1,7 @@
 import { useAuthStore } from '../../store/authStore';
 import { useAiVerdictStore } from '../../store/aiVerdictStore';
 import { useGuestStore } from '../../store/guestStore';
+import { useUiPreferencesStore } from '../../store/uiPreferencesStore';
 import { supabase } from '../../lib/supabase/client';
 import { env } from '../../lib/env';
 import * as AppleAuthentication from 'expo-apple-authentication';
@@ -195,6 +196,7 @@ describe('authService.deleteAccount', () => {
     mutableEnv.googleIosClientId = '';
     useGuestStore.getState().clearAllLocalData();
     useAiVerdictStore.getState().clearAllAiVerdicts();
+    useUiPreferencesStore.getState().resetFirstUseHelp();
     useAuthStore.getState().resetSession();
   });
 
@@ -204,6 +206,7 @@ describe('authService.deleteAccount', () => {
     useGuestStore.getState().ensureGuestSession();
     useGuestStore.getState().addCase(buildGuestCase());
     useGuestStore.getState().setCaseDraft('draft');
+    useUiPreferencesStore.getState().markFirstUseHelpSeen();
     useAiVerdictStore.getState().setAiVerdict('case-local-1', buildAiVerdictSnapshot());
     useAiVerdictStore.getState().setRequestState('case-local-1', {
       status: 'quota_exceeded',
@@ -217,6 +220,7 @@ describe('authService.deleteAccount', () => {
     expect(useGuestStore.getState().drafts.caseText).toBe('');
     expect(useAiVerdictStore.getState().byCaseId).toEqual({});
     expect(useAiVerdictStore.getState().requestByCaseId).toEqual({});
+    expect(useUiPreferencesStore.getState().hasSeenFirstUseHelp).toBe(false);
     expect(useAuthStore.getState().sessionMode).toBe('guest');
     expect(useAuthStore.getState().hasCompletedEntry).toBe(false);
     expect(premiumService.handleAuthStateChange).toHaveBeenCalledWith(null);
@@ -230,6 +234,7 @@ describe('authService.deleteAccount', () => {
     });
     useGuestStore.getState().addCase(buildGuestCase());
     useGuestStore.getState().setCaseDraft('draft');
+    useUiPreferencesStore.getState().markFirstUseHelpSeen();
     useAiVerdictStore.getState().setAiVerdict('remote-case-1', buildAiVerdictSnapshot());
     useAiVerdictStore.getState().setRequestState('remote-case-1', {
       status: 'quota_exceeded',
@@ -245,6 +250,7 @@ describe('authService.deleteAccount', () => {
     expect(useGuestStore.getState().cases).toHaveLength(0);
     expect(useAiVerdictStore.getState().byCaseId).toEqual({});
     expect(useAiVerdictStore.getState().requestByCaseId).toEqual({});
+    expect(useUiPreferencesStore.getState().hasSeenFirstUseHelp).toBe(false);
     expect(useAuthStore.getState().sessionMode).toBe('guest');
     expect(useAuthStore.getState().hasCompletedEntry).toBe(false);
     expect(premiumService.handleAuthStateChange).toHaveBeenCalledWith(null);
@@ -275,11 +281,13 @@ describe('authService.deleteAccount', () => {
       email: 'person@example.com',
       provider: 'email',
     });
+    useUiPreferencesStore.getState().markFirstUseHelpSeen();
     mockSupabase.auth.signOut.mockRejectedValueOnce(new Error('sign out failed'));
 
     await expect(authService.signOut()).resolves.toBeUndefined();
 
     expect(useAuthStore.getState().sessionMode).toBe('guest');
+    expect(useUiPreferencesStore.getState().hasSeenFirstUseHelp).toBe(true);
     expect(premiumService.handleAuthStateChange).toHaveBeenCalledWith(null);
   });
 });

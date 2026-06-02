@@ -77,7 +77,7 @@ function failure(code: AiVerdictFailureCode, message: string): Extract<AiVerdict
 }
 
 function safeUnavailableFailure(): Extract<AiVerdictResponse, { ok: false }> {
-  return failure('unknown', 'AI verdict is unavailable right now.');
+  return failure('unknown', 'Smart Verdict is unavailable right now.');
 }
 
 const AI_VERDICT_CLIENT_TIMEOUT_MS = 30_000;
@@ -244,7 +244,7 @@ function loadingState(): AiVerdictRequestState {
 function storedCacheState(): AiVerdictRequestState {
   return {
     status: 'cache',
-    message: 'Saved AI verdict from your account.',
+    message: 'Saved Smart Verdict from your account.',
     updatedAt: nowIso(),
   };
 }
@@ -298,9 +298,9 @@ function snapshotFromStoredRow(row: StoredAiVerdictRow): CaseAiVerdictSnapshot {
       displayLabel: row.display_label ?? row.verdict_label.replace(/_/g, ' '),
       explanationText: row.explanation_text,
       evidenceCheckText:
-        row.evidence_check_text ?? 'The saved AI verdict predates detailed evidence notes for this case.',
+        row.evidence_check_text ?? 'The saved Smart Verdict predates detailed evidence notes for this case.',
       overreadingText:
-        row.overreading_text ?? 'The saved AI verdict predates detailed overreading notes for this case.',
+        row.overreading_text ?? 'The saved Smart Verdict predates detailed overreading notes for this case.',
       whatMattersText: row.what_matters_text ?? 'Use the saved next move as the cleanest read on what matters.',
       nextMoveText: row.next_move_text,
       verdictVersion: row.verdict_version,
@@ -406,7 +406,7 @@ async function invokeAiVerdict(
     }
 
     return {
-      response: failure('invalid_ai_response', 'AI verdict returned an invalid response.'),
+      response: failure('invalid_ai_response', 'Smart Verdict returned an invalid response.'),
       httpStatus: result.status,
       elapsedMs: Date.now() - startedAt,
       timedOut: false,
@@ -414,7 +414,7 @@ async function invokeAiVerdict(
   } catch (error) {
     const timedOut = isAbortError(error);
     return {
-      response: timedOut ? failure('ai_timeout', 'AI verdict timed out. Showing basic verdict.') : safeUnavailableFailure(),
+      response: timedOut ? failure('ai_timeout', 'Smart Verdict timed out. Showing Basic Verdict.') : safeUnavailableFailure(),
       elapsedMs: Date.now() - startedAt,
       timedOut,
     };
@@ -512,7 +512,7 @@ export const aiVerdictService = {
       }
 
       if (auth.sessionMode !== 'authenticated' || !auth.user) {
-        const response = failure('not_authenticated', 'Sign in to use AI verdicts.');
+        const response = failure('not_authenticated', 'Sign in to use Smart Verdicts.');
         aiStore.setRequestState(caseId, requestStateFromFailure(response));
         return response;
       }
@@ -521,7 +521,7 @@ export const aiVerdictService = {
       const headers = await authenticatedHeaders();
 
       if (!headers) {
-        const response = failure('not_authenticated', 'Sign in to use AI verdicts.');
+        const response = failure('not_authenticated', 'Sign in to use Smart Verdicts.');
         aiStore.setRequestState(caseId, requestStateFromFailure(response));
         return response;
       }

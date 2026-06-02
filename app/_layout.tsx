@@ -16,6 +16,7 @@ import {
 } from '@expo-google-fonts/space-grotesk';
 import { authService } from '../src/features/auth/authService';
 import { MigrationPrompt } from '../src/features/migration/MigrationPrompt';
+import { FirstUseHelpModal } from '../src/shared/ui/FirstUseHelpModal';
 import { colors } from '../src/shared/theme/tokens';
 
 export default function RootLayout() {
@@ -58,6 +59,7 @@ export default function RootLayout() {
         <Stack.Screen name="(modals)" options={{ presentation: 'modal' }} />
       </Stack>
       <MigrationPrompt />
+      <FirstUseHelpModal />
     </>
   );
 }

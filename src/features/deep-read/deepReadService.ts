@@ -228,11 +228,11 @@ export const deepReadService = {
     const aiVerdictLockState = getAiVerdictDeepReadLockState(trimmedCaseId, { premiumActive });
 
     if (aiVerdictLockState?.status === 'fair_use_exceeded') {
-      return failure('fair_use_exceeded', 'AI reads are temporarily limited for fair use. Try again later.');
+      return failure('fair_use_exceeded', 'Smart reads are temporarily limited for fair use. Try again later.');
     }
 
     if (aiVerdictLockState) {
-      return failure('quota_exceeded', 'AI verdict quota is used up for now. Deep Read stays locked for this case.');
+      return failure('quota_exceeded', 'Smart Verdict quota is used up for now. Deep Read stays locked for this case.');
     }
 
     if (!supabase) {

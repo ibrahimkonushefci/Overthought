@@ -534,7 +534,7 @@ export default function CaseDetailRoute() {
                 <View style={styles.aiBadge}>
                   <Sparkles color={colors.text.onAccent} size={14} strokeWidth={2.8} />
                   <AppText variant="eyebrow" color={colors.text.onAccent} style={styles.aiBadgeText}>
-                    AI
+                    Smart
                   </AppText>
                 </View>
               </View>

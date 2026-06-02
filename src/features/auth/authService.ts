@@ -16,6 +16,7 @@ import { supabase } from '../../lib/supabase/client';
 import { useAuthStore } from '../../store/authStore';
 import { useAiVerdictStore } from '../../store/aiVerdictStore';
 import { useGuestStore } from '../../store/guestStore';
+import { useUiPreferencesStore } from '../../store/uiPreferencesStore';
 import { createId } from '../../shared/utils/id';
 import { premiumService } from '../premium/premiumService';
 import { profileRepository } from '../profile/profileRepository';
@@ -554,6 +555,7 @@ export const authService = {
     if (useAuthStore.getState().sessionMode !== 'authenticated') {
       useGuestStore.getState().clearAllLocalData();
       useAiVerdictStore.getState().clearAllAiVerdicts();
+      useUiPreferencesStore.getState().resetFirstUseHelp();
       useAuthStore.getState().resetSession();
       await premiumService.handleAuthStateChange(null);
       return { ok: true, message: 'Local data deleted.' };
@@ -593,6 +595,7 @@ export const authService = {
 
       useGuestStore.getState().clearAllLocalData();
       useAiVerdictStore.getState().clearAllAiVerdicts();
+      useUiPreferencesStore.getState().resetFirstUseHelp();
       useAuthStore.getState().resetSession();
       await premiumService.handleAuthStateChange(null);
       return {

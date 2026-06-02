@@ -209,7 +209,7 @@ describe('deepReadService', () => {
     await expect(deepReadService.requestCaseDeepRead('case-1')).resolves.toEqual({
       ok: false,
       code: 'quota_exceeded',
-      message: 'AI verdict quota is used up for now. Deep Read stays locked for this case.',
+      message: 'Smart Verdict quota is used up for now. Deep Read stays locked for this case.',
     });
     expect(mockSupabase.functions.invoke).not.toHaveBeenCalled();
   });
