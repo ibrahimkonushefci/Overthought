@@ -2,6 +2,7 @@ import { buildExplanationText, buildNextMoveText, inferConfidenceLevel } from '.
 import { extractSemanticFacts, findSemanticScenarioOverride } from './facts';
 import { clampNumber, buildHaystack } from './normalize';
 import { matchSignal } from './patterns';
+import { assessCaseInputQuality, type CaseInputQualityReason } from '../../shared/utils/caseInputQuality';
 import type {
   CaseAnalysisInput,
   CaseAnalysisResult,
@@ -136,6 +137,78 @@ function shouldUseSemanticScenario(
   );
 }
 
+function needsMoreContextCopy(reason: CaseInputQualityReason): { explanationText: string; nextMoveText: string } {
+  switch (reason) {
+    case 'not_a_case':
+      return {
+        explanationText:
+          'Overthought judges social situations, not homework, poems, or financial prophecy. This is not a case file yet.',
+        nextMoveText: 'Bring one human doing one confusing thing, then ask what it means.',
+      };
+    case 'emoji_or_symbols_only':
+    case 'repeated_characters':
+    case 'repeated_words':
+    case 'keyboard_gibberish':
+    case 'random_words':
+      return {
+        explanationText:
+          'This is not a judgeable case yet. Right now the evidence is keyboard fog wearing a tiny detective hat.',
+        nextMoveText: 'Rewrite it with what happened, who did it, and the question you want judged.',
+      };
+    case 'unsupported_local_language':
+      return {
+        explanationText:
+          "Basic Verdict can't read this clearly enough. Smart Verdict may understand this better, especially with clearer context.",
+        nextMoveText: 'Add who did what, what happened, and what you want judged.',
+      };
+    case 'too_vague':
+    case 'low_context':
+    default:
+      return {
+        explanationText:
+          'I can see the spiral, but not the receipts. I need one clear event before pretending this is a full case.',
+        nextMoveText: 'Add who did what, what happened next, and what you are worried it means.',
+      };
+  }
+}
+
+function buildNeedsMoreContextResult(
+  config: VerdictEngineConfig,
+  reason: CaseInputQualityReason,
+  options: { includeDebug?: boolean },
+  semanticFacts: ReturnType<typeof extractSemanticFacts>,
+): CaseAnalysisResult {
+  const delusionScore = 24;
+  const verdictLabel =
+    config.verdictBands.find((band) => delusionScore >= band.min && delusionScore <= band.max)
+      ?.label ?? 'slight_reach';
+  const copy = needsMoreContextCopy(reason);
+  const result: CaseAnalysisResult = {
+    verdictLabel,
+    delusionScore,
+    explanationText: copy.explanationText,
+    nextMoveText: copy.nextMoveText,
+    verdictVersion: config.version,
+    triggeredSignals: ['needs_more_context_input', reason],
+    confidenceLevel: 'low',
+  };
+
+  if (options.includeDebug) {
+    result.debug = {
+      baseScore: config.baseScore,
+      weakEvidenceDelta: 0,
+      positiveEvidenceDelta: 0,
+      contextModifierDelta: 0,
+      rawScore: delusionScore,
+      clampedScore: delusionScore,
+      semanticFacts,
+      matchedSignals: [],
+    };
+  }
+
+  return result;
+}
+
 function buildSyntheticSignal(
   signalId: string,
   config: VerdictEngineConfig,
@@ -226,6 +299,7 @@ export function analyzeCase(
     normalizedUpdate,
     category: input.category,
   });
+  const inputQuality = assessCaseInputQuality(input.inputText);
 
   const matchedSignals: TriggeredSignal[] = config.signals
     .map((signal) => {
@@ -245,6 +319,17 @@ export function analyzeCase(
       } satisfies TriggeredSignal;
     })
     .filter((value): value is TriggeredSignal => Boolean(value));
+
+  const shouldUseNeedsMoreContextResult =
+    inputQuality.status === 'block' ||
+    (inputQuality.status === 'needs_context' &&
+      (inputQuality.reason === 'too_vague' ||
+        inputQuality.reason === 'unsupported_local_language' ||
+        (matchedSignals.length === 0 && semanticFacts.ids.length < 2)));
+
+  if (shouldUseNeedsMoreContextResult) {
+    return buildNeedsMoreContextResult(config, inputQuality.reason, options, semanticFacts);
+  }
 
   const signalsWithSyntheticRules = applyBlankSlateRule(
     matchedSignals,

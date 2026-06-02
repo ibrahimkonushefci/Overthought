@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, TextInput, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { Archive, Search } from 'lucide-react-native';
 import type { CaseCategory } from '../../src/types/shared';
 import { Screen } from '../../src/shared/ui/Screen';
@@ -19,6 +19,18 @@ export default function CasesRoute() {
   const { cases } = useCases();
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
+  const hasFocusedOnceRef = useRef(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!hasFocusedOnceRef.current) {
+        hasFocusedOnceRef.current = true;
+        return;
+      }
+
+      setFilter('all');
+    }, []),
+  );
 
   const visibleCases = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();

@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { ActivityIndicator, Alert, Keyboard, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, Animated, Keyboard, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, Sparkles } from 'lucide-react-native';
 import type { CaseCategory } from '../src/types/shared';
@@ -12,6 +12,7 @@ import { Button } from '../src/shared/ui/Button';
 import { AppText } from '../src/shared/ui/Text';
 import { Screen } from '../src/shared/ui/Screen';
 import { colors, radii, spacing, typography } from '../src/shared/theme/tokens';
+import { assessCaseInputQuality } from '../src/shared/utils/caseInputQuality';
 import { useAuthStore } from '../src/store/authStore';
 import { useGuestStore } from '../src/store/guestStore';
 
@@ -35,6 +36,58 @@ export default function NewCaseRoute() {
   const [category, setCategory] = useState<CaseCategory>('romance');
   const [loading, setLoading] = useState(false);
   const [examples, setExamples] = useState(() => pickExamplePrompts(4));
+  const helperPulse = useRef(new Animated.Value(0)).current;
+  const previousHelperAttentionKey = useRef('');
+  const trimmedInput = inputText.trim();
+  const inputQuality = assessCaseInputQuality(trimmedInput);
+  const inputQualityBlocked = inputQuality.status === 'block';
+  const canSubmit = !loading && trimmedInput.length >= MIN_CASE_CHARACTERS && !inputQualityBlocked;
+  const shouldShowInputQualityMessage =
+    inputQualityBlocked || inputQuality.reason === 'too_vague' || inputQuality.reason === 'low_context';
+  const shouldAnimateInputHelper = trimmedInput.length >= MIN_CASE_CHARACTERS && shouldShowInputQualityMessage;
+  const helperAttentionKey = shouldAnimateInputHelper ? `${inputQuality.reason}:${inputQuality.message ?? ''}` : '';
+  const inputHelperCopy =
+    trimmedInput.length < MIN_CASE_CHARACTERS
+      ? MIN_CASE_HELPER_COPY
+      : shouldShowInputQualityMessage
+        ? inputQuality.message ?? 'Add a clearer situation before judging.'
+        : 'Enough to judge.';
+  const helperAnimatedStyle = {
+    transform: [
+      {
+        translateX: helperPulse.interpolate({
+          inputRange: [0, 0.2, 0.45, 0.7, 1],
+          outputRange: [0, -3, 3, -2, 0],
+        }),
+      },
+      {
+        scale: helperPulse.interpolate({
+          inputRange: [0, 0.5, 1],
+          outputRange: [1, 1.015, 1],
+        }),
+      },
+    ],
+  };
+
+  useEffect(() => {
+    if (!helperAttentionKey) {
+      helperPulse.setValue(0);
+      previousHelperAttentionKey.current = '';
+      return;
+    }
+
+    if (previousHelperAttentionKey.current === helperAttentionKey) {
+      return;
+    }
+
+    previousHelperAttentionKey.current = helperAttentionKey;
+    helperPulse.setValue(0);
+    Animated.timing(helperPulse, {
+      toValue: 1,
+      duration: 340,
+      useNativeDriver: true,
+    }).start();
+  }, [helperAttentionKey, helperPulse]);
 
   const goBack = () => {
     if (router.canGoBack()) {
@@ -50,6 +103,13 @@ export default function NewCaseRoute() {
 
     if (trimmed.length < MIN_CASE_CHARACTERS) {
       Alert.alert('Add a little more', MIN_CASE_HELPER_COPY);
+      return;
+    }
+
+    const quality = assessCaseInputQuality(trimmed);
+
+    if (quality.status === 'block') {
+      Alert.alert('Make it a real case', quality.message ?? 'Add a clearer situation before judging.');
       return;
     }
 
@@ -128,6 +188,8 @@ export default function NewCaseRoute() {
 
       <View style={styles.inputWrap}>
         <TextInput
+          autoCapitalize="sentences"
+          autoCorrect
           multiline
           maxLength={400}
           onChangeText={(value) => {
@@ -136,15 +198,23 @@ export default function NewCaseRoute() {
           }}
           placeholder="e.g. He said we should hang out but never picked a day..."
           placeholderTextColor={colors.ui.placeholder}
+          spellCheck
           style={styles.input}
           textAlignVertical="top"
+          textContentType="none"
           value={inputText}
         />
         <View style={styles.inputMeta}>
           <AppText variant="meta">{inputText.length}/400</AppText>
-          <AppText variant="meta" style={styles.inputHelper}>
-            {inputText.trim().length < MIN_CASE_CHARACTERS ? MIN_CASE_HELPER_COPY : 'Enough to judge.'}
-          </AppText>
+          <Animated.View style={[shouldAnimateInputHelper && styles.inputHelperCue, helperAnimatedStyle]}>
+            <AppText
+              variant="meta"
+              color={shouldAnimateInputHelper ? colors.brand.pink : colors.text.secondary}
+              style={styles.inputHelper}
+            >
+              {inputHelperCopy}
+            </AppText>
+          </Animated.View>
         </View>
       </View>
 
@@ -174,7 +244,7 @@ export default function NewCaseRoute() {
           title="Judge this"
           icon={Sparkles}
           loading={loading}
-          disabled={loading || inputText.trim().length < MIN_CASE_CHARACTERS}
+          disabled={!canSubmit}
           onPress={() => void submit()}
         />
       </View>
@@ -257,6 +327,14 @@ const styles = StyleSheet.create({
   },
   inputHelper: {
     lineHeight: 16,
+  },
+  inputHelperCue: {
+    backgroundColor: 'rgba(236, 41, 141, 0.08)',
+    borderRadius: radii.sm,
+    marginLeft: -spacing.xs,
+    marginTop: -spacing.xs,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: spacing.xs,
   },
   examplesTitle: {
     marginTop: spacing.xl,

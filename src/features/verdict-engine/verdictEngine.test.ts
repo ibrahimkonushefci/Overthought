@@ -700,11 +700,10 @@ const goldenCases: GoldenCase[] = [
     name: 'Low Information Gibberish',
     category: 'romance',
     inputText: 'Gibberish message jhsadjhkdsaijh Busch hsdjhs',
-    minScore: 50,
-    maxScore: 55,
-    verdictLabel: 'mild_delusion',
-    explanationPattern: /not a case yet|keyboard fog|actual social facts|syllables/i,
-    expectedScenarioId: 'low_information_gibberish_prompt',
+    minScore: 20,
+    maxScore: 30,
+    verdictLabel: 'slight_reach',
+    explanationPattern: /not a judgeable case yet|keyboard fog|rewrite it/i,
   },
   {
     name: 'First Date Crying Context',
@@ -1082,6 +1081,69 @@ describe('verdict engine golden cases', () => {
     goldenCase.expectedFactIds?.forEach((factId) => {
       expect(result.debug?.semanticFacts.ids).toContain(factId);
     });
+  });
+});
+
+describe('verdict engine low-information guard', () => {
+  it.each([
+    'asdkj asdklj qweqwe zxc zxc qweqwe asdkj asdklj',
+    'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+    '😂😂😂😂😂😂😂😂😂😂😂😂😂😂😂😂😂😂😂😂',
+    'blue chair window pizza banana airplane lamp',
+    'coffee turtle mirror airport candle broccoli moon carpet wallet',
+    'hfhfhfhfhfhfhfhfhfhfhfhfhfhfhfhf',
+    'What is the capital of France?',
+    'Write me a poem about a dog',
+    'Buy Bitcoin now or wait?',
+    'Should I buy Ethereum now or wait',
+    'Solana looks good here to buy ngl',
+    'Explain photosynthesis',
+  ])('returns needs-more-context copy instead of a confident verdict for: %s', (inputText) => {
+    const result = analyzeCase(verdictConfig, { category: 'romance', inputText }, { includeDebug: true });
+
+    expect(result.delusionScore).toBeLessThanOrEqual(30);
+    expect(result.verdictLabel).toBe('slight_reach');
+    expect(result.confidenceLevel).toBe('low');
+    expect(result.triggeredSignals).toContain('needs_more_context_input');
+    expect(result.explanationText).toMatch(/not a judgeable case|not homework|not a case file/i);
+  });
+
+  it.each([
+    'She looked at me and I think something happened',
+    'He is weird and I don’t know',
+    'My friend acted different today and I am confused',
+    'Someone texted me and now I’m overthinking',
+    'Are you serious right now bro?',
+    'Ai më shkruan çdo mëngjes por thotë që nuk do lidhje serioze.',
+    'Ella me mira en clase y se ríe, pero nunca me escribe primero.',
+  ])('asks for more context when Basic Verdict cannot safely read: %s', (inputText) => {
+    const result = analyzeCase(verdictConfig, { category: 'romance', inputText }, { includeDebug: true });
+
+    expect(result.delusionScore).toBeLessThanOrEqual(30);
+    expect(result.verdictLabel).toBe('slight_reach');
+    expect(result.confidenceLevel).toBe('low');
+    expect(result.triggeredSignals).toContain('needs_more_context_input');
+    expect(result.nextMoveText).toMatch(/who did what|what happened|Basic Verdict|want judged/i);
+  });
+
+  it('uses safer low-confidence copy for mixed-language input Basic Verdict may only partially understand', () => {
+    const result = analyzeCase(
+      verdictConfig,
+      {
+        category: 'romance',
+        inputText: 'He më la on read for two days but pastaj liked my story.',
+      },
+      { includeDebug: true },
+    );
+
+    expect(result.delusionScore).toBeLessThanOrEqual(30);
+    expect(result.verdictLabel).toBe('slight_reach');
+    expect(result.confidenceLevel).toBe('low');
+    expect(result.triggeredSignals).toContain('needs_more_context_input');
+    expect(result.triggeredSignals).toContain('unsupported_local_language');
+    expect(result.explanationText).toMatch(/Basic Verdict can't read this clearly enough/i);
+    expect(result.explanationText).toMatch(/Smart Verdict may understand this better/i);
+    expect(result.nextMoveText).toBe('Add who did what, what happened, and what you want judged.');
   });
 });
 

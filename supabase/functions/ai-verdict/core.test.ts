@@ -898,6 +898,12 @@ describe('Gemini AI verdict provider', () => {
     const secondBody = JSON.parse((global.fetch as jest.Mock).mock.calls[1][1].body);
     expect(secondBody.contents[0].parts[0].text).toContain('STRICT RETRY MODE');
     expect(secondBody.contents[0].parts[0].text).toContain('If the user was clearly included');
+    expect(secondBody.contents[0].parts[0].text).toContain('Bad-input calibration');
+    expect(secondBody.contents[0].parts[0].text).toContain('Valid non-English or mixed-language social situations are allowed');
+    expect(secondBody.contents[0].parts[0].text).toContain('Response language');
+    expect(secondBody.contents[0].parts[0].text).toContain('If the case text is Albanian, answer in Albanian');
+    expect(secondBody.contents[0].parts[0].text).toContain('Language matching is a hard requirement');
+    expect(secondBody.contents[0].parts[0].text).toContain('do not copy its language when the user');
     expect(secondBody.contents[0].parts[0].text).toContain('never start with "What matters is"');
     expect(secondBody.generationConfig.temperature).toBe(0.8);
     expect(secondBody.generationConfig.maxOutputTokens).toBe(2048);
