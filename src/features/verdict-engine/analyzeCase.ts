@@ -142,8 +142,8 @@ function needsMoreContextCopy(reason: CaseInputQualityReason): { explanationText
     case 'not_a_case':
       return {
         explanationText:
-          'Overthought judges social situations, not homework, poems, or financial prophecy. This is not a case file yet.',
-        nextMoveText: 'Bring one human doing one confusing thing, then ask what it means.',
+          'This is not a social situation for Overthought to judge. Basic Verdict needs a real human interaction, not commands, code, recipes, homework, or app prompts.',
+        nextMoveText: 'Submit a real social or relationship situation involving actual people.',
       };
     case 'emoji_or_symbols_only':
     case 'repeated_characters':
@@ -178,7 +178,7 @@ function buildNeedsMoreContextResult(
   options: { includeDebug?: boolean },
   semanticFacts: ReturnType<typeof extractSemanticFacts>,
 ): CaseAnalysisResult {
-  const delusionScore = 24;
+  const delusionScore = reason === 'not_a_case' ? 5 : 24;
   const verdictLabel =
     config.verdictBands.find((band) => delusionScore >= band.min && delusionScore <= band.max)
       ?.label ?? 'slight_reach';

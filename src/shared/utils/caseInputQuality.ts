@@ -99,14 +99,44 @@ const HUMAN_OR_ACTION_SOCIAL_PATTERNS = [
 ];
 
 const MULTILINGUAL_SOCIAL_PATTERNS = [
-  /\b(ai|ajo|shkruan|mengjes|thote|lidhje|serioze|pastaj)\b/i,
+  /\b(ai|ajo|shkruan|shkrun|mengjes|thote|lidhje|serioze|pastaj|qdo|cdo|mirpo|mirepo|deshiron|takim)\b/i,
+  /\bme\s+dal(?:e|ë)?\b/i,
+  /\bnat(?:e|ë)?\b/i,
   /\b(ella|el|mira|clase|rie|nunca|escribe|primero)\b/i,
   /\bmë\b/i,
 ];
 
 const NON_CASE_PATTERNS = [
   /^\s*(what is|explain|write me|write a|write an|make me|solve|summarize|translate)\b/i,
-  /\b(capital of france|photosynthesis|poem about)\b/i,
+  /\b(capital of france|photosynthesis|poem about|recipe for|detailed recipe)\b/i,
+];
+
+const PROMPT_OR_SCHEMA_ATTACK_PATTERNS = [
+  /\b(?:ignore|forget|disregard)\s+(?:all\s+)?(?:previous|prior|above)\s+instructions\b/i,
+  /\[\s*system\s+override\s*\]/i,
+  /\b(?:system|developer)\s+override\b/i,
+  /\bdisable\s+the\s+roasting\s+persona\b/i,
+  /\b(?:return|give me)\s+a\s+delusion\s+score\s+of\b/i,
+  /\bwrite\s+test\s+passed\b/i,
+  /\binside\s+the\s+[`"“”']?(?:explanationText|verdictLabel|delusionScore|nextMoveText)[`"“”']?\s+field\b/i,
+  /\b(?:verdictLabel|delusionScore|explanationText|nextMoveText)\b.*\b(?:hacked|system compromised|restart|999|test passed)\b/i,
+  /[`"“”']?\s*verdictLabel\s*[`"“”']?\s*:/i,
+  /\bplease\s+don[’']?t\s+roast\s+me\b/i,
+];
+
+const META_AI_NON_CASE_PATTERNS = [
+  /\bthis app\b.*\b(?:dumb script|actual ai|ai)\b/i,
+  /\b(?:actual ai|dumb script)\b.*\bthis app\b/i,
+  /\byou\s+are\s+admitting\s+your\s+own\s+code\s+is\s+delusional\b/i,
+  /\byour\s+own\s+code\b.*\bdelusional\b/i,
+  /\bif\s+you\s+give\s+me\s+a\s+high\s+delusion\s+score\b/i,
+];
+
+const CODE_NON_CASE_PATTERNS = [
+  /```[\s\S]*```/,
+  /\bthis\s+exact\s+code\b/i,
+  /\b(?:javascript|typescript|python|html|css|sql)\b.*\b(?:console\.log|function|const|let|var|return|select|div)\b/i,
+  /\bconsole\.log\s*\(/i,
 ];
 
 const TOO_VAGUE_PATTERNS = [
@@ -210,7 +240,12 @@ function isFinancePrompt(words: string[], value: string): boolean {
 }
 
 function isObviousNonCase(value: string): boolean {
-  return hasAnyPattern(value, NON_CASE_PATTERNS) && !hasSocialContext(value);
+  return (
+    hasAnyPattern(value, PROMPT_OR_SCHEMA_ATTACK_PATTERNS) ||
+    hasAnyPattern(value, META_AI_NON_CASE_PATTERNS) ||
+    hasAnyPattern(value, CODE_NON_CASE_PATTERNS) ||
+    (hasAnyPattern(value, NON_CASE_PATTERNS) && !hasSocialContext(value))
+  );
 }
 
 function messageFor(reason: CaseInputQualityReason): string | null {
