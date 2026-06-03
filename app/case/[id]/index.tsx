@@ -472,7 +472,7 @@ export default function CaseDetailRoute() {
   return (
     <Screen
       backgroundColor={caseDetailBackground}
-      bottomInset={72}
+      bottomInset={44}
       initialScrollY={restoredScrollY}
       onScrollYChange={(scrollY) => {
         if (!shouldRunResultIntro) {
@@ -500,7 +500,6 @@ export default function CaseDetailRoute() {
           <AiVerdictPremiumCard
             verdict={aiVerdict.verdict}
             displayLabel={heroDisplayLabel}
-            caseDisplayId={displayCaseId}
             remainingLabel={aiVerdictAccessLabel(aiVerdict?.access ?? aiVerdictRequest?.access, isGuestCase(record))}
           />
         ) : (
@@ -975,12 +974,10 @@ function aiVerdictAccessLabel(access: AiVerdictRequestState['access'] | undefine
 function AiVerdictPremiumCard({
   verdict,
   displayLabel,
-  caseDisplayId,
   remainingLabel,
 }: {
   verdict: AiVerdictOutput;
   displayLabel: string;
-  caseDisplayId: string;
   remainingLabel: string;
 }) {
   const [openSection, setOpenSection] = useState<AiVerdictInsightKey>('evidenceCheck');
@@ -1007,7 +1004,7 @@ function AiVerdictPremiumCard({
 
   return (
     <View style={styles.aiPremiumCard}>
-      <View style={styles.deepHeader}>
+      <View style={styles.aiPremiumHeader}>
         <View style={styles.deepTitleRow}>
           <AppText variant="title" color={colors.text.onBrand} style={styles.deepTitle}>
             Smart Verdict
@@ -1019,14 +1016,10 @@ function AiVerdictPremiumCard({
             </AppText>
           </View>
         </View>
-        <AppText variant="eyebrow" color="rgba(255, 255, 255, 0.58)" style={styles.remainingReads}>
+        <AppText variant="eyebrow" color="rgba(255, 255, 255, 0.5)" style={styles.aiPremiumRemainingReads}>
           {remainingLabel}
         </AppText>
       </View>
-
-      <AppText variant="subtitle" color="rgba(255, 255, 255, 0.72)" style={styles.deepSubtitle}>
-        The version your group chat would actually send.
-      </AppText>
 
       <View style={styles.aiPremiumHero}>
         <View style={styles.aiPremiumRingWrap}>
@@ -1065,9 +1058,6 @@ function AiVerdictPremiumCard({
           <AppText variant="display" color={colors.text.onBrand} style={styles.aiPremiumTitle} numberOfLines={3}>
             {displayLabel}
           </AppText>
-          <AppText variant="eyebrow" color="rgba(255, 255, 255, 0.62)" style={styles.aiPremiumCaseId} numberOfLines={1}>
-            Case {caseDisplayId}
-          </AppText>
         </View>
       </View>
 
@@ -1077,12 +1067,12 @@ function AiVerdictPremiumCard({
             The Read
           </AppText>
         </View>
-        <AppText variant="title" color={colors.text.onBrand} style={styles.groupChatText}>
+        <AppText variant="title" color={colors.text.onBrand} style={[styles.groupChatText, styles.aiPremiumGroupChatText]}>
           {verdict.explanationText}
         </AppText>
       </View>
 
-      <View style={styles.deepSections}>
+      <View style={styles.aiPremiumSections}>
         {sections.map((section) => (
           <AiVerdictInsightRow
             key={section.key}
@@ -1093,11 +1083,11 @@ function AiVerdictPremiumCard({
         ))}
       </View>
 
-      <AppText variant="eyebrow" color={colors.accent.lime} style={styles.deepTakeawayLabel}>
+      <AppText variant="eyebrow" color={colors.accent.lime} style={styles.aiPremiumTakeawayLabel}>
         Do this →
       </AppText>
-      <View style={styles.roastLine}>
-        <AppText variant="body" color={colors.text.onAccent} style={styles.roastLineText}>
+      <View style={[styles.roastLine, styles.aiPremiumRoastLine]}>
+        <AppText variant="body" color={colors.text.onAccent} style={[styles.roastLineText, styles.aiPremiumRoastLineText]}>
           {verdict.nextMoveText}
         </AppText>
       </View>
@@ -1125,15 +1115,20 @@ function AiVerdictInsightRow({
   const Icon = expanded ? ChevronUp : ChevronDown;
 
   return (
-    <View style={styles.deepSection}>
-      <Pressable accessibilityRole="button" accessibilityState={{ expanded }} onPress={onPress} style={styles.deepSectionHeader}>
-        <AppText variant="eyebrow" color="rgba(255, 255, 255, 0.62)" style={styles.deepFieldLabel}>
+    <View style={styles.aiPremiumSection}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ expanded }}
+        onPress={onPress}
+        style={styles.aiPremiumSectionHeader}
+      >
+        <AppText variant="eyebrow" color="rgba(255, 255, 255, 0.78)" style={styles.aiPremiumFieldLabel}>
           {section.label}
         </AppText>
-        <Icon color="rgba(255, 255, 255, 0.62)" size={18} strokeWidth={2.2} />
+        <Icon color="rgba(255, 255, 255, 0.78)" size={19} strokeWidth={2.25} />
       </Pressable>
       {expanded ? (
-        <AppText variant="body" color={colors.text.onBrand} style={styles.deepFieldBody}>
+        <AppText variant="body" color="rgba(255, 255, 255, 0.94)" style={styles.aiPremiumFieldBody}>
           {section.body}
         </AppText>
       ) : null}
@@ -1484,7 +1479,7 @@ const styles = StyleSheet.create({
   },
   sectionLabelSpaced: {
     marginBottom: spacing.sm,
-    marginTop: spacing.xl,
+    marginTop: spacing.md,
   },
   deepRead: {
     backgroundColor: '#090910',
@@ -1514,11 +1509,24 @@ const styles = StyleSheet.create({
     shadowRadius: 0,
     elevation: 4,
   },
+  aiPremiumHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  aiPremiumRemainingReads: {
+    flexShrink: 0,
+    fontFamily: typography.family.displayBold,
+    fontSize: 8.5,
+    letterSpacing: 1.2,
+    lineHeight: 12,
+  },
   aiPremiumHero: {
     alignItems: 'center',
     flexDirection: 'row',
     gap: spacing.xl,
-    marginTop: spacing.sm,
+    marginTop: spacing.xs,
   },
   aiPremiumRingWrap: {
     alignItems: 'center',
@@ -1565,11 +1573,52 @@ const styles = StyleSheet.create({
     fontSize: 22,
     lineHeight: 27,
   },
-  aiPremiumCaseId: {
+  aiPremiumGroupChatText: {
+    fontSize: 16.5,
+    lineHeight: 24,
+  },
+  aiPremiumSections: {
+    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
+    borderBottomWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.08)',
+    borderTopWidth: 1,
+  },
+  aiPremiumSection: {
+    borderTopColor: 'rgba(255, 255, 255, 0.08)',
+    borderTopWidth: 1,
+    gap: spacing.sm,
+    paddingVertical: 17,
+  },
+  aiPremiumSectionHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    minHeight: 28,
+  },
+  aiPremiumFieldLabel: {
     fontFamily: typography.family.displayBold,
-    fontSize: 8,
-    letterSpacing: 1.8,
-    lineHeight: 12,
+    fontSize: 11,
+    letterSpacing: 1,
+    lineHeight: 15,
+  },
+  aiPremiumFieldBody: {
+    fontFamily: typography.family.body,
+    fontSize: 15.5,
+    lineHeight: 24,
+  },
+  aiPremiumTakeawayLabel: {
+    fontFamily: typography.family.displayBold,
+    fontSize: 10.5,
+    letterSpacing: 1,
+    lineHeight: 14,
+  },
+  aiPremiumRoastLine: {
+    paddingBottom: 22,
+    paddingTop: 22,
+  },
+  aiPremiumRoastLineText: {
+    fontSize: 16.5,
+    lineHeight: 24,
   },
   aiVerdictStatus: {
     backgroundColor: colors.bg.surface,
@@ -1786,11 +1835,11 @@ const styles = StyleSheet.create({
     backgroundColor: caseDetailBackground,
     marginHorizontal: -spacing.xl,
     marginTop: spacing.xxl,
-    paddingBottom: spacing.md,
+    paddingBottom: 0,
     paddingHorizontal: spacing.xl,
   },
   quote: {
-    backgroundColor: '#F8C7D4',
+    backgroundColor: '#FCE8EF',
     borderColor: colors.brand.ink,
     borderRadius: radii.xl,
     borderWidth: 2,
@@ -1843,15 +1892,16 @@ const styles = StyleSheet.create({
   },
   addUpdate: {
     alignItems: 'center',
-    borderColor: colors.text.secondary,
-    borderRadius: radii.xl,
-    borderStyle: 'dashed',
-    borderWidth: 1.5,
+    alignSelf: 'stretch',
+    backgroundColor: colors.bg.surface,
+    borderColor: 'rgba(31, 23, 34, 0.34)',
+    borderRadius: radii.pill,
+    borderWidth: 1.25,
     flexDirection: 'row',
     gap: spacing.sm,
     justifyContent: 'center',
-    marginTop: spacing.md,
-    minHeight: 46,
+    marginTop: spacing.sm,
+    minHeight: 44,
     paddingHorizontal: spacing.lg,
   },
   addUpdateText: {
@@ -1911,13 +1961,13 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   noUpdates: {
-    borderColor: colors.text.secondary,
-    borderRadius: radii.xl,
-    borderStyle: 'dashed',
-    borderWidth: 1.5,
+    backgroundColor: '#FFFDF8',
+    borderColor: 'rgba(31, 23, 34, 0.16)',
+    borderRadius: radii.lg,
+    borderWidth: 1,
     marginTop: spacing.md,
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.xl,
+    paddingVertical: spacing.lg,
   },
   noUpdatesText: {
     fontFamily: typography.family.bodyMedium,
@@ -1929,7 +1979,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 0,
     marginTop: 0,
-    marginBottom: spacing.xl,
+    marginBottom: spacing.md,
     paddingTop: spacing.sm,
   },
   caseFileLine: {
@@ -1960,43 +2010,43 @@ const styles = StyleSheet.create({
   outcomes: {
     flexDirection: 'row',
     gap: spacing.sm,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
   },
   outcome: {
     alignItems: 'center',
-    backgroundColor: colors.bg.surface,
-    borderColor: colors.brand.ink,
-    borderRadius: radii.xl,
-    borderWidth: 2,
+    backgroundColor: '#FFFDF8',
+    borderColor: 'rgba(31, 23, 34, 0.34)',
+    borderRadius: radii.lg,
+    borderWidth: 1.25,
     flex: 1,
-    minHeight: 78,
+    minHeight: 64,
     justifyContent: 'center',
-    gap: spacing.xs,
+    gap: 3,
     paddingHorizontal: spacing.xs,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.xs,
   },
   outcomeIconWrap: {
     alignItems: 'center',
-    borderColor: colors.brand.ink,
+    borderColor: 'rgba(31, 23, 34, 0.42)',
     borderRadius: radii.pill,
-    borderWidth: 2,
-    height: 30,
+    borderWidth: 1.25,
+    height: 28,
     justifyContent: 'center',
-    width: 30,
+    width: 28,
   },
   outcomeIconWrapSelected: {
-    backgroundColor: colors.bg.surface,
+    backgroundColor: 'rgba(255, 255, 255, 0.45)',
+    borderColor: colors.brand.ink,
   },
   outcomeLabel: {
     fontFamily: typography.family.displayBold,
-    fontSize: 10,
-    lineHeight: 14,
+    fontSize: 9.5,
+    lineHeight: 13,
   },
   outcomeSelected: {
     backgroundColor: colors.accent.lime,
     borderColor: colors.brand.ink,
-    borderWidth: 2,
-    ...shadows.hardSmall,
+    borderWidth: 1.5,
   },
   closeCaseHeader: {
     gap: 3,
