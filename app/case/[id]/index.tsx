@@ -31,6 +31,7 @@ import type {
 import { caseRepository } from '../../../src/features/cases/repositories/caseRepository';
 import { caseUpdateRepository } from '../../../src/features/cases/repositories/caseUpdateRepository';
 import { aiVerdictService } from '../../../src/features/ai-verdict/aiVerdictService';
+import { getCachedCaseById } from '../../../src/features/cases/services/useCases';
 import {
   isAiVerdictDeepReadAccountLocked,
   isAiVerdictDeepReadCaseLocked,
@@ -73,9 +74,10 @@ function sortUpdatesNewestFirst(items: CaseUpdateEntity[]): CaseUpdateEntity[] {
 export default function CaseDetailRoute() {
   const router = useRouter();
   const { id, fromAnalysis, aiQuota } = useLocalSearchParams<{ id: string; fromAnalysis?: string; aiQuota?: string }>();
-  const [record, setRecord] = useState<CaseEntity | null>(null);
+  const initialCachedRecord = id ? getCachedCaseById(id) : null;
+  const [record, setRecord] = useState<CaseEntity | null>(initialCachedRecord);
   const [updates, setUpdates] = useState<CaseUpdateEntity[]>([]);
-  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
+  const [initialLoadComplete, setInitialLoadComplete] = useState(Boolean(initialCachedRecord));
   const [deepReadStatus, setDeepReadStatus] = useState<DeepReadStatus>('idle');
   const [deepReadResult, setDeepReadResult] = useState<Extract<DeepReadResponse, { ok: true }> | null>(null);
   const [deepReadMessage, setDeepReadMessage] = useState<string | null>(null);
@@ -88,6 +90,7 @@ export default function CaseDetailRoute() {
   const aiVerdictRequestsByCaseId = useAiVerdictStore((state) => state.requestByCaseId);
   const premiumState = usePremiumStore((state) => state.premiumState);
   const shareCardRef = useRef<ViewShot | null>(null);
+  const recordRef = useRef<CaseEntity | null>(initialCachedRecord);
   const deepReadRequestInFlightRef = useRef(false);
   const shouldPresentNewResult = fromAnalysis === '1';
   const [shouldRunResultIntro, setShouldRunResultIntro] = useState(shouldPresentNewResult);
@@ -101,21 +104,48 @@ export default function CaseDetailRoute() {
 
     try {
       const nextRecord = await caseRepository.getCase(id);
+
+      if (!nextRecord) {
+        setRecord(null);
+        setUpdates([]);
+        return;
+      }
+
       setRecord(nextRecord);
-      const nextUpdates =
-        nextRecord && isGuestCase(nextRecord) ? nextRecord.updates : await caseUpdateRepository.listUpdates(id);
-      setUpdates(sortUpdatesNewestFirst(nextUpdates));
+      recordRef.current = nextRecord;
+
+      if (isGuestCase(nextRecord)) {
+        setUpdates(sortUpdatesNewestFirst(nextRecord.updates));
+        return;
+      }
+
+      try {
+        const nextUpdates = await caseUpdateRepository.listUpdates(getCaseId(nextRecord));
+        setUpdates(sortUpdatesNewestFirst(nextUpdates));
+      } catch {
+        setUpdates([]);
+      }
     } catch (error) {
-      Alert.alert('Could not refresh case', error instanceof Error ? error.message : 'Try again.');
+      const cachedRecord = getCachedCaseById(id);
+
+      if (cachedRecord) {
+        setRecord(cachedRecord);
+        recordRef.current = cachedRecord;
+        setUpdates(isGuestCase(cachedRecord) ? sortUpdatesNewestFirst(cachedRecord.updates) : []);
+      } else if (!recordRef.current) {
+        Alert.alert('Could not refresh case', error instanceof Error ? error.message : 'Try again.');
+      }
     } finally {
       setInitialLoadComplete(true);
     }
   }, [id]);
 
   useEffect(() => {
-    setInitialLoadComplete(false);
-    setRecord(null);
-    setUpdates([]);
+    const cachedRecord = id ? getCachedCaseById(id) : null;
+    recordRef.current = cachedRecord;
+    setInitialLoadComplete(Boolean(cachedRecord));
+    setRecord(cachedRecord);
+    setUpdates(cachedRecord && isGuestCase(cachedRecord) ? sortUpdatesNewestFirst(cachedRecord.updates) : []);
     setDeepReadStatus('idle');
     setDeepReadResult(null);
     setDeepReadMessage(null);
@@ -124,8 +154,8 @@ export default function CaseDetailRoute() {
   }, [id]);
 
   useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    recordRef.current = record;
+  }, [record]);
 
   useFocusEffect(
     useCallback(() => {

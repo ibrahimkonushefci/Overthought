@@ -289,21 +289,28 @@ export const authService = {
       };
     }
 
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    if (error) {
-      return { ok: false, message: error.message };
+      if (error) {
+        return { ok: false, message: error.message };
+      }
+
+      if (!data.session) {
+        return { ok: false, message: 'Email sign-in did not return a session. Try again.' };
+      }
+
+      await applySession(data.session);
+      return { ok: true };
+    } catch (error) {
+      return {
+        ok: false,
+        message: error instanceof Error ? error.message : 'Unable to sign in right now. Try again.',
+      };
     }
-
-    if (!data.session) {
-      return { ok: false, message: 'Email sign-in did not return a session. Try again.' };
-    }
-
-    await applySession(data.session);
-    return { ok: true };
   },
   async signUpWithEmailPassword(email: string, password: string): Promise<AuthActionResult> {
     trackEvent('auth_started', { provider: 'email' });
@@ -315,27 +322,34 @@ export const authService = {
       };
     }
 
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: env.supabaseRedirectUrl,
-      },
-    });
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: env.supabaseRedirectUrl,
+        },
+      });
 
-    if (error) {
-      return { ok: false, message: error.message };
+      if (error) {
+        return { ok: false, message: error.message };
+      }
+
+      if (data.session) {
+        await applySession(data.session);
+        return { ok: true };
+      }
+
+      return {
+        ok: true,
+        message: 'Account created. Check your email to confirm it, then sign in. If it is not there, check Spam/Junk.',
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        message: error instanceof Error ? error.message : 'Unable to create account right now. Try again.',
+      };
     }
-
-    if (data.session) {
-      await applySession(data.session);
-      return { ok: true };
-    }
-
-    return {
-      ok: true,
-      message: 'Account created. Check your email to confirm it, then sign in. If it is not there, check Spam/Junk.',
-    };
   },
   async requestPasswordReset(email: string): Promise<AuthActionResult> {
     trackEvent('auth_started', { provider: 'email' });

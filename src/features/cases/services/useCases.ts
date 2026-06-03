@@ -18,11 +18,103 @@ function caseListTimestamp(record: CaseEntity): number {
   return timestamps.length > 0 ? Math.max(...timestamps) : 0;
 }
 
+let cachedRemoteCases: CaseEntity[] = [];
+let cachedRemoteUserId: string | null = null;
+let cachedRemoteLoading = false;
+let cachedRemoteError: Error | null = null;
+let remoteRefreshInFlight: Promise<void> | null = null;
+let remoteRefreshInFlightUserId: string | null = null;
+const remoteCaseSubscribers = new Set<() => void>();
+
+function notifyRemoteCaseSubscribers() {
+  remoteCaseSubscribers.forEach((listener) => listener());
+}
+
+function subscribeToRemoteCases(listener: () => void) {
+  remoteCaseSubscribers.add(listener);
+  return () => {
+    remoteCaseSubscribers.delete(listener);
+  };
+}
+
+function setRemoteCaseSnapshot(nextCases: CaseEntity[], userId: string | null) {
+  cachedRemoteCases = nextCases;
+  cachedRemoteUserId = userId;
+  notifyRemoteCaseSubscribers();
+}
+
+function clearRemoteCaseSnapshot() {
+  if (cachedRemoteCases.length === 0 && !cachedRemoteError && !cachedRemoteUserId && !cachedRemoteLoading) {
+    return;
+  }
+
+  cachedRemoteCases = [];
+  cachedRemoteUserId = null;
+  cachedRemoteError = null;
+  cachedRemoteLoading = false;
+  remoteRefreshInFlight = null;
+  remoteRefreshInFlightUserId = null;
+  notifyRemoteCaseSubscribers();
+}
+
+async function refreshRemoteCaseSnapshot(userId: string) {
+  if (remoteRefreshInFlight && remoteRefreshInFlightUserId === userId) {
+    return remoteRefreshInFlight;
+  }
+
+  if (cachedRemoteUserId !== userId) {
+    cachedRemoteCases = [];
+    cachedRemoteError = null;
+    cachedRemoteUserId = userId;
+  }
+
+  cachedRemoteLoading = true;
+  remoteRefreshInFlightUserId = userId;
+  notifyRemoteCaseSubscribers();
+
+  remoteRefreshInFlight = caseRepository
+    .listCases()
+    .then((records) => {
+      if (cachedRemoteUserId === userId) {
+        cachedRemoteCases = records;
+        cachedRemoteError = null;
+      }
+    })
+    .catch((refreshError) => {
+      if (cachedRemoteUserId === userId) {
+        cachedRemoteError = refreshError instanceof Error ? refreshError : new Error('Unable to refresh cases.');
+      }
+    })
+    .finally(() => {
+      if (remoteRefreshInFlightUserId === userId) {
+        cachedRemoteLoading = false;
+        remoteRefreshInFlight = null;
+        remoteRefreshInFlightUserId = null;
+        notifyRemoteCaseSubscribers();
+      }
+    });
+
+  return remoteRefreshInFlight;
+}
+
+export function getCachedCaseById(caseId: string): CaseEntity | null {
+  const remoteCaseId = useGuestStore.getState().migratedCaseMap[caseId] ?? caseId;
+
+  return (
+    cachedRemoteCases.find((item) => {
+      const itemId = getCaseId(item);
+      return itemId === caseId || itemId === remoteCaseId;
+    }) ?? null
+  );
+}
+
 export function useCases() {
   const authMode = useAuthStore((state) => state.sessionMode);
+  const authUserId = useAuthStore((state) => state.user?.id ?? null);
   const rawGuestCases = useGuestStore((state) => state.cases);
   const aiVerdictsByCaseId = useAiVerdictStore((state) => state.byCaseId);
   const migratedCaseCount = useGuestStore((state) => Object.keys(state.migratedCaseMap).length);
+  const [remoteCaseVersion, setRemoteCaseVersion] = useState(0);
   const guestCases = useMemo(
     () =>
       rawGuestCases
@@ -30,28 +122,16 @@ export function useCases() {
         .sort((left, right) => caseListTimestamp(right) - caseListTimestamp(left)),
     [rawGuestCases],
   );
-  const [remoteCases, setRemoteCases] = useState<CaseEntity[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
+  useEffect(() => subscribeToRemoteCases(() => setRemoteCaseVersion((version) => version + 1)), []);
 
   const refresh = useCallback(async () => {
-    if (authMode !== 'authenticated') {
-      setRemoteCases([]);
-      setLoading(false);
-      setError(null);
+    if (authMode !== 'authenticated' || !authUserId) {
+      clearRemoteCaseSnapshot();
       return;
     }
 
-    setLoading(true);
-    try {
-      setRemoteCases(await caseRepository.listCases());
-      setError(null);
-    } catch (refreshError) {
-      setError(refreshError instanceof Error ? refreshError : new Error('Unable to refresh cases.'));
-    } finally {
-      setLoading(false);
-    }
-  }, [authMode]);
+    await refreshRemoteCaseSnapshot(authUserId);
+  }, [authMode, authUserId]);
 
   useEffect(() => {
     void refresh();
@@ -64,7 +144,12 @@ export function useCases() {
   );
 
   const casesWithAiVerdicts = useMemo(() => {
-    const sourceCases = authMode === 'authenticated' ? remoteCases : guestCases;
+    const sourceCases =
+      authMode === 'authenticated'
+        ? authUserId && cachedRemoteUserId === authUserId
+          ? cachedRemoteCases
+          : []
+        : guestCases;
 
     return sourceCases.map((item) => {
       const caseId = getCaseId(item);
@@ -83,12 +168,12 @@ export function useCases() {
         verdictVersion: aiVerdict.verdict.verdictVersion,
       };
     });
-  }, [aiVerdictsByCaseId, authMode, guestCases, remoteCases]);
+  }, [aiVerdictsByCaseId, authMode, authUserId, guestCases, remoteCaseVersion]);
 
   return {
     cases: casesWithAiVerdicts,
-    loading,
-    error,
+    loading: authMode === 'authenticated' && authUserId ? cachedRemoteLoading : false,
+    error: authMode === 'authenticated' && authUserId ? cachedRemoteError : null,
     refresh,
   };
 }

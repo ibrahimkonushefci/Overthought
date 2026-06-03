@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Keyboard, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { usePathname, useRouter } from 'expo-router';
 import { ArrowLeft, LockKeyhole, LogIn, Mail, Sparkles, UserPlus } from 'lucide-react-native';
@@ -22,15 +22,12 @@ export default function AuthRoute() {
   const [appleLoading, setAppleLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [signupSuccessEmail, setSignupSuccessEmail] = useState<string | null>(null);
+  const emailInputRef = useRef<TextInput>(null);
+  const passwordInputRef = useRef<TextInput>(null);
+  const emailRequestInFlightRef = useRef(false);
 
   const routeHome = useCallback(() => {
-    if (router.canDismiss()) {
-      router.dismissAll();
-    }
-
-    requestAnimationFrame(() => {
-      router.replace('/home');
-    });
+    router.replace('/home');
   }, [router]);
 
   useEffect(() => {
@@ -54,6 +51,10 @@ export default function AuthRoute() {
   }, []);
 
   const submit = async () => {
+    if (emailRequestInFlightRef.current || emailLoading || appleLoading || googleLoading) {
+      return;
+    }
+
     const trimmedEmail = email.trim();
 
     if (!trimmedEmail.includes('@') || password.length < 8) {
@@ -61,12 +62,14 @@ export default function AuthRoute() {
       return;
     }
 
+    emailRequestInFlightRef.current = true;
     setEmailLoading(true);
     Keyboard.dismiss();
     const result =
       authMode === 'sign_in'
         ? await authService.signInWithEmailPassword(trimmedEmail, password)
         : await authService.signUpWithEmailPassword(trimmedEmail, password);
+    emailRequestInFlightRef.current = false;
     setEmailLoading(false);
 
     if (result.ok && authMode === 'sign_up' && result.message) {
@@ -183,9 +186,10 @@ export default function AuthRoute() {
             <AppText variant="eyebrow" style={styles.fieldLabel}>
               Email
             </AppText>
-            <View style={styles.inputShell}>
+            <Pressable accessible={false} onPress={() => emailInputRef.current?.focus()} style={styles.inputShell}>
               <Mail color={colors.text.secondary} size={18} strokeWidth={2.4} />
               <TextInput
+                ref={emailInputRef}
                 autoCapitalize="none"
                 autoCorrect={false}
                 autoComplete="email"
@@ -197,17 +201,19 @@ export default function AuthRoute() {
                 returnKeyType="next"
                 style={styles.input}
                 submitBehavior="submit"
+                onSubmitEditing={() => passwordInputRef.current?.focus()}
                 value={email}
               />
-            </View>
+            </Pressable>
           </View>
           <View style={styles.field}>
             <AppText variant="eyebrow" style={styles.fieldLabel}>
               Password
             </AppText>
-            <View style={styles.inputShell}>
+            <Pressable accessible={false} onPress={() => passwordInputRef.current?.focus()} style={styles.inputShell}>
               <LockKeyhole color={colors.text.secondary} size={18} strokeWidth={2.4} />
               <TextInput
+                ref={passwordInputRef}
                 autoCapitalize="none"
                 autoCorrect={false}
                 autoComplete={authMode === 'sign_in' ? 'current-password' : 'new-password'}
@@ -226,7 +232,7 @@ export default function AuthRoute() {
                 }}
                 value={password}
               />
-            </View>
+            </Pressable>
           </View>
         </View>
 
@@ -433,10 +439,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
   },
   input: {
+    alignSelf: 'stretch',
     color: colors.text.primary,
     flex: 1,
     fontFamily: typography.family.bodyMedium,
     fontSize: 15,
+    minHeight: 54,
     minWidth: 0,
     paddingVertical: 0,
   },
