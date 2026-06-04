@@ -27,10 +27,12 @@ const baseExpo = {
   version: '0.1.0',
   orientation: 'portrait',
   userInterfaceStyle: 'light',
+  icon: './assets/brand/app-icon.png',
   assetBundlePatterns: ['**/*'],
   ios: {
     supportsTablet: false,
     bundleIdentifier: 'com.ibrahim.overthought',
+    icon: './assets/brand/app-icon.png',
   },
   plugins: [
     'expo-router',

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { StyleProp, TextStyle } from 'react-native';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { usePathname, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { authService } from '../../src/features/auth/authService';
@@ -82,7 +82,13 @@ export default function WelcomeRoute() {
       />
       <View style={styles.brandRow}>
         <View style={styles.logo}>
-          <AppText center style={styles.logoGlyph}>🌀</AppText>
+          <Image
+            accessibilityIgnoresInvertColors
+            accessibilityLabel="Overthought"
+            resizeMode="contain"
+            source={require('../../assets/brand/app-logo-transparent.png')}
+            style={styles.logoImage}
+          />
         </View>
         <AppText variant="title" style={styles.wordmark}>Overthought</AppText>
       </View>
@@ -168,15 +174,13 @@ const styles = StyleSheet.create({
   },
   logo: {
     alignItems: 'center',
-    backgroundColor: colors.brand.ink,
-    borderRadius: 14,
     height: 46,
     justifyContent: 'center',
     width: 46,
   },
-  logoGlyph: {
-    fontSize: 21,
-    lineHeight: 24,
+  logoImage: {
+    height: 46,
+    width: 46,
   },
   wordmark: {
     fontFamily: typography.family.displaySemiBold,
