@@ -334,6 +334,30 @@ describe('authService email password auth', () => {
     expect(premiumService.handleAuthStateChange).toHaveBeenCalledWith('email-user-1');
   });
 
+  it('retries a transient email password network failure once', async () => {
+    mockSupabase.auth.signInWithPassword
+      .mockRejectedValueOnce(new TypeError('Network request failed'))
+      .mockResolvedValueOnce({
+        data: {
+          session: {
+            user: {
+              id: 'email-user-1',
+              email: 'person@example.com',
+              app_metadata: { provider: 'email' },
+              user_metadata: {},
+            },
+          },
+        },
+        error: null,
+      });
+
+    const result = await authService.signInWithEmailPassword('person@example.com', 'password123');
+
+    expect(result).toEqual({ ok: true });
+    expect(mockSupabase.auth.signInWithPassword).toHaveBeenCalledTimes(2);
+    expect(useAuthStore.getState().sessionMode).toBe('authenticated');
+  });
+
   it('returns Supabase email password sign-in errors without changing local auth state', async () => {
     mockSupabase.auth.signInWithPassword.mockResolvedValue({
       data: { session: null },
@@ -343,6 +367,7 @@ describe('authService email password auth', () => {
     const result = await authService.signInWithEmailPassword('person@example.com', 'password123');
 
     expect(result).toEqual({ ok: false, message: 'Invalid login credentials' });
+    expect(mockSupabase.auth.signInWithPassword).toHaveBeenCalledTimes(1);
     expect(useAuthStore.getState().sessionMode).toBe('guest');
     expect(premiumService.handleAuthStateChange).not.toHaveBeenCalled();
   });

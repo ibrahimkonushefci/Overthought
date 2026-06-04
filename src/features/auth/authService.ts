@@ -42,6 +42,8 @@ interface DeleteAccountFunctionFailure {
 type DeleteAccountFunctionResponse = DeleteAccountFunctionSuccess | DeleteAccountFunctionFailure;
 
 let listenersStarted = false;
+const transientEmailSignInRetryDelayMs = 400;
+
 function providerFromSupabase(provider?: string): AuthProvider {
   if (provider === 'apple' || provider === 'google' || provider === 'email') {
     return provider;
@@ -95,6 +97,16 @@ function authErrorMessage(error: unknown): string | null {
   }
 
   return null;
+}
+
+function isTransientNetworkError(error: unknown): boolean {
+  return error instanceof TypeError || authErrorMessage(error)?.includes('Network request failed') === true;
+}
+
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
 }
 
 function isGoogleNonceSetupError(error: unknown): boolean {
@@ -289,8 +301,9 @@ export const authService = {
       };
     }
 
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+    const authClient = supabase.auth;
+    const signInOnce = async (): Promise<AuthActionResult> => {
+      const { data, error } = await authClient.signInWithPassword({
         email,
         password,
       });
@@ -305,7 +318,24 @@ export const authService = {
 
       await applySession(data.session);
       return { ok: true };
+    };
+
+    try {
+      return await signInOnce();
     } catch (error) {
+      if (isTransientNetworkError(error)) {
+        await wait(transientEmailSignInRetryDelayMs);
+
+        try {
+          return await signInOnce();
+        } catch (retryError) {
+          return {
+            ok: false,
+            message: retryError instanceof Error ? retryError.message : 'Unable to sign in right now. Try again.',
+          };
+        }
+      }
+
       return {
         ok: false,
         message: error instanceof Error ? error.message : 'Unable to sign in right now. Try again.',

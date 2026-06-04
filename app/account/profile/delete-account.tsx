@@ -32,14 +32,22 @@ export default function DeleteAccountRoute() {
         style: 'destructive',
         onPress: () => {
           setLoading(true);
-          void authService.deleteAccount().then((result) => {
-            setLoading(false);
-            if (!result.ok) {
-              Alert.alert('Could not delete', result.message ?? 'Try again.');
-              return;
+          void (async () => {
+            try {
+              const result = await authService.deleteAccount();
+
+              if (!result.ok) {
+                Alert.alert('Could not delete', result.message ?? 'Try again.');
+                return;
+              }
+
+              router.replace('/welcome');
+            } catch (error) {
+              Alert.alert('Could not delete', error instanceof Error ? error.message : 'Try again.');
+            } finally {
+              setLoading(false);
             }
-            router.replace('/welcome');
-          });
+          })();
         },
       },
     ]);
