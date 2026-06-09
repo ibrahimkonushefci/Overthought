@@ -5,6 +5,21 @@ const appVariant =
 
 export const passwordResetRedirectUrl = 'overthought://reset-password';
 
+export const legalUrls = {
+  privacyPolicy: 'https://overthought.app/privacy-policy.html',
+  termsOfUse: 'https://overthought.app/terms-of-use.html',
+} as const;
+
+function normalizeLegalUrl(value: string | undefined, canonicalUrl: string): string {
+  const trimmedValue = value?.trim();
+
+  if (!trimmedValue) {
+    return canonicalUrl;
+  }
+
+  return trimmedValue === canonicalUrl.replace('.html', '/') ? canonicalUrl : trimmedValue;
+}
+
 export const env = {
   appVariant,
   supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL ?? '',
@@ -19,8 +34,8 @@ export const env = {
   revenueCatIosApiKey: process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY ?? '',
   revenueCatAndroidApiKey: process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY ?? '',
   enablePremium: appVariant === 'production' && process.env.EXPO_PUBLIC_ENABLE_PREMIUM === 'true',
-  privacyPolicyUrl: process.env.EXPO_PUBLIC_PRIVACY_POLICY_URL ?? '',
-  termsUrl: process.env.EXPO_PUBLIC_TERMS_URL ?? '',
+  privacyPolicyUrl: normalizeLegalUrl(process.env.EXPO_PUBLIC_PRIVACY_POLICY_URL, legalUrls.privacyPolicy),
+  termsUrl: normalizeLegalUrl(process.env.EXPO_PUBLIC_TERMS_URL, legalUrls.termsOfUse),
 } as const;
 
 export function hasSupabaseEnv(): boolean {
