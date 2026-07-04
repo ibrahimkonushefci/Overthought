@@ -1,6 +1,7 @@
 import { analyzeCase, verdictConfig } from './index';
+import { buildExplanationText, buildNextMoveText, describeSignal } from './copy';
 import { normalizeText } from './normalize';
-import type { Category, SemanticFactId } from './types';
+import type { Category, SemanticFactId, TriggeredSignal } from './types';
 import { getVerdictDisplayLabel, verdictLabels } from '../../shared/utils/verdict';
 
 interface GoldenCase {
@@ -1030,6 +1031,92 @@ const goldenCases: GoldenCase[] = [
     expectedScenarioId: 'late_night_friend_invite',
     expectedFactIds: ['hasFriendContext', 'hasInvitation', 'hasLateNightTiming'],
   },
+  {
+    name: 'The Slow Fade',
+    category: 'friendship',
+    inputText:
+      'We used to talk every day but we barely talk anymore and her replies keep getting shorter, I feel like we are drifting apart.',
+    minScore: 52,
+    maxScore: 64,
+    verdictLabel: 'mild_delusion',
+    explanationPattern: /cooling|drift/i,
+    expectedScenarioId: 'friendship_drift_pattern',
+  },
+  {
+    name: 'The Left Out',
+    category: 'friendship',
+    inputText:
+      'My friends all hung out without me this weekend and I only found out from their story, they did not invite me at all.',
+    minScore: 54,
+    maxScore: 66,
+    verdictLabel: 'mild_delusion',
+    explanationPattern: /left out/i,
+    expectedScenarioId: 'friendship_exclusion_once',
+  },
+  {
+    name: 'The Critical Parent',
+    category: 'general',
+    inputText:
+      'My mom always criticizes me and says nothing i do is good enough, and she compares me to my cousin constantly.',
+    minScore: 48,
+    maxScore: 60,
+    verdictLabel: 'mild_delusion',
+    explanationPattern: /criticism/i,
+    expectedScenarioId: 'family_criticism_pattern',
+  },
+  {
+    name: 'The Golden Child',
+    category: 'general',
+    inputText:
+      'My parents treat my brother better and he is obviously the favorite child, they always take his side.',
+    minScore: 50,
+    maxScore: 62,
+    verdictLabel: 'mild_delusion',
+    explanationPattern: /favoritism|unequal treatment/i,
+    expectedScenarioId: 'family_favoritism_pattern',
+  },
+  {
+    name: 'The Layoff Spiral',
+    category: 'general',
+    inputText:
+      'I was left out of the meeting again and kept out of the loop lately, I think I am about to be let go.',
+    minScore: 72,
+    maxScore: 82,
+    verdictLabel: 'dangerous_overthinking',
+    explanationPattern: /left out|exclusion/i,
+    expectedScenarioId: 'workplace_exclusion_layoff',
+  },
+  {
+    name: 'The Unmatch',
+    category: 'romance',
+    inputText: 'We had a great conversation and then she unmatched me the next morning without any warning.',
+    minScore: 26,
+    maxScore: 36,
+    verdictLabel: 'slight_reach',
+    explanationPattern: /blunt answer|closed door/i,
+    expectedScenarioId: 'dating_unmatched_closure',
+  },
+  {
+    name: 'The Still Swiping',
+    category: 'romance',
+    inputText: 'We have been on two dates but he is still active on the app and still swiping every night.',
+    minScore: 56,
+    maxScore: 68,
+    verdictLabel: 'mild_delusion',
+    explanationPattern: /still looking|still swiping/i,
+    expectedScenarioId: 'dating_still_shopping',
+  },
+  {
+    name: 'The Ghost Match',
+    category: 'romance',
+    inputText:
+      'We matched a week ago but never messaged and I keep wondering what I did wrong to make him lose interest.',
+    minScore: 60,
+    maxScore: 72,
+    verdictLabel: 'dangerous_overthinking',
+    explanationPattern: /match/i,
+    expectedScenarioId: 'dating_matched_no_message',
+  },
 ];
 
 const goldenResults: Array<{
@@ -1146,6 +1233,35 @@ describe('verdict engine low-information guard', () => {
     expect(result.confidenceLevel).toBe('low');
     expect(result.triggeredSignals).toContain('needs_more_context_input');
     expect(result.nextMoveText).toMatch(/who did what|what happened|Basic Verdict|want judged/i);
+  });
+
+  it.each(['?', '...', '!!!', '', '   ', '❤️❤️❤️'])(
+    'never fakes a confident verdict for an empty or symbol-only submission: %s',
+    (inputText) => {
+      const result = analyzeCase(verdictConfig, { category: 'romance', inputText }, { includeDebug: true });
+
+      expect(result.delusionScore).toBeLessThanOrEqual(30);
+      expect(result.verdictLabel).toBe('slight_reach');
+      expect(result.confidenceLevel).toBe('low');
+      expect(result.triggeredSignals).toContain('needs_more_context_input');
+    },
+  );
+
+  it.each([
+    'he didnt reply n now im freakin out lol',
+    'she leftt me on read agian and i dont kno what i did wrong',
+    'MY BOYFRIEND LIKED HIS EXES PHOTO AND IM LOSING IT',
+    'we was talking everyday then he just stop texting me idk why 😭😭',
+    'my freind ignored me at lunch today n i think she hates me now',
+    'bro he watched my story like 5 times but wont text back???',
+    'He texted me every day last week and then he stopped. He watched my story though. He liked my post. He is confusing me so much.',
+  ])('gives messy or misspelled real cases an actual analysis, not the reject copy: %s', (inputText) => {
+    const result = analyzeCase(verdictConfig, { category: 'romance', inputText }, { includeDebug: true });
+
+    expect(result.triggeredSignals).not.toContain('needs_more_context_input');
+    expect(result.explanationText).not.toMatch(/not a judgeable case|not a social situation|keyboard fog/i);
+    expect(result.delusionScore).toBeGreaterThanOrEqual(30);
+    expect(result.delusionScore).toBeLessThanOrEqual(90);
   });
 
   it('uses safer low-confidence copy for mixed-language input Basic Verdict may only partially understand', () => {
@@ -1283,7 +1399,9 @@ describe('verdict engine fallback generalization', () => {
     );
 
     expect(result.debug?.scenarioOverrideId).toBeUndefined();
-    expect(result.delusionScore).toBeLessThanOrEqual(70);
+    // Multiple independent weak signals may now reach dangerous_overthinking (up
+    // to 85) without a scenario, but must never fake full-clown or its dramatic copy.
+    expect(result.delusionScore).toBeLessThanOrEqual(85);
     expect(result.verdictLabel).not.toBe('full_clown_territory');
     expect(result.explanationText).not.toMatch(
       /fake mustache|wedding cake|theory is louder|confidence is doing push-ups/i,
@@ -1462,5 +1580,410 @@ describe('semantic facts evaluation set', () => {
     expect(result.explanationText).toMatch(evaluationCase.expectedPattern);
     expect(result.explanationText).not.toMatch(/strongest signal is a weak signal/i);
     expect(result.delusionScore).toBeLessThanOrEqual(85);
+  });
+});
+
+describe('matching false positives', () => {
+  // Word-boundary matching must stop plain phrase patterns from firing when the
+  // pattern text is only a substring inside a larger, unrelated word.
+  const falsePositiveCases: Array<{
+    name: string;
+    category: Category;
+    inputText: string;
+    forbiddenSignalIds: string[];
+  }> = [
+    {
+      name: '"no plan" must not match inside "no planet"',
+      category: 'general',
+      inputText:
+        'My professor said my thesis about how there is no planet B needs a full rewrite before the deadline next week.',
+      forbiddenSignalIds: ['no_concrete_followup'],
+    },
+    {
+      name: '"liked" must not match inside "disliked"',
+      category: 'general',
+      inputText: 'My professor disliked my thesis topic and told me to change the whole angle before Friday.',
+      forbiddenSignalIds: ['social_media_overread', 'heart_emoji_signal'],
+    },
+    {
+      name: 'calendar "date" wording must not read as a romantic date signal',
+      category: 'general',
+      inputText: 'The project deadline date is Friday and my manager moved the review meeting up a day.',
+      forbiddenSignalIds: ['direct_action', 'verbal_dinner_interest'],
+    },
+    {
+      name: '"chill" inside "chilling" must not synthesize an invite',
+      category: 'friendship',
+      inputText: 'We were all chilling as a group at the library and nobody said much to me directly.',
+      forbiddenSignalIds: ['direct_action'],
+    },
+    {
+      name: '"asked" inside "basked" must not fire direct action',
+      category: 'general',
+      inputText: 'We basked in the afternoon sun at the picnic and then everyone drifted off without a word.',
+      forbiddenSignalIds: ['direct_action', 'availability_question'],
+    },
+  ];
+
+  it.each(falsePositiveCases)('$name', (falsePositiveCase) => {
+    const result = analyzeCase(
+      verdictConfig,
+      {
+        category: falsePositiveCase.category,
+        inputText: falsePositiveCase.inputText,
+      },
+      { includeDebug: true },
+    );
+
+    falsePositiveCase.forbiddenSignalIds.forEach((signalId) => {
+      expect(result.triggeredSignals).not.toContain(signalId);
+    });
+  });
+});
+
+describe('scoring generalization', () => {
+  // Realistic, out-of-scenario cases. These assert the structural guarantees of
+  // the unified bands + conditional fallback guard, not exact hand-tuned scores,
+  // so they stay valid as pattern/scenario coverage grows.
+  const generalizationCases: Array<{ name: string; category: Category; inputText: string }> = [
+    { name: 'single delayed reply', category: 'romance', inputText: 'He replied to my message a bit slower than usual today and I keep wondering if he is losing interest in me.' },
+    { name: 'late night one word', category: 'romance', inputText: 'He only ever texts me late at night, never suggests actual plans, and gives one word answers during the day but I still think he likes me.' },
+    { name: 'grounded dinner plan', category: 'romance', inputText: 'She asked me out for dinner on Saturday, picked the restaurant, and confirmed the time the next morning.' },
+    { name: 'friendship drift', category: 'friendship', inputText: 'My close friend used to text me every day but lately her replies are short and it takes her a while, and I am not sure if I did something.' },
+    { name: 'one word annoyed', category: 'friendship', inputText: 'My friend keeps replying with just k or lol and I feel like she is annoyed with me but I have no proof.' },
+    { name: 'family short calls', category: 'general', inputText: 'My mom has been really short with me on the phone this week and I keep wondering if she is upset about something I said.' },
+    { name: 'manager cold standup', category: 'general', inputText: 'My manager used to say good morning to me and now she barely acknowledges me in standup and I think I am about to be let go.' },
+    { name: 'dating app went quiet', category: 'romance', inputText: 'We matched three days ago and had a great conversation but she has not messaged back since yesterday and I am spiraling.' },
+    { name: 'party ignored', category: 'social', inputText: 'A few people at the party did not really talk to me much and I left early wondering if everyone secretly dislikes me.' },
+    { name: 'strong birthday plan', category: 'friendship', inputText: 'My friend planned my birthday dinner, invited everyone, and texted to double check I could make it.' },
+  ];
+
+  const results = generalizationCases.map((generalizationCase) => ({
+    ...generalizationCase,
+    result: analyzeCase(
+      verdictConfig,
+      { category: generalizationCase.category, inputText: generalizationCase.inputText },
+      { includeDebug: true },
+    ),
+  }));
+
+  function distinctActiveWeakSignals(result: (typeof results)[number]['result']): number {
+    return new Set(
+      (result.debug?.matchedSignals ?? [])
+        .filter((signal) => signal.type === 'weak_evidence' && signal.weightApplied > 0)
+        .map((signal) => signal.id),
+    ).size;
+  }
+
+  it.each(results)('$name never fakes a confident full-clown read without a scenario', ({ result }) => {
+    if (result.debug?.scenarioOverrideId) {
+      return;
+    }
+
+    // No bespoke scenario => the fallback guard applies: never full clown, and
+    // only reach dangerous_overthinking when at least two independent weak
+    // signals justify it.
+    expect(result.verdictLabel).not.toBe('full_clown_territory');
+    expect(result.delusionScore).toBeLessThanOrEqual(85);
+
+    if (distinctActiveWeakSignals(result) < 2) {
+      expect(result.delusionScore).toBeLessThanOrEqual(70);
+    }
+  });
+
+  it('spreads scores across multiple bands instead of pinning everything at the old 70 cap', () => {
+    const labels = new Set(results.map(({ result }) => result.verdictLabel));
+    expect(labels.size).toBeGreaterThanOrEqual(3);
+
+    const scores = results.map(({ result }) => result.delusionScore);
+    expect(Math.max(...scores) - Math.min(...scores)).toBeGreaterThanOrEqual(40);
+  });
+
+  it('keeps a clearly grounded case low and a multi-signal spiral high', () => {
+    const grounded = results.find((entry) => entry.name === 'grounded dinner plan')!.result;
+    const spiral = results.find((entry) => entry.name === 'dating app went quiet')!.result;
+
+    expect(grounded.delusionScore).toBeLessThanOrEqual(45);
+    expect(['barely_delusional', 'slight_reach']).toContain(grounded.verdictLabel);
+
+    expect(spiral.delusionScore).toBeGreaterThan(70);
+    expect(spiral.verdictLabel).toBe('dangerous_overthinking');
+  });
+});
+
+describe('fallback copy quality', () => {
+  function weakSignal(id: string): TriggeredSignal {
+    return { id, type: 'weak_evidence', weightApplied: 20, matchedPatterns: [id], source: 'input' };
+  }
+
+  it('names the actual top signal instead of a flat category label', () => {
+    const explanation = buildExplanationText({
+      score: 78,
+      scoreSeed: 'seed-signal-aware',
+      config: verdictConfig,
+      topSignals: [weakSignal('no_concrete_followup'), weakSignal('delayed_reply')],
+      genericFallbackApplied: true,
+    });
+
+    // The signal-aware fallback should surface the described phrase, not the old
+    // flat "a weak signal" placeholder.
+    expect(explanation).toContain(describeSignal('no_concrete_followup'));
+    expect(explanation).not.toMatch(/\ba weak signal\b/i);
+  });
+
+  it('produces varied fallback explanations and next moves across many cases', () => {
+    const explanations = new Set<string>();
+    const nextMoves = new Set<string>();
+
+    for (let index = 0; index < 24; index += 1) {
+      const scoreSeed = `case-${index}-${index * 7}`;
+      explanations.add(
+        buildExplanationText({
+          score: 75,
+          scoreSeed,
+          config: verdictConfig,
+          topSignals: [weakSignal('mixed_signals'), weakSignal('vague_language')],
+          genericFallbackApplied: true,
+        }),
+      );
+      nextMoves.add(
+        buildNextMoveText({
+          score: 75,
+          scoreSeed,
+          config: verdictConfig,
+          genericFallbackApplied: true,
+        }),
+      );
+    }
+
+    // The old pools had 3 templates each; the expanded pools must produce clearly
+    // more variety so repeated fallbacks stop reading identically.
+    expect(explanations.size).toBeGreaterThanOrEqual(8);
+    expect(nextMoves.size).toBeGreaterThanOrEqual(7);
+  });
+
+  it('is deterministic for the same case seed', () => {
+    const args = {
+      score: 80,
+      scoreSeed: 'stable-seed',
+      config: verdictConfig,
+      topSignals: [weakSignal('social_media_overread')],
+      genericFallbackApplied: true,
+    };
+
+    expect(buildExplanationText(args)).toBe(buildExplanationText(args));
+  });
+});
+
+interface ComparisonRegressionCase {
+  name: string;
+  category: Category;
+  inputText: string;
+  minScore: number;
+  maxScore: number;
+  verdictLabel: CaseLabel;
+  explanationPattern: RegExp;
+  nextMovePattern: RegExp;
+  forbiddenExplanationPattern?: RegExp;
+  forbiddenNextMovePattern?: RegExp;
+  expectedScenarioId?: string;
+}
+
+type CaseLabel = GoldenCase['verdictLabel'];
+
+// The 10 prompts from the July 2026 live App Store vs local comparison test,
+// plus the follow-up polish prompts that exposed fresh generic fallbacks.
+// Each fixture pins the behavior that review found good (or fixed): scenario
+// routing, proportional score, and copy that names the case-specific facts.
+const comparisonRegressionCases: ComparisonRegressionCase[] = [
+  {
+    name: 'P1 story like without an actual day',
+    category: 'romance',
+    inputText:
+      "He replied slower than usual today, liked my story, and then said 'maybe we can hang sometime' but never suggested an actual day.",
+    minScore: 71,
+    maxScore: 90,
+    verdictLabel: 'dangerous_overthinking',
+    explanationPattern: /missing follow-through/i,
+    nextMovePattern: /follow-up|actual plan/i,
+  },
+  {
+    name: 'P2 hinge match gone quiet',
+    category: 'romance',
+    inputText:
+      "We matched on Hinge a week ago, had a good conversation, and now she hasn't messaged back. I keep wondering if I said something wrong.",
+    minScore: 60,
+    maxScore: 70,
+    verdictLabel: 'mild_delusion',
+    explanationPattern: /never turns into a real message|real message/i,
+    nextMovePattern: /opener|follow-up|reply speed|silence is the answer/i,
+    forbiddenNextMovePattern: /keep the read cautious/i,
+  },
+  {
+    name: 'P3 unmatch is closure',
+    category: 'romance',
+    inputText:
+      'We had a great conversation and then she unmatched me the next morning without any warning.',
+    minScore: 26,
+    maxScore: 40,
+    verdictLabel: 'slight_reach',
+    explanationPattern: /unmatch/i,
+    nextMovePattern: /unmatch|answer/i,
+    expectedScenarioId: 'dating_unmatched_closure',
+  },
+  {
+    name: 'P4 two dates but still swiping',
+    category: 'romance',
+    inputText:
+      "We went on two dates, but he is still active on the app and keeps updating his profile. I'm wondering if that means he's not serious.",
+    minScore: 56,
+    maxScore: 68,
+    verdictLabel: 'mild_delusion',
+    explanationPattern: /still active on the app|still swiping/i,
+    nextMovePattern: /investment|exclusivity/i,
+    expectedScenarioId: 'dating_still_shopping',
+  },
+  {
+    name: 'P5 daily texting fades to short answers',
+    category: 'romance',
+    inputText:
+      "We used to text every day, but now she replies with short answers and we barely talk anymore. I feel like we're drifting apart.",
+    minScore: 56,
+    maxScore: 68,
+    verdictLabel: 'mild_delusion',
+    explanationPattern: /drift|short answers|one-word replies/i,
+    nextMovePattern: /distance|bid for the connection/i,
+    expectedScenarioId: 'romance_drift_pattern',
+  },
+  {
+    name: 'P6 friends hung out without me',
+    category: 'friendship',
+    inputText:
+      'My friends all hung out without me this weekend and I only found out from their story. Nobody invited me.',
+    minScore: 46,
+    maxScore: 66,
+    verdictLabel: 'mild_delusion',
+    explanationPattern: /left out/i,
+    nextMovePattern: /pattern|would have liked to be there/i,
+    expectedScenarioId: 'friendship_exclusion_once',
+  },
+  {
+    name: 'P7 constant parent criticism and comparison',
+    category: 'general',
+    inputText:
+      'My mom always criticizes me and says nothing I do is good enough. She keeps comparing me to my cousin.',
+    minScore: 48,
+    maxScore: 60,
+    verdictLabel: 'mild_delusion',
+    explanationPattern: /criticism/i,
+    nextMovePattern: /boundary|their opinion/i,
+    forbiddenNextMovePattern: /feedback that is fair/i,
+    expectedScenarioId: 'family_criticism_pattern',
+  },
+  {
+    name: 'P8 workplace exclusion firing spiral',
+    category: 'general',
+    inputText:
+      "I was left out of a meeting again, my manager barely acknowledges me in standup, and now I think I'm about to get fired.",
+    minScore: 72,
+    maxScore: 82,
+    verdictLabel: 'dangerous_overthinking',
+    explanationPattern: /left out at work|exclusion is real/i,
+    nextMovePattern: /manager|concrete information/i,
+    forbiddenExplanationPattern: /work context matters here/i,
+    expectedScenarioId: 'workplace_exclusion_layoff',
+  },
+  {
+    name: 'P9 quiet party read as secret dislike',
+    category: 'social',
+    inputText:
+      'At the party, a few people didn’t really talk to me, and I left early wondering if everyone secretly dislikes me.',
+    minScore: 58,
+    maxScore: 68,
+    verdictLabel: 'mild_delusion',
+    explanationPattern: /quiet people|party/i,
+    nextMovePattern: /one person who was there|flat party/i,
+    forbiddenExplanationPattern: /group invite/i,
+    expectedScenarioId: 'party_ignored_spiral',
+  },
+  {
+    name: 'P10 professor thesis rewrite is not a social case',
+    category: 'general',
+    inputText:
+      'My professor said my thesis about how there is no planet B needs a full rewrite before the deadline next week.',
+    minScore: 28,
+    maxScore: 38,
+    verdictLabel: 'slight_reach',
+    explanationPattern: /instruction|task with a deadline/i,
+    nextMovePattern: /rewrite/i,
+    expectedScenarioId: 'academic_feedback_not_social',
+  },
+  {
+    name: 'P11 withheld present read as neediness',
+    category: 'romance',
+    inputText: "Bought her a present, didn't give it to her yet bc she might see me as a needy guy",
+    minScore: 46,
+    maxScore: 58,
+    verdictLabel: 'mild_delusion',
+    explanationPattern: /present|needy|effort|panic/i,
+    nextMovePattern: /gift|relationship|scale|normally/i,
+    forbiddenExplanationPattern: /few facts early|plot is thin|birth certificate/i,
+    expectedScenarioId: 'needy_gesture_anxiety_pattern',
+  },
+  {
+    name: 'P12 casual coffee refusal is not a mystery',
+    category: 'romance',
+    inputText:
+      'She refused the coffee offer way too casual and said she is meeting with a friend shortly instead',
+    minScore: 32,
+    maxScore: 44,
+    verdictLabel: 'slight_reach',
+    explanationPattern: /coffee|declined|refused|friend|hidden message|mysterious/i,
+    nextMovePattern: /take the no|refusal|real time|actual plan/i,
+    forbiddenExplanationPattern: /birth certificate|case has a pulse|plot is thin/i,
+    expectedScenarioId: 'casual_coffee_refusal_closure',
+  },
+  {
+    name: 'P13 excitement dropped to meh',
+    category: 'romance',
+    inputText: 'She would be very excited at the beginning now she is kinda MEH. Idk what changed',
+    minScore: 54,
+    maxScore: 66,
+    verdictLabel: 'mild_delusion',
+    explanationPattern: /excited|meh|drop|energy|changed/i,
+    nextMovePattern: /low-pressure|clarity|energy|vibe changed/i,
+    forbiddenExplanationPattern: /pattern is forming|signed anything|maybe with good lighting/i,
+    expectedScenarioId: 'enthusiasm_drop_pattern',
+  },
+];
+
+describe('app store comparison regression prompts', () => {
+  it.each(comparisonRegressionCases)('$name', (regressionCase) => {
+    const result = analyzeCase(
+      verdictConfig,
+      {
+        category: regressionCase.category,
+        inputText: regressionCase.inputText,
+      },
+      { includeDebug: true },
+    );
+
+    expect(result.delusionScore).toBeGreaterThanOrEqual(regressionCase.minScore);
+    expect(result.delusionScore).toBeLessThanOrEqual(regressionCase.maxScore);
+    expect(result.verdictLabel).toBe(regressionCase.verdictLabel);
+    expect(result.explanationText).toMatch(regressionCase.explanationPattern);
+    expect(result.nextMoveText).toMatch(regressionCase.nextMovePattern);
+
+    if (regressionCase.forbiddenExplanationPattern) {
+      expect(result.explanationText).not.toMatch(regressionCase.forbiddenExplanationPattern);
+    }
+
+    if (regressionCase.forbiddenNextMovePattern) {
+      expect(result.nextMoveText).not.toMatch(regressionCase.forbiddenNextMovePattern);
+    }
+
+    if (regressionCase.expectedScenarioId) {
+      expect(result.debug?.scenarioOverrideId).toBe(regressionCase.expectedScenarioId);
+    }
   });
 });

@@ -19,21 +19,21 @@
     },
     {
       "min": 21,
-      "max": 40,
+      "max": 45,
       "label": "slight_reach"
     },
     {
-      "min": 41,
+      "min": 46,
       "max": 70,
       "label": "mild_delusion"
     },
     {
       "min": 71,
-      "max": 85,
+      "max": 90,
       "label": "dangerous_overthinking"
     },
     {
-      "min": 86,
+      "min": 91,
       "max": 100,
       "label": "full_clown_territory"
     }
@@ -358,6 +358,41 @@
       ]
     },
     {
+      "id": "needy_gesture_anxiety",
+      "type": "weak_evidence",
+      "defaultWeight": 16,
+      "patterns": [
+        "/(bought|got|made).{0,50}(gift|present).{0,80}(needy|desperate|too much)/",
+        "/(needy|desperate|too much).{0,80}(gift|present)/",
+        "/(gift|present).{0,80}did not give/",
+        "/did not give (her|him|them) (a |the )?(gift|present)/"
+      ]
+    },
+    {
+      "id": "casual_refusal",
+      "type": "weak_evidence",
+      "defaultWeight": 18,
+      "patterns": [
+        "/(refused|declined|turned down) (my |the |a )?(coffee|drink|date|offer|invite)/",
+        "/(refused|declined|turned down).{0,50}(coffee|drink|date|offer|invite)/",
+        "/cannot (make it|come|go|meet)/",
+        "/could not (make it|come|go|meet)/"
+      ]
+    },
+    {
+      "id": "enthusiasm_drop",
+      "type": "weak_evidence",
+      "defaultWeight": 18,
+      "patterns": [
+        "/used to (be )?(very |so |super )?(excited|into it|into me)/",
+        "/was (very |so |super )?excited (at|in) the beginning/",
+        "/would be (very |so |super )?excited/",
+        "/now (she|he|they) (is|are) (kinda |kind of |so |very )?(meh|cold|distant|different|less excited)/",
+        "/energy (changed|shifted|dropped)/",
+        "/not as excited (anymore|now)/"
+      ]
+    },
+    {
       "id": "no_concrete_followup",
       "type": "weak_evidence",
       "defaultWeight": 30,
@@ -365,6 +400,8 @@
         "didn't make plans",
         "did not make plans",
         "never followed up",
+        "/never (suggests?|suggested|names?|named|picks?|picked|offers?|offered|gives?|gave) (an actual |a real |a specific |a concrete |an? )?(day|date|time|plan)/",
+        "/(no|without an?) actual (day|date|time|plan)/",
         "no date",
         "no plan",
         "has not made plans",
@@ -504,6 +541,31 @@
         "party went quiet",
         "went quiet for a sec",
         "hate my vibe"
+      ]
+    },
+    {
+      "id": "party_ignored_anxiety",
+      "type": "weak_evidence",
+      "defaultWeight": 20,
+      "patterns": [
+        "/(didn'?t|did not|barely|hardly) (really |even )?(talk|speak) to me/",
+        "/nobody (really |even )?(talked|spoke) to me/",
+        "/(everyone|everybody) secretly (dislikes|hates) me/",
+        "/secretly (dislikes|hates|hated) me/",
+        "/i left (the party |the |)early/"
+      ]
+    },
+    {
+      "id": "academic_feedback_context",
+      "type": "context_modifier",
+      "defaultWeight": -12,
+      "patterns": [
+        "/(professor|teacher|lecturer|prof|advisor|supervisor) (said|told|asked|wants|gave|thinks)/",
+        "thesis",
+        "dissertation",
+        "/(essay|assignment|thesis|dissertation|draft) .*(rewrite|rewritten|revise|revision|redo)/",
+        "/full rewrite/",
+        "/(failed|grade[ds]?) (my|the) (essay|assignment|exam|paper|thesis)/"
       ]
     },
     {
@@ -1388,8 +1450,8 @@
         "invited the entire office",
         "invited the whole office",
         "everyone at the office",
-        "some of us",
-        "a few people",
+        "/some of us are (going|hitting|heading|grabbing|getting)/",
+        "/a few people (over|coming|are coming)/",
         "getting a group together",
         "few people over",
         "people over for drinks"
@@ -1536,6 +1598,222 @@
         "stopped texting after",
         "after 12 days",
         "after twelve days"
+      ]
+    },
+    {
+      "id": "friendship_drift",
+      "type": "weak_evidence",
+      "defaultWeight": 20,
+      "patterns": [
+        "used to text every day",
+        "used to talk every day",
+        "used to talk all the time",
+        "used to be so close",
+        "we barely talk anymore",
+        "barely talk anymore",
+        "growing apart",
+        "drifting apart",
+        "slowly drifting",
+        "feels distant lately",
+        "been distant lately",
+        "/replies (are|keep) getting shorter/",
+        "/repl(ies|y|ying) with short (answers|replies|texts)/",
+        "/one word (answers|replies|texts)/",
+        "stopped reaching out"
+      ]
+    },
+    {
+      "id": "excluded_from_plans",
+      "type": "weak_evidence",
+      "defaultWeight": 22,
+      "patterns": [
+        "hung out without me",
+        "went out without me",
+        "hung out without inviting me",
+        "did not invite me",
+        "didnt invite me",
+        "left me out",
+        "left out of the group",
+        "everyone was there except me",
+        "found out from their story",
+        "saw on their story they all",
+        "not invited"
+      ]
+    },
+    {
+      "id": "replaced_by_friend",
+      "type": "weak_evidence",
+      "defaultWeight": 22,
+      "patterns": [
+        "new best friend",
+        "replacing me",
+        "closer to her than to me",
+        "closer to him than to me",
+        "hanging out with her new friends",
+        "found a new best friend",
+        "i feel replaced"
+      ]
+    },
+    {
+      "id": "family_context",
+      "type": "context_modifier",
+      "defaultWeight": 0,
+      "patterns": [
+        "my mom",
+        "my mum",
+        "my dad",
+        "my mother",
+        "my father",
+        "my sister",
+        "my brother",
+        "my parents",
+        "my family",
+        "my stepmom",
+        "my stepdad"
+      ]
+    },
+    {
+      "id": "family_criticism",
+      "type": "weak_evidence",
+      "defaultWeight": 16,
+      "patterns": [
+        "/(always|constantly) criticiz(es|ing) me/",
+        "nothing i do is good enough",
+        "/never (feels |seems )?good enough/",
+        "disappointed in me",
+        "/(compares|comparing|compared) me to/",
+        "always compares me",
+        "never approves of"
+      ]
+    },
+    {
+      "id": "family_favoritism",
+      "type": "weak_evidence",
+      "defaultWeight": 18,
+      "patterns": [
+        "favorite child",
+        "favors my sister",
+        "favors my brother",
+        "treats my sister better",
+        "treats my brother better",
+        "always takes their side",
+        "golden child"
+      ]
+    },
+    {
+      "id": "family_guilt",
+      "type": "weak_evidence",
+      "defaultWeight": 16,
+      "patterns": [
+        "guilt trips me",
+        "guilt trip",
+        "makes me feel guilty",
+        "says i never call",
+        "says i never visit",
+        "why dont you ever call"
+      ]
+    },
+    {
+      "id": "work_exclusion",
+      "type": "weak_evidence",
+      "defaultWeight": 22,
+      "patterns": [
+        "/left out of (a|the|another|yet another) (meeting|call|sync|thread|group chat)/",
+        "/not invited to (a|the|another) (meeting|call|sync)/",
+        "/(excluded|left out) (from|of) (a|the|another) (meeting|project|call|sync)/",
+        "left out of meetings",
+        "kept out of the loop",
+        "out of the loop lately",
+        "not included in the",
+        "taken off the project"
+      ]
+    },
+    {
+      "id": "manager_tone_shift",
+      "type": "weak_evidence",
+      "defaultWeight": 20,
+      "patterns": [
+        "/(manager|boss) (barely|hardly|never|rarely) (acknowledges|talks to|speaks to|looks at|responds to) me/",
+        "/(barely|hardly) acknowledges me/",
+        "stopped giving me feedback",
+        "/(cold|short|distant) with me in (standup|stand up|meetings|the office)/",
+        "/(manager|boss) has been (distant|cold|short) (with me|lately)/",
+        "/(manager|boss) has been (distant|cold)/"
+      ]
+    },
+    {
+      "id": "layoff_anxiety",
+      "type": "weak_evidence",
+      "defaultWeight": 24,
+      "patterns": [
+        "/about to (get|be) (fired|let go|laid off)/",
+        "/going to (get|be) (fired|let go|laid off)/",
+        "/getting (fired|laid off|let go)/",
+        "/(think|feel like|worried) (i am|im|i'm) (getting|about to be|about to get|going to be|going to get) (fired|laid off|let go)/",
+        "on the chopping block"
+      ]
+    },
+    {
+      "id": "credit_taken",
+      "type": "weak_evidence",
+      "defaultWeight": 18,
+      "patterns": [
+        "took credit for my work",
+        "took credit for my idea",
+        "presented my work as theirs",
+        "did not give me credit",
+        "stole my idea at work"
+      ]
+    },
+    {
+      "id": "matched_no_message",
+      "type": "weak_evidence",
+      "defaultWeight": 22,
+      "patterns": [
+        "matched but never messaged",
+        "matched and never messaged",
+        "we matched but never",
+        "matched days ago but",
+        "matched a week ago but",
+        "matched but hasnt messaged"
+      ]
+    },
+    {
+      "id": "unmatched_me",
+      "type": "weak_evidence",
+      "defaultWeight": 26,
+      "patterns": [
+        "unmatched me",
+        "then unmatched me",
+        "and unmatched me",
+        "unmatched me after"
+      ]
+    },
+    {
+      "id": "still_active_dating_app",
+      "type": "weak_evidence",
+      "defaultWeight": 22,
+      "patterns": [
+        "still active on the app",
+        "still active on hinge",
+        "still active on tinder",
+        "still active on bumble",
+        "still swiping",
+        "back on the app",
+        "still on the apps"
+      ]
+    },
+    {
+      "id": "profile_update_overread",
+      "type": "weak_evidence",
+      "defaultWeight": 16,
+      "patterns": [
+        "updated their profile",
+        "changed their bio",
+        "changed their profile picture",
+        "new photos on their profile",
+        "updated his bio",
+        "updated her bio"
       ]
     }
   ],
@@ -1870,7 +2148,7 @@
         "late_night_intimacy",
         "no_concrete_followup"
       ],
-      "scoreFloor": 88,
+      "scoreFloor": 91,
       "scoreCeiling": 92,
       "explanationTemplates": [
         "\"Misses me\" is language. Never planning anything is the behavior. The behavior is louder.",
@@ -1889,7 +2167,7 @@
         "ex_no_contact_context",
         "social_media_overread"
       ],
-      "scoreFloor": 90,
+      "scoreFloor": 91,
       "scoreCeiling": 94,
       "explanationTemplates": [
         "An ex watching your story after no contact is not a comeback. It is curiosity with Wi-Fi.",
@@ -1961,7 +2239,7 @@
       "requiredSignalIds": [
         "stopped_texting_duration"
       ],
-      "scoreFloor": 88,
+      "scoreFloor": 91,
       "scoreCeiling": 92,
       "explanationTemplates": [
         "If he stopped texting, the evidence is not hidden. It is absent and wearing a giant sign.",
@@ -2191,7 +2469,7 @@
         "work_context",
         "work_smiley_overread"
       ],
-      "scoreFloor": 45,
+      "scoreFloor": 46,
       "scoreCeiling": 48,
       "explanationTemplates": [
         "A smiley face next to a project check-in is office seasoning, not a confession.",
@@ -2405,7 +2683,7 @@
         "soft_invite_disclaimer",
         "friend_group_context"
       ],
-      "scoreFloor": 85,
+      "scoreFloor": 91,
       "scoreCeiling": 95,
       "explanationTemplates": [
         "A disclaimer like that is an afterthought, not an invitation. They are holding the door open because you were standing there, not because they sent for you.",
@@ -2498,8 +2776,8 @@
         "blank_slate_short_prompt",
         "assumption_without_action"
       ],
-      "scoreFloor": 88,
-      "scoreCeiling": 88,
+      "scoreFloor": 91,
+      "scoreCeiling": 92,
       "explanationTemplates": [
         "You are trying to build a legal case out of someone accidentally looking in your general direction.",
         "Eye contact in a meeting is not a legal case; it is someone looking in your general direction with office lighting."
@@ -2516,7 +2794,7 @@
         "main_character_syndrome",
         "assumption_without_action"
       ],
-      "scoreFloor": 90,
+      "scoreFloor": 91,
       "scoreCeiling": 92,
       "explanationTemplates": [
         "Terminal Main Character Syndrome. Unless you were on fire, a room full of people was not secretly plotting to be your best friend.",
@@ -2534,8 +2812,8 @@
         "professional_routine_context",
         "work_context"
       ],
-      "scoreFloor": 45,
-      "scoreCeiling": 45,
+      "scoreFloor": 46,
+      "scoreCeiling": 46,
       "explanationTemplates": [
         "They check in because their bonus depends on your work. It is called project management, not a meet-cute.",
         "Morning project check-ins are office plumbing. Useful, repetitive, and not secretly romantic."
@@ -2608,8 +2886,8 @@
         "group_invite_context",
         "direct_action"
       ],
-      "scoreFloor": 88,
-      "scoreCeiling": 88,
+      "scoreFloor": 91,
+      "scoreCeiling": 92,
       "explanationTemplates": [
         "You were not exclusively chosen; you are a warm body required to make the room look full. Go for the free cake, but this was not a targeted strike.",
         "An invite to the entire office is crowd control with frosting. You are a warm body with access to free cake, not a targeted strike."
@@ -2645,7 +2923,7 @@
         "group_invite_context",
         "assumption_without_action"
       ],
-      "scoreFloor": 88,
+      "scoreFloor": 91,
       "scoreCeiling": 92,
       "explanationTemplates": [
         "Inviting the whole office is not a coded personal invitation. It is a mass invite with your theory stapled on.",
@@ -2655,44 +2933,325 @@
         "Go if you want to go, but do not treat a group invite like a private signal.",
         "Keep the office invite in the group-invite category where it belongs."
       ]
+    },
+    {
+      "id": "dating_unmatched_closure",
+      "requiredSignalIds": [
+        "unmatched_me"
+      ],
+      "priority": 90,
+      "scoreFloor": 26,
+      "scoreCeiling": 36,
+      "explanationTemplates": [
+        "An unmatch is a blunt answer, not a mystery. It is rude, but it is also clear.",
+        "That is a closed door, not a cliffhanger. The signal is obvious even if the reason is not."
+      ],
+      "nextMoveTemplates": [
+        "Take the unmatch as the answer and do not go looking for a hidden one.",
+        "Do not build a theory around a door someone already closed."
+      ]
+    },
+    {
+      "id": "friendship_drift_pattern",
+      "category": "friendship",
+      "requiredSignalIds": [
+        "friendship_drift"
+      ],
+      "priority": 82,
+      "scoreFloor": 52,
+      "scoreCeiling": 64,
+      "explanationTemplates": [
+        "A friendship cooling off is a real thing to notice, but slower replies alone do not mean you did something wrong.",
+        "The drift might be real, but distance can be seasons and schedules as easily as it is a verdict on you."
+      ],
+      "nextMoveTemplates": [
+        "Reach out once like a normal person and see if the effort comes back.",
+        "Name that you miss them instead of decoding every short reply."
+      ]
+    },
+    {
+      "id": "friendship_exclusion_once",
+      "category": "friendship",
+      "requiredSignalIds": [
+        "excluded_from_plans"
+      ],
+      "priority": 82,
+      "scoreFloor": 54,
+      "scoreCeiling": 66,
+      "explanationTemplates": [
+        "Being left out once stings and is worth noticing, but one hangout without you is data, not a full verdict.",
+        "Getting left out is real information, but a single missed invite is not proof the whole group is done with you."
+      ],
+      "nextMoveTemplates": [
+        "Watch whether this becomes a pattern before deciding what it means.",
+        "Say you would have liked to be there instead of assuming the worst."
+      ]
+    },
+    {
+      "id": "family_criticism_pattern",
+      "category": "general",
+      "requiredSignalIds": [
+        "family_criticism"
+      ],
+      "priority": 80,
+      "scoreFloor": 48,
+      "scoreCeiling": 60,
+      "explanationTemplates": [
+        "The criticism is real, and family hits different, but harsh delivery does not automatically mean the read on their intent is right.",
+        "You are not imagining the criticism. The uncertain part is what it means about you, not whether it happened."
+      ],
+      "nextMoveTemplates": [
+        "Judge the specific comment, not the whole relationship, and set a boundary if you need one.",
+        "Decide what you actually agree with, and let the rest stay their opinion instead of your verdict."
+      ]
+    },
+    {
+      "id": "family_favoritism_pattern",
+      "category": "general",
+      "requiredSignalIds": [
+        "family_favoritism"
+      ],
+      "priority": 80,
+      "scoreFloor": 50,
+      "scoreCeiling": 62,
+      "explanationTemplates": [
+        "Perceived favoritism is a real and common family wound, but one moment of taking their side is not the whole ledger.",
+        "The unequal treatment may be real, though it is worth checking whether this is a pattern or one loud example."
+      ],
+      "nextMoveTemplates": [
+        "Name the specific thing that felt unfair instead of relitigating your whole childhood.",
+        "Look for the pattern over time before deciding it is deliberate favoritism."
+      ]
+    },
+    {
+      "id": "workplace_exclusion_layoff",
+      "category": "general",
+      "requiredSignalIds": [
+        "work_exclusion",
+        "layoff_anxiety"
+      ],
+      "priority": 84,
+      "scoreFloor": 72,
+      "scoreCeiling": 82,
+      "explanationTemplates": [
+        "Being left out at work is worth noticing, but jumping straight to getting fired is the spiral doing overtime.",
+        "The exclusion is real; the layoff conclusion is a big leap from a missed meeting invite."
+      ],
+      "nextMoveTemplates": [
+        "Ask your manager a direct question about scope instead of writing your own termination letter.",
+        "Get concrete information before you assume the worst-case ending."
+      ]
+    },
+    {
+      "id": "dating_still_shopping",
+      "category": "romance",
+      "requiredSignalIds": [
+        "still_active_dating_app"
+      ],
+      "priority": 80,
+      "scoreFloor": 56,
+      "scoreCeiling": 68,
+      "explanationTemplates": [
+        "Someone still active on the app is telling you they are still looking, which is real information, not a personal betrayal this early.",
+        "Still swiping is a signal to notice, but a couple of dates does not make it exclusive by default."
+      ],
+      "nextMoveTemplates": [
+        "Match your investment to theirs instead of racing ahead of the actual commitment.",
+        "If exclusivity matters to you, say so directly instead of monitoring their app."
+      ]
+    },
+    {
+      "id": "dating_matched_no_message",
+      "category": "romance",
+      "requiredSignalIds": [
+        "matched_no_message"
+      ],
+      "priority": 78,
+      "scoreFloor": 60,
+      "scoreCeiling": 72,
+      "explanationTemplates": [
+        "A match that never turned into a message is barely a data point, not a relationship to grieve.",
+        "Matching and going silent is extremely common and says almost nothing specific about you."
+      ],
+      "nextMoveTemplates": [
+        "Send one message if you are curious, then let it go if nothing comes back.",
+        "Do not build a story around a match that never actually became a conversation."
+      ]
+    },
+    {
+      "id": "romance_drift_pattern",
+      "category": "romance",
+      "requiredSignalIds": [
+        "friendship_drift"
+      ],
+      "priority": 82,
+      "scoreFloor": 56,
+      "scoreCeiling": 68,
+      "explanationTemplates": [
+        "Going from daily texting to short answers is a real change, not something you invented. What it means is still open: people pull back for reasons that are sometimes about you and often not.",
+        "The drift from real conversations to one-word replies is worth noticing. The change is real; the reason for it is still unwritten."
+      ],
+      "nextMoveTemplates": [
+        "Name the distance once, say you have noticed it, instead of decoding every short reply.",
+        "Make one real bid for the connection and watch what comes back. That answer beats any theory."
+      ]
+    },
+    {
+      "id": "needy_gesture_anxiety_pattern",
+      "requiredSignalIds": [
+        "needy_gesture_anxiety"
+      ],
+      "priority": 86,
+      "scoreFloor": 46,
+      "scoreCeiling": 58,
+      "explanationTemplates": [
+        "The present is not automatically too much; the panic about looking needy is doing most of the work. Without relationship context, this is effort being put on trial before she even sees it.",
+        "You bought the present and then turned the handoff into a courtroom scene. The evidence is your fear of seeming needy, not proof that she will judge you."
+      ],
+      "nextMoveTemplates": [
+        "If the gift fits the relationship, give it normally. If it feels oversized, scale it down instead of letting panic make the whole decision.",
+        "Match the gift to the actual relationship stage, then stop treating normal effort like a confession under oath."
+      ]
+    },
+    {
+      "id": "casual_coffee_refusal_closure",
+      "requiredSignalIds": [
+        "casual_refusal"
+      ],
+      "priority": 86,
+      "scoreFloor": 32,
+      "scoreCeiling": 44,
+      "explanationTemplates": [
+        "A refused coffee offer is already a pretty clear answer. The casual tone and friend detail may sting, but they do not create a second hidden message.",
+        "The coffee got declined, and the friend plan is probably just the exit ramp. Annoying, yes; mysterious, not really."
+      ],
+      "nextMoveTemplates": [
+        "Take the no once. If she wants to reopen it, she can offer a real time.",
+        "Do not negotiate with the tone. Let the refusal be the answer unless she follows up with an actual plan."
+      ]
+    },
+    {
+      "id": "enthusiasm_drop_pattern",
+      "requiredSignalIds": [
+        "enthusiasm_drop"
+      ],
+      "priority": 85,
+      "scoreFloor": 54,
+      "scoreCeiling": 66,
+      "explanationTemplates": [
+        "Going from excited to meh is a real change, but it is a temperature reading, not a full diagnosis. Notice the shift without inventing the reason.",
+        "The drop in energy is worth noticing. The part you do not have yet is why it changed, so do not let the old excitement testify for the current version."
+      ],
+      "nextMoveTemplates": [
+        "Make one low-pressure bid for clarity, then judge the response instead of the old version of her.",
+        "Watch what the energy does next. One clear bid beats guessing why the vibe changed."
+      ]
+    },
+    {
+      "id": "party_ignored_spiral",
+      "category": "social",
+      "requiredSignalIds": [
+        "party_ignored_anxiety"
+      ],
+      "priority": 84,
+      "scoreFloor": 58,
+      "scoreCeiling": 68,
+      "explanationTemplates": [
+        "A few quiet people at one party is thin evidence, and 'everyone secretly dislikes me' is a whole building constructed on it.",
+        "Some people not talking to you at a party is real, but a room has a hundred reasons to be off that have nothing to do with you."
+      ],
+      "nextMoveTemplates": [
+        "Check the theory with one person who was there before treating one quiet night as a referendum on you.",
+        "Let one flat party be one flat party. The next hangout is the real data point."
+      ]
+    },
+    {
+      "id": "academic_feedback_not_social",
+      "priority": 85,
+      "requiredSignalIds": [
+        "academic_feedback_context"
+      ],
+      "scoreFloor": 28,
+      "scoreCeiling": 38,
+      "explanationTemplates": [
+        "A professor asking for a rewrite is instruction, not a social verdict. This is feedback about the work, and feedback comes with a next step.",
+        "This is not really a who-likes-me case. A rewrite request is a task with a deadline, not a hidden message about you."
+      ],
+      "nextMoveTemplates": [
+        "Ask the professor what a passing version looks like, then start the rewrite. This one is effort, not decoding.",
+        "Break the rewrite into pieces and start today. The deadline is the only real signal here."
+      ]
     }
   ],
   "nextMoveTemplates": {
-    "86-100": [
+    "91-100": [
       "Wait for real action before taking this seriously.",
       "Do not escalate based on crumbs alone.",
       "Pause the narrative and look for something concrete.",
-      "Stop filling in blanks they have not filled in themselves."
+      "Stop filling in blanks they have not filled in themselves.",
+      "Stop reading the tea leaves and wait for a real move.",
+      "Put the corkboard and red string away for tonight.",
+      "Do not act on this until something concrete actually happens.",
+      "Let them show you something real before you spend another thought on it.",
+      "Give the spiral a break and let actions do the talking."
     ],
-    "71-85": [
+    "71-90": [
       "Look for follow-through, not just vibes.",
       "Get clearer evidence before deciding what this means.",
       "Do not judge this from the best moment. Watch the full pattern.",
-      "Keep the read provisional until action catches up."
+      "Keep the read provisional until action catches up.",
+      "Look for follow-through before you trust the read.",
+      "Watch the full pattern, not the single best or worst moment.",
+      "Wait for one clear action before you decide what this is.",
+      "Keep it provisional until the behavior catches up.",
+      "Do not build on this until it repeats."
     ],
-    "41-70": [
+    "46-70": [
       "Stay neutral and watch the pattern.",
       "Give it a little time and see what repeats.",
       "Keep things light until the situation becomes less weird.",
-      "Pay attention to whether effort increases, decreases, or stays vague."
+      "Pay attention to whether effort increases, decreases, or stays vague.",
+      "Stay neutral and let the pattern reveal itself.",
+      "Give it a little time and watch what repeats.",
+      "Note it, then wait for the next real data point.",
+      "Keep expectations loose until this gets clearer.",
+      "Watch whether the effort grows, shrinks, or stays vague."
     ],
-    "21-40": [
+    "21-45": [
       "Proceed naturally, but keep expectations realistic.",
       "Respond and see whether they match your energy.",
       "Keep it simple and see whether the effort continues.",
-      "The evidence is decent, so do not overwork it."
+      "The evidence is decent, so do not overwork it.",
+      "Proceed naturally and keep your expectations sane.",
+      "Respond like normal and see if they match your energy.",
+      "Keep it easy and let consistency prove itself.",
+      "This is decent, so do not overwork it.",
+      "Engage without turning it into a whole investigation."
     ],
     "0-20": [
       "This is clear enough. Act normal.",
       "The evidence is stronger than usual here.",
       "Drop the detective work and respond like a person.",
-      "Treat this like a real signal unless the pattern changes."
+      "Treat this like a real signal unless the pattern changes.",
+      "This is clear. Act like a normal person.",
+      "The evidence is solid, so respond and move on.",
+      "Drop the detective work; there is nothing to solve here.",
+      "Take the win and reply like you would to anyone else.",
+      "Trust it unless the pattern actually changes."
     ]
   },
   "dominantSignalOverrides": {
     "no_concrete_followup": [
       "Wait for an actual plan, not a vague maybe.",
       "Without follow-up, the case stays weaker than it sounds."
+    ],
+    "no_dm_signal": [
+      "One normal follow-up is allowed. After that, their silence is the answer, not your last message.",
+      "Send one easy opener if you want the answer, then let their reply speed be the data."
+    ],
+    "no_response_after_match": [
+      "One light follow-up, then stop auditing your last message. Silence after a good talk is information, not a verdict on what you said.",
+      "Resist rereading the conversation for the mistake. If they were interested, one imperfect message would not have ended it."
     ],
     "mixed_signals": [
       "Do not judge this from the highs only. Watch the full pattern.",
@@ -2732,19 +3291,43 @@
       "The evidence is thin and the confidence is doing push-ups.",
       "This is mostly vibes wearing a fake mustache as evidence.",
       "The theory is louder than the behavior supporting it.",
-      "There are crumbs here, but you are trying to bake a wedding cake."
+      "There are crumbs here, but you are trying to bake a wedding cake.",
+      "The receipts are thin but the storyline has a full production budget.",
+      "You are cross-examining a situation that never took the stand.",
+      "This is a lot of certainty built on top of very little proof.",
+      "The gap between what happened and what you concluded is doing gymnastics.",
+      "Big verdict energy, small evidence file.",
+      "The spiral is louder than anything the other person actually did.",
+      "You have built a whole plot from a trailer and a maybe.",
+      "The confidence here is renting a mansion the evidence cannot afford."
     ],
     "mid": [
       "There is something here, but not enough to declare a whole narrative.",
       "This is not baseless, but it is also not sturdy enough to lean on.",
       "The case has a pulse, just not a birth certificate.",
-      "A few signals exist, but the pattern is still wearing a disguise."
+      "A few signals exist, but the pattern is still wearing a disguise.",
+      "There is a real thread here, it just is not tied to anything yet.",
+      "Something is worth watching, but it is still mostly potential.",
+      "The signal is real; the certainty is on layaway.",
+      "This could be something, but right now it is mostly a maybe with good lighting.",
+      "You are not making it up, you are just a few facts early.",
+      "There is enough here to notice and not enough here to bet on.",
+      "The pattern is forming, but it has not signed anything yet.",
+      "Half a case, waiting on the other half to show up."
     ],
     "low": [
       "This looks more grounded than delusional.",
       "There is actual effort here, so the panic can take a chair.",
       "The evidence is concrete enough that you can stop interrogating it.",
-      "This is one of the clearer cases. Please do not make it weird."
+      "This is one of the clearer cases. Please do not make it weird.",
+      "The evidence is doing its job, so the anxiety can clock out.",
+      "This one has actual bones, not just vibes.",
+      "There is real follow-through here. Let it be good.",
+      "You are on solid ground for once. Try to enjoy it.",
+      "The proof shows up in the behavior, not just the hope.",
+      "This is grounded enough that you can stop building a case.",
+      "The other person is meeting you halfway. Believe it.",
+      "Nothing to decode here. The read is clean."
     ]
   }
 }

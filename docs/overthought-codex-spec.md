@@ -290,12 +290,12 @@ Core fields:
 - generated_next_move_text optional
 - created_at
 
-Note: v1 can choose either:
-- full re-analysis on update
-- or store update and optionally recalculate the case summary later
+Note: the `generated_*` fields exist so a future version can re-analyze on update.
 
-Recommended v1 approach:
-- new update triggers re-analysis and stores a new generated outcome for that update event.
+v1 as shipped:
+- an update stores `update_text` only and shows it on the case timeline as a receipt
+- the `generated_*` fields stay null and the parent case verdict is unchanged
+- re-analysis on update is a deferred v1.x/v2 enhancement, not current behavior
 
 ### PremiumState
 Represents premium readiness.
@@ -532,7 +532,7 @@ Must show:
 Must support:
 - short text input
 - submit update
-- trigger re-analysis flow
+- save the update and show it on the case timeline (re-analysis on update is a future enhancement, not in v1)
 
 ## Stats
 Must show simple summaries:
@@ -763,7 +763,7 @@ Build result screen and save flow.
 Build history and case detail.
 
 ### Step 6
-Build add-update flow and re-analysis behavior.
+Build add-update flow (store the update and show it on the timeline). Re-analysis on update is a deferred future enhancement, not part of v1.
 
 ### Step 7
 Build basic stats.

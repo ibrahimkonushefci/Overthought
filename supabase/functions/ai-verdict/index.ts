@@ -22,8 +22,8 @@ const RESPONSE_SCHEMA_VERSION = 2;
 const SIGNED_IN_FREE_DAILY_LIMIT = 2;
 const GUEST_LIFETIME_LIMIT = 2;
 const GUEST_DAILY_LIMIT = 2;
-const GUEST_IP_DAILY_LIMIT = 10;
-const GLOBAL_DAILY_LIMIT = 100;
+const GUEST_IP_DAILY_LIMIT = 20;
+const GLOBAL_DAILY_LIMIT = 300;
 
 type EntitlementStatus = 'free' | 'premium' | 'grace_period' | 'expired';
 

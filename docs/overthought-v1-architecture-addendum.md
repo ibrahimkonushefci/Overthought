@@ -80,13 +80,19 @@ The current AI-first verdict flow supersedes the original "local-only analysis" 
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `GEMINI_API_KEY`
 
-Optional `ai-verdict` quota cap environment variables:
+Optional `ai-verdict` quota cap environment variables (repo defaults reflect the current soft-launch settings):
 - `AI_VERDICT_SIGNED_IN_FREE_DAILY_LIMIT` defaults to `2`
 - `AI_VERDICT_GUEST_LIFETIME_LIMIT` defaults to `2`
 - `AI_VERDICT_GUEST_DAILY_LIMIT` defaults to `2`
-- `AI_VERDICT_GUEST_IP_DAILY_LIMIT` defaults to `10`
-- `AI_VERDICT_GLOBAL_DAILY_LIMIT` defaults to `100`
+- `AI_VERDICT_GUEST_IP_DAILY_LIMIT` defaults to `20`
+- `AI_VERDICT_GLOBAL_DAILY_LIMIT` defaults to `300`
 - `AI_VERDICT_PREMIUM_DAILY_LIMIT` defaults to `50`
+
+The global daily cap applies to everyone, including Premium users: Premium raises the
+per-user daily limit but does not bypass the global app cap. This is the current soft-launch
+product rule; raising the global cap or exempting Premium from it is a future product decision,
+not a code default. These are Edge Function env values and can be changed without an App
+Store/TestFlight rebuild; the constants above are the repo fallbacks used when the env vars are unset.
 
 ### Current release-hardening status
 

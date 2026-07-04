@@ -49,8 +49,8 @@ The `config.ts` file imports JSON. In TypeScript, enable:
 
 - v1 is deterministic and cheap to run
 - the app is not a chatbot
-- light case updates are supported through `previousCaseContext` + `updateText`
-- the config is designed to be tuned without changing engine code
+- the engine can re-analyze with `previousCaseContext` + `updateText`, but the **v1 app does not call it on update** — updates are stored as timeline receipts only; re-analysis on update is a future enhancement
+- the config drives bands, weights, patterns, and banded copy; note that some semantic scenarios and fallback copy currently live in `facts.ts` and `copy.ts`, so not all tuning is config-only today
 
 ## Suggested future expansion
 

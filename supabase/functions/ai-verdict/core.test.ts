@@ -256,8 +256,8 @@ function handlerDeps(adapter: AiVerdictDataAdapter, generateVerdict = successPro
     premiumDailyLimit: 50,
     guestLifetimeLimit: 2,
     guestDailyLimit: 2,
-    guestIpDailyLimit: 10,
-    globalDailyLimit: 100,
+    guestIpDailyLimit: 20,
+    globalDailyLimit: 300,
   };
 }
 
@@ -704,9 +704,9 @@ describe('ai-verdict core guest path', () => {
         reservationFailure('ip_daily_cap_exceeded', generatedAccess({
           accessTier: 'guest',
           allowed: false,
-          used: 10,
+          used: 20,
           remaining: 0,
-          limit: 10,
+          limit: 20,
           quotaScope: 'daily',
           quotaBucket: '2026-05-16',
           reason: 'ip_daily_cap',
@@ -733,9 +733,9 @@ describe('ai-verdict core guest path', () => {
         reservationFailure('global_daily_cap_exceeded', generatedAccess({
           accessTier: 'guest',
           allowed: false,
-          used: 100,
+          used: 300,
           remaining: 0,
-          limit: 100,
+          limit: 300,
           quotaScope: 'daily',
           quotaBucket: '2026-05-16',
           reason: 'global_daily_cap',

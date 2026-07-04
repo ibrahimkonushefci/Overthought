@@ -16,7 +16,7 @@ This engine is intended for **v1 and early v1.x releases**. It must be implement
 - a hybrid AI rewrite layer
 - a full LLM-based analysis system
 
-The app is **not** a chatbot. The engine analyzes a **case** and optionally re-analyzes when the user adds a lightweight update.
+The app is **not** a chatbot. The engine analyzes a **case**. It is *capable* of re-analyzing when a lightweight update is added, but the v1 app does not use that path (updates are stored as timeline receipts only; see §13).
 
 ---
 
@@ -75,10 +75,15 @@ These labels must be configurable.
 | Score Range | Label |
 |---|---|
 | 0-20 | Barely Delusional |
-| 21-40 | Slight Reach |
-| 41-60 | Mild Delusion |
-| 61-80 | Dangerous Overthinking |
-| 81-100 | Full Clown Territory |
+| 21-45 | Slight Reach |
+| 46-70 | Mild Delusion |
+| 71-90 | Dangerous Overthinking |
+| 91-100 | Full Clown Territory |
+
+> These bands are the current shipped values in
+> `src/features/verdict-engine/config/verdict-config.v1.json`, and they match the
+> Smart Verdict (Gemini) score→label calibration so Basic and Smart agree on labels.
+> The original 0-20 / 21-40 / 41-60 / 61-80 / 81-100 split has been superseded.
 
 ### Notes
 - Labels are intentionally funny-first.
@@ -409,11 +414,16 @@ A neutral ambiguous social situation is usually neither fully grounded nor fully
 Starting at 50 makes the score easier to move meaningfully in either direction.
 
 ### Caps
-To prevent runaway scoring:
-- same signal may only be applied once per analysis in v1
-- max total positive reduction from evidence: `-45`
-- max total weak-evidence increase: `+45`
-- context modifiers can add/subtract outside those caps only up to `10`
+To prevent runaway scoring (shipped values in `verdict-config.v1.json` shown in parentheses):
+- same signal may only be applied once per analysis in v1 (`maxApplicationsPerSignal: 1`)
+- max total positive reduction from evidence: `-45` (shipped `-50`)
+- max total weak-evidence increase: `+45` (shipped `+50`)
+- context modifiers can add/subtract outside those caps only up to `10` (shipped `35`)
+
+In addition to these caps, the engine applies a **generic-fallback guard**: a case
+that matches no bespoke scenario is held to `70` (`68` for friendship) unless at
+least two independent weak-evidence signals justify reaching up to `85`. This keeps
+out-of-pattern cases from faking a confident full-clown verdict.
 
 ---
 
@@ -537,9 +547,16 @@ If strongest signal is `direct_action`:
 
 ## 13. Case Update Handling
 
+> **v1 app status:** this section describes an **engine capability that is not
+> wired into the v1 app.** In v1, adding an update stores the update text and
+> shows it on the case timeline as a receipt — it does **not** re-run analysis or
+> change the parent verdict. The design below is the intended re-analysis path
+> for a later version. The engine already accepts `updateText` /
+> `previousCaseContext`, so wiring it up is a future task, not a current guarantee.
+
 v1 supports **light updates**, not chat.
 
-### Rule
+### Rule (future re-analysis design)
 When a case gets an update:
 - combine the original input and the latest update into a fresh analysis pass
 - include previous dominant signals as weak context only

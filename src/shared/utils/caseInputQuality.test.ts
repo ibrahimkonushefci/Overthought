@@ -68,4 +68,47 @@ describe('case input quality', () => {
   ])('allows ordinary valid social cases: %s', (inputText) => {
     expect(assessCaseInputQuality(inputText).status).toBe('ok');
   });
+
+  it.each([
+    'he didnt reply n now im freakin out lol',
+    'she leftt me on read agian and i dont kno what i did wrong',
+    'MY BOYFRIEND LIKED HIS EXES PHOTO AND IM LOSING IT',
+    'we was talking everyday then he just stop texting me idk why 😭😭',
+    'my freind ignored me at lunch today n i think she hates me now',
+    'bro he watched my story like 5 times but wont text back???',
+    // Natural anxious writing repeats pronouns and filler heavily; that must
+    // never read as keyboard spam.
+    'He texted me every day last week and then he stopped. He watched my story though. He liked my post. He is confusing me so much.',
+    'she said she was busy but she said that last week too and she said it again today',
+  ])('never blocks messy or misspelled but real social cases: %s', (inputText) => {
+    expect(assessCaseInputQuality(inputText).status).not.toBe('block');
+  });
+
+  it.each(['?', '...', '!!!', '', '   ', '❤️❤️❤️'])(
+    'routes empty or symbol-only scraps to needs_context instead of a confident verdict: %s',
+    (inputText) => {
+      const result = assessCaseInputQuality(inputText);
+
+      expect(result.status).toBe('needs_context');
+      expect(result.reason).toBe('low_context');
+    },
+  );
+
+  it('still hard-blocks long emoji floods', () => {
+    const result = assessCaseInputQuality('❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️');
+
+    expect(result.status).toBe('block');
+    expect(result.reason).toBe('emoji_or_symbols_only');
+  });
+
+  it.each([
+    'lol lol lol lol lol lol lol lol',
+    'same same same same same same same same',
+    'why why why why why why',
+  ])('still blocks genuine word spam: %s', (inputText) => {
+    const result = assessCaseInputQuality(inputText);
+
+    expect(result.status).toBe('block');
+    expect(['repeated_words', 'repeated_characters']).toContain(result.reason);
+  });
 });

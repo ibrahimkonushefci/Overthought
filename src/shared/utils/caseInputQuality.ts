@@ -195,6 +195,19 @@ function isRepeatedCharacters(value: string): boolean {
   return /(.)\1{14,}/u.test(compact);
 }
 
+// Pronouns, articles, and filler repeat heavily in natural anxious writing
+// ("He texted me... He watched my story... He liked my post"), so only
+// content-word repetition counts toward the spam threshold.
+const COMMON_SOCIAL_FILLER_WORDS = new Set([
+  'i', 'im', "i'm", 'me', 'my', 'mine', 'he', 'she', 'they', 'them', 'him',
+  'his', 'her', 'hers', 'their', 'we', 'us', 'our', 'you', 'your', 'it', 'its',
+  'a', 'an', 'the', 'and', 'or', 'but', 'so', 'to', 'of', 'in', 'on', 'at',
+  'for', 'with', 'is', 'am', 'are', 'was', 'were', 'be', 'been', 'do', 'does',
+  'did', 'dont', "don't", 'didnt', "didn't", 'doesnt', "doesn't", 'not', 'no',
+  'that', 'this', 'then', 'now', 'just', 'like', 'said', 'say', 'says', 'what',
+  'why', 'how', 'when', 'again', 'really',
+]);
+
 function isRepeatedWords(words: string[]): boolean {
   if (words.length < 6) {
     return false;
@@ -202,10 +215,15 @@ function isRepeatedWords(words: string[]): boolean {
 
   const counts = new Map<string, number>();
   words.forEach((word) => counts.set(word, (counts.get(word) ?? 0) + 1));
-  const maxCount = Math.max(...counts.values());
+  const maxContentWordCount = Math.max(
+    0,
+    ...[...counts.entries()]
+      .filter(([word]) => !COMMON_SOCIAL_FILLER_WORDS.has(word))
+      .map(([, count]) => count),
+  );
   const uniqueRatio = counts.size / words.length;
 
-  return maxCount >= 5 || uniqueRatio <= 0.35;
+  return maxContentWordCount >= 5 || uniqueRatio <= 0.35;
 }
 
 function isKeyboardGibberish(words: string[]): boolean {
@@ -257,8 +275,14 @@ export function assessCaseInputQuality(inputText: string): CaseInputQualityAsses
   const words = wordTokens(trimmed);
   const letterNumberCount = letterOrNumberCount(trimmed);
 
-  if (trimmed.length >= 8 && letterNumberCount === 0) {
-    return { status: 'block', reason: 'emoji_or_symbols_only', message: messageFor('emoji_or_symbols_only') };
+  // No letters or digits at all: a long emoji/symbol flood is spam, but a
+  // stray "?" or "..." (or an empty submission) is just not a case yet.
+  if (letterNumberCount === 0) {
+    if (trimmed.length >= 8) {
+      return { status: 'block', reason: 'emoji_or_symbols_only', message: messageFor('emoji_or_symbols_only') };
+    }
+
+    return { status: 'needs_context', reason: 'low_context', message: messageFor('low_context') };
   }
 
   if (isRepeatedCharacters(trimmed)) {

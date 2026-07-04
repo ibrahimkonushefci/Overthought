@@ -93,13 +93,29 @@ function applyScenarioBounds(score: number, scenario?: ScenarioOverride): number
   return adjustedScore;
 }
 
+function countDistinctActiveWeakSignals(signals: TriggeredSignal[]): number {
+  return new Set(
+    signals
+      .filter((signal) => signal.type === 'weak_evidence' && signal.weightApplied > 0)
+      .map((signal) => signal.id),
+  ).size;
+}
+
 function applyGenericFallbackGuard(
   score: number,
   category: Category,
-  scenario?: ScenarioOverride,
+  scenario: ScenarioOverride | undefined,
+  distinctActiveWeakSignals: number,
 ): number {
   if (scenario || score < 71) {
     return score;
+  }
+
+  // Multiple independent weak-evidence signals justify reaching into
+  // dangerous_overthinking (up to 85) even without a bespoke scenario. A single
+  // weak signal still gets held down so the engine does not fake confidence.
+  if (distinctActiveWeakSignals >= 2) {
+    return Math.min(score, 85);
   }
 
   if (category === 'friendship') {
@@ -107,10 +123,6 @@ function applyGenericFallbackGuard(
   }
 
   return Math.min(score, 70);
-}
-
-function shouldUseGenericFallbackCopy(score: number, scenario?: ScenarioOverride): boolean {
-  return !scenario && score >= 71;
 }
 
 function shouldUseSemanticScenario(
@@ -390,15 +402,17 @@ export function analyzeCase(
     : configuredScenarioOverride ?? semanticScenarioOverride;
 
   const scenarioAdjustedScore = applyScenarioBounds(rawScore, scenarioOverride);
-  const genericFallbackApplied = shouldUseGenericFallbackCopy(
-    scenarioAdjustedScore,
-    scenarioOverride,
-  );
+  const distinctActiveWeakSignals = countDistinctActiveWeakSignals(weightedSignals);
   const fallbackGuardedScore = applyGenericFallbackGuard(
     scenarioAdjustedScore,
     input.category,
     scenarioOverride,
+    distinctActiveWeakSignals,
   );
+  // Route to the humble, signal-aware fallback copy only when the guard actually
+  // pulled the score down. A no-scenario case that keeps its high score (because
+  // multiple weak signals justified it) uses the confident high-band templates.
+  const genericFallbackApplied = !scenarioOverride && fallbackGuardedScore < scenarioAdjustedScore;
 
   const delusionScore = clampNumber(
     Math.round(fallbackGuardedScore),

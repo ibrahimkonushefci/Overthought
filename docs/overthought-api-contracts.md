@@ -58,8 +58,8 @@ If Codex prefers, the deterministic verdict engine can also run on-device for gu
 Input:
 - `category`
 - `inputText`
-- optional `previousCaseContext`
-- optional `updateText`
+- optional `previousCaseContext` (engine-supported, **not used by the app in v1**)
+- optional `updateText` (engine-supported, **not used by the app in v1**)
 
 Output:
 - `verdictLabel`
@@ -68,6 +68,10 @@ Output:
 - `nextMoveText`
 - `verdictVersion`
 - optional `triggeredSignals` in debug mode only
+
+> Note: the engine can re-analyze with `updateText`/`previousCaseContext`, but the
+> v1 app only calls `analyzeCase` at case creation. Updates are stored as
+> timeline receipts and do not trigger re-analysis yet (see §7).
 
 ### Rule
 The rest of the app should not care whether the result came from:
@@ -207,22 +211,24 @@ Result should be renderable from memory immediately, then persisted.
 This is **not chat**.
 It is just a lightweight update attached to an existing case.
 
-### Flow
+### Flow (v1 as shipped)
 1. user opens case detail
 2. taps `Add update`
 3. writes short update
-4. app sends:
-   - original case context
-   - latest verdict context
-   - update text
-5. app receives a new analysis result
-6. app stores:
-   - `case_updates` row
-   - updated summary fields on the parent `cases` row
-   - incremented `latest_verdict_version`
+4. app stores a `case_updates` row (the update text) and displays it on the case timeline as a "receipt"
 
-### Recommended parent-case update behavior
-After each update, refresh the parent case with the latest generated verdict fields so list screens stay simple.
+In v1 the update is **not** re-analyzed: the parent case verdict, score, and
+`latest_verdict_version` are unchanged, and the generated verdict columns on
+`case_updates` (`verdict_label`, `delusion_score`, `explanation_text`,
+`next_move_text`, `verdict_version`) stay null. They are reserved for a future
+re-analysis pass.
+
+### Future re-analysis behavior (not in v1)
+The verdict engine already accepts `updateText` + `previousCaseContext`, so a
+later version can re-run analysis on update, store a generated result on the
+`case_updates` row, refresh the parent case summary fields, and increment
+`latest_verdict_version`. This is a deliberate v1.x/v2 enhancement, not current
+behavior — do not assume the app re-scores on update today.
 
 ---
 

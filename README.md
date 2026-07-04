@@ -187,7 +187,7 @@ APP_VARIANT=production npx expo config --type public
 - Continue as guest.
 - Create a case and see a deterministic result.
 - View the case in history and detail.
-- Add a light update and re-run the local verdict.
+- Add a light update and see it on the case timeline (v1 stores the update as a receipt; it does not re-run the verdict).
 - Mark outcome status.
 - View stats generated from local cases.
 - Delete guest local data.
