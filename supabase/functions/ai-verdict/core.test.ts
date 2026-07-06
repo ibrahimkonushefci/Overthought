@@ -1,4 +1,5 @@
 import {
+  buildAiVerdictLanguageHint,
   generateAiVerdictWithGemini,
   handleAiVerdictRequest,
   type AiVerdictAccessState,
@@ -1052,6 +1053,25 @@ describe('Gemini AI verdict provider', () => {
       expectedInstruction:
         'Write every user-facing string value in romanized Hindi/Urdu using Latin characters. Do not switch to Devanagari or Arabic script.',
     },
+    // Regression: diacritic-free colloquial Albanian previously scored as a
+    // Spanish/French tie (via the shared word "me") and the prompt instructed
+    // Gemini to answer in Spanish with French borrowings.
+    {
+      inputText: 'Ajo me futi ne friendzone. Qka me bo tash une?',
+      expectedTarget: 'Albanian',
+      expectedInstruction: 'Write every user-facing string value in Albanian.',
+    },
+    {
+      inputText: 'Ajo po flirton me mua ne tenis. Qka te bej',
+      expectedTarget: 'Albanian',
+      expectedInstruction: 'Write every user-facing string value in Albanian.',
+    },
+    {
+      inputText:
+        'Ne coworking space kemi kaluar mir. Pasi qe e lash une coworking space dhe i shkruajta asaj ajo me la seen',
+      expectedTarget: 'Albanian',
+      expectedInstruction: 'Write every user-facing string value in Albanian.',
+    },
   ])('adds an original-case language hint for Smart Verdict prompt: %s', async ({
     inputText,
     expectedTarget,
@@ -1122,6 +1142,29 @@ describe('Gemini AI verdict provider', () => {
     expect(prompt).toContain('"localTextFields": "omitted_for_language_matching"');
     expect(prompt).not.toContain('English local fallback should not control Smart Verdict language.');
     expect(prompt).not.toContain('English local next move should not control Smart Verdict language.');
+  });
+
+  it('never names a wrong language for the reported Albanian friendzone case', () => {
+    const hint = buildAiVerdictLanguageHint('Ajo me futi ne friendzone. Qka me bo tash une?');
+
+    expect(hint.targetLanguage).toBe('Albanian');
+    expect(hint.confidence).toBe('high');
+    expect(hint.instruction).not.toMatch(/Spanish|French|Portuguese|Italian|German/);
+  });
+
+  it.each([
+    // Too few distinctive markers: the hint must tell the model to mirror the
+    // case text language itself instead of naming a possibly-wrong language.
+    'Kam ra ne dashni nuk di si tia them',
+    'Seems like no one wants',
+    'asdkj qweqwe zxc',
+  ])('uses a mirror-the-input instruction instead of naming a language when detection is uncertain: %s', (inputText) => {
+    const hint = buildAiVerdictLanguageHint(inputText);
+
+    expect(hint.confidence).not.toBe('high');
+    expect(hint.targetLanguage).toBe('The same language as the original user case text.');
+    expect(hint.instruction).toContain('Identify the language of the original user case text yourself');
+    expect(hint.instruction).not.toMatch(/\b(?:in|from) (?:Spanish|French|Portuguese|Italian|German|Albanian)\b/);
   });
 
   it('normalizes safe numeric strings and missing verdictVersion from Gemini JSON', async () => {

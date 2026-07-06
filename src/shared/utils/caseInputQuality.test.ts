@@ -60,6 +60,28 @@ describe('case input quality', () => {
   });
 
   it.each([
+    // Albanian is almost always typed without ë/ç, so ASCII-only Albanian must
+    // still be detected as an unsupported local language.
+    'Ajo me futi ne friendzone. Qka me bo tash une?',
+    'Ajo po flirton me mua ne tenis. Qka te bej',
+    'Ne coworking space kemi kaluar mir. Pasi qe e lash une coworking space dhe i shkruajta asaj ajo me la seen',
+    'Kam ra ne dashni nuk di si tia them',
+  ])('flags diacritic-free Albanian social input as unsupported local language: %s', (inputText) => {
+    const result = assessCaseInputQuality(inputText);
+
+    expect(result.status).toBe('needs_context');
+    expect(result.reason).toBe('unsupported_local_language');
+  });
+
+  it.each([
+    'She friendzoned me. What do I do now',
+    'He asked me out for Friday and followed up today to confirm the time.',
+    'My friend keeps canceling but says we are good.',
+  ])('does not flag plain English social input as unsupported local language: %s', (inputText) => {
+    expect(assessCaseInputQuality(inputText).reason).not.toBe('unsupported_local_language');
+  });
+
+  it.each([
     'She liked my story but replied after 9 hours.',
     'He said he is not ready for a relationship but calls at 2am.',
     'My friend keeps canceling but says we are good.',

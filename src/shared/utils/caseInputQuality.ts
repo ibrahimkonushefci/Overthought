@@ -100,6 +100,12 @@ const HUMAN_OR_ACTION_SOCIAL_PATTERNS = [
 
 const MULTILINGUAL_SOCIAL_PATTERNS = [
   /\b(ai|ajo|shkruan|shkrun|mengjes|thote|lidhje|serioze|pastaj|qdo|cdo|mirpo|mirepo|deshiron|takim)\b/i,
+  // Diacritic-free Albanian: most Albanian speakers type without ë/ç, so these
+  // colloquial/Gheg forms must be detectable from plain ASCII.
+  /\b(qka|cka|qysh|tash|une|mua|nuk|dashni|dashuri|shkruajta|ckemi|qkemi|pse|flirton|kaluar|kemi|mirupafshim|sdi)\b/i,
+  /\b(kam|paska)\s+ra\b/i,
+  /\bme\s+(bo|fut|futi)\b/i,
+  /\bt'?ia\s+them\b/i,
   /\bme\s+dal(?:e|ë)?\b/i,
   /\bnat(?:e|ë)?\b/i,
   /\b(ella|el|mira|clase|rie|nunca|escribe|primero)\b/i,
@@ -313,9 +319,13 @@ export function assessCaseInputQuality(inputText: string): CaseInputQualityAsses
     return { status: 'needs_context', reason: 'too_vague', message: messageFor('too_vague') };
   }
 
+  // Non-English detection runs on two complementary branches: accented letters
+  // (ë, ç, ...) are a hard signal, but most Albanian speakers type plain ASCII,
+  // so multilingual social markers with no English social context also count.
   if (
-    hasNonAsciiLetters(trimmed) &&
-    (!hasAnyPattern(trimmed, ENGLISH_SOCIAL_PATTERNS) || hasMultilingualSocialContext(trimmed))
+    (hasNonAsciiLetters(trimmed) &&
+      (!hasAnyPattern(trimmed, ENGLISH_SOCIAL_PATTERNS) || hasMultilingualSocialContext(trimmed))) ||
+    (hasMultilingualSocialContext(trimmed) && !hasAnyPattern(trimmed, ENGLISH_SOCIAL_PATTERNS))
   ) {
     return {
       status: 'needs_context',

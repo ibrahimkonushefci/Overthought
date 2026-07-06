@@ -1,5 +1,9 @@
 import { useAiVerdictStore } from '../../store/aiVerdictStore';
-import { findAiVerdictDeepReadAccountLock, isAiVerdictDeepReadAccountLocked } from './aiVerdictAccess';
+import {
+  findAiVerdictDeepReadAccountLock,
+  isAiVerdictDeepReadAccountLocked,
+  isCurrentDailyQuotaAccess,
+} from './aiVerdictAccess';
 
 describe('aiVerdictAccess', () => {
   beforeEach(() => {
@@ -32,6 +36,28 @@ describe('aiVerdictAccess', () => {
 
     expect(isAiVerdictDeepReadAccountLocked(guestQuotaState)).toBe(false);
     expect(findAiVerdictDeepReadAccountLock()).toBeUndefined();
+  });
+
+  it('treats a daily quota access snapshot from an earlier UTC day as stale', () => {
+    const staleAccess = {
+      accessTier: 'free' as const,
+      allowed: false,
+      used: 2,
+      remaining: 0,
+      limit: 2,
+      quotaScope: 'daily' as const,
+      quotaBucket: '2020-01-01',
+      reason: 'daily_limit' as const,
+    };
+
+    expect(isCurrentDailyQuotaAccess(staleAccess)).toBe(false);
+    expect(isCurrentDailyQuotaAccess({ ...staleAccess, quotaBucket: new Date().toISOString().slice(0, 10) })).toBe(
+      true,
+    );
+    // Lifetime scopes never go stale by date.
+    expect(isCurrentDailyQuotaAccess({ ...staleAccess, quotaScope: 'lifetime' as const, quotaBucket: null })).toBe(
+      true,
+    );
   });
 
   it('still treats current signed-in free daily exhaustion as an account lock', () => {

@@ -141,7 +141,10 @@ Store/TestFlight rebuild; the constants above are the repo fallbacks used when t
 This section records the late v1 stabilization pass completed before the next handoff.
 
 - AI Verdict is the main enhanced output when quota/access allows; the deterministic local Basic Verdict remains the fallback.
-- AI Verdict prompt version is `3`, Gemini temperature is `0.8`, and generated AI text is cleaned for markdown artifacts before display/storage.
+- AI Verdict prompt version is `6`, Gemini temperature is `0.8`, and generated AI text is cleaned for markdown artifacts before display/storage.
+- Prompt version 6 hardened language matching: language markers are scored on unique distinctive words (shared stopwords like "me" no longer count), the Albanian marker set covers diacritic-free colloquial/Gheg spellings, and when detection is not high-confidence the prompt tells Gemini to mirror the case-text language itself instead of naming a possibly-wrong target language.
+- Basic Verdict input quality detects diacritic-free Albanian (and other multilingual social markers without English social context) as `unsupported_local_language`, routing to the pinned low-confidence "needs clearer context" result instead of a confident score. The generic-fallback guard also counts the two synthetic blank-slate signals as one observation, so short conclusion-only prompts cap at 70.
+- Guest Smart Verdict quota is a lifetime cap (default 2) per `guestAiKey` and intentionally never resets; only signed-in quotas reset per UTC day. "It never resets for guests" is designed behavior, not a bug.
 - `ai-verdict` was deployed after the stabilization commit containing quota, tone, and fallback fixes.
 - Guest and signed-in free quota UX now shows upgrade/retry prompts for `quota_exceeded` cases without auto-consuming AI quota when old cases are reopened.
 - Old Basic fallback cases caused by AI quota exhaustion can show "Try AI Verdict" after quota reset.

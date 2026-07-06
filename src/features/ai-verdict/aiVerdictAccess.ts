@@ -31,6 +31,14 @@ function utcTodayBucket(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+export function isCurrentDailyQuotaAccess(access: NonNullable<AiVerdictRequestState['access']>): boolean {
+  if (access.quotaScope !== 'daily') {
+    return true;
+  }
+
+  return access.quotaBucket === utcTodayBucket();
+}
+
 function isCurrentDailyQuotaState(requestState: AiVerdictRequestState): boolean {
   const access = requestState.access;
 
@@ -39,11 +47,7 @@ function isCurrentDailyQuotaState(requestState: AiVerdictRequestState): boolean 
     return Number.isFinite(updatedAt) && new Date(updatedAt).toISOString().slice(0, 10) === utcTodayBucket();
   }
 
-  if (access.quotaScope !== 'daily') {
-    return true;
-  }
-
-  return access.quotaBucket === utcTodayBucket();
+  return isCurrentDailyQuotaAccess(access);
 }
 
 function isStaleFreeQuotaLockForPremium(

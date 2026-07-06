@@ -1284,6 +1284,38 @@ describe('verdict engine low-information guard', () => {
     expect(result.nextMoveText).toBe('Add who did what, what happened, and what you want judged.');
   });
 
+  it.each([
+    'Ajo me futi ne friendzone. Qka me bo tash une?',
+    'Ajo më futi në friendzone. Çka me bo tash unë?',
+    'Ajo po flirton me mua ne tenis. Qka te bej',
+    'Ne coworking space kemi kaluar mir. Pasi qe e lash une coworking space dhe i shkruajta asaj ajo me la seen',
+    'Kam ra ne dashni nuk di si tia them',
+  ])(
+    'routes diacritic-free Albanian input to the low-confidence fallback instead of a confident score: %s',
+    (inputText) => {
+      const result = analyzeCase(verdictConfig, { category: 'romance', inputText }, { includeDebug: true });
+
+      expect(result.delusionScore).toBeLessThanOrEqual(30);
+      expect(result.verdictLabel).toBe('slight_reach');
+      expect(result.confidenceLevel).toBe('low');
+      expect(result.triggeredSignals).toContain('needs_more_context_input');
+      expect(result.triggeredSignals).toContain('unsupported_local_language');
+      expect(result.explanationText).toMatch(/Smart Verdict may understand this better/i);
+    },
+  );
+
+  it('caps short conclusion-only prompts at 70 because blank-slate signals are one observation, not two', () => {
+    const result = analyzeCase(
+      verdictConfig,
+      { category: 'romance', inputText: 'She friendzoned me. What do I do now' },
+      { includeDebug: true },
+    );
+
+    expect(result.triggeredSignals).toContain('blank_slate_short_prompt');
+    expect(result.delusionScore).toBeLessThanOrEqual(70);
+    expect(result.triggeredSignals).not.toContain('needs_more_context_input');
+  });
+
   it('still analyzes a valid normal social input without the low-confidence fallback', () => {
     const result = analyzeCase(
       verdictConfig,

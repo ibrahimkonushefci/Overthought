@@ -302,7 +302,7 @@ type AiVerdictResponse =
 
 const MODEL_PROVIDER = 'gemini';
 const MODEL_NAME = 'gemini-2.5-flash';
-const PROMPT_VERSION = 5;
+const PROMPT_VERSION = 6;
 const RESPONSE_SCHEMA_VERSION = 2;
 const SIGNED_IN_FREE_DAILY_LIMIT = 2;
 const GUEST_LIFETIME_LIMIT = 2;
@@ -331,6 +331,10 @@ const AI_VERDICT_FIELD_LIMITS = {
   nextMoveText: 170,
 } as const;
 
+// Marker words must be reasonably distinctive for their language. Do not add
+// words shared across several supported languages (for example "me", which is
+// valid Albanian, Spanish, French, Portuguese, and English) — shared stopwords
+// inflate the wrong language and can flip the detected target entirely.
 const LANGUAGE_WORD_MARKERS: Record<string, Set<string>> = {
   Albanian: new Set([
     'ai',
@@ -379,6 +383,34 @@ const LANGUAGE_WORD_MARKERS: Record<string, Set<string>> = {
     'dëshiron',
     'dal',
     'dalë',
+    // Diacritic-free colloquial/Gheg forms: Albanian is almost always typed
+    // without ë/ç, so ASCII spellings must count toward Albanian.
+    'qka',
+    'çka',
+    'cka',
+    'qysh',
+    'tash',
+    'une',
+    'unë',
+    'mua',
+    'bej',
+    'bëj',
+    'boj',
+    'kam',
+    'jam',
+    'jom',
+    'dashni',
+    'dashuri',
+    'futi',
+    'flirton',
+    'ftoje',
+    'shkruajta',
+    'kaluar',
+    'kemi',
+    'pse',
+    'ckemi',
+    'qkemi',
+    'sdi',
   ]),
   Spanish: new Set([
     'clase',
@@ -391,7 +423,6 @@ const LANGUAGE_WORD_MARKERS: Record<string, Set<string>> = {
     'exagerando',
     'gusta',
     'le',
-    'me',
     'mira',
     'nunca',
     'pero',
@@ -431,7 +462,7 @@ const LANGUAGE_WORD_MARKERS: Record<string, Set<string>> = {
     'wenn',
     'wir',
   ]),
-  French: new Set(['avec', 'elle', 'est', 'il', 'je', 'jamais', 'mais', 'me', 'nous', 'pas', 'quand', 'répond', 'repond', 'sourit', 'toujours']),
+  French: new Set(['avec', 'elle', 'est', 'il', 'je', 'jamais', 'mais', 'nous', 'pas', 'quand', 'répond', 'repond', 'sourit', 'toujours']),
   Italian: new Set(['che', 'con', 'gli', 'io', 'lei', 'lui', 'ma', 'mai', 'mi', 'non', 'prima', 'quando', 'risponde', 'sempre', 'sorride']),
   Portuguese: new Set([
     'antiga',
@@ -452,7 +483,6 @@ const LANGUAGE_WORD_MARKERS: Record<string, Set<string>> = {
     'manhã',
     'manha',
     'mas',
-    'me',
     'mim',
     'minha',
     'nunca',
@@ -513,7 +543,6 @@ const LANGUAGE_WORD_MARKERS: Record<string, Set<string>> = {
     'it',
     'liked',
     'longer',
-    'me',
     'much',
     'my',
     'never',
@@ -1507,73 +1536,57 @@ function languageTokens(value: string): string[] {
   return value.toLowerCase().match(/[\p{L}]+/gu) ?? [];
 }
 
-function buildAiVerdictLanguageHint(inputText: string): {
+// When detection is not high-confidence, never name a specific language: a
+// wrongly named target overrides the model's own (usually correct) language
+// inference and produces answers in the wrong language entirely.
+const MIRROR_LANGUAGE_TARGET = 'The same language as the original user case text.';
+const MIRROR_LANGUAGE_INSTRUCTION =
+  'Identify the language of the original user case text yourself and write every user-facing string value in that exact same language, matching its script style. If the case text mixes languages, mirror its dominant language naturally. If the input is gibberish or unusable, still use the apparent language when detectable; otherwise use concise English.';
+
+export function buildAiVerdictLanguageHint(inputText: string): {
   targetLanguage: string;
   confidence: 'high' | 'medium' | 'low';
   instruction: string;
 } {
-  const tokens = languageTokens(inputText);
+  // Count unique marker words, not token occurrences: a repeated ambiguous
+  // word must not outvote several distinct markers of the actual language.
+  const tokens = new Set(languageTokens(inputText));
   const scores = Object.entries(LANGUAGE_WORD_MARKERS)
     .map(([language, markers]) => ({
       language,
       score:
-        tokens.filter((token) => markers.has(token)).length +
+        [...tokens].filter((token) => markers.has(token)).length +
         (language === 'Spanish' && /[¿¡]/.test(inputText) ? 1 : 0),
     }))
     .filter((entry) => entry.score > 0)
     .sort((left, right) => right.score - left.score);
   const top = scores[0];
   const second = scores[1];
+  const isAmbiguousTie = Boolean(second && second.score >= 2 && top && top.score - second.score <= 1);
 
-  if (!top || top.score < 2) {
-    return {
-      targetLanguage: 'Infer from original user case text if detectable; otherwise concise English.',
-      confidence: 'low',
-      instruction:
-        'If the input is gibberish or unusable, still use the apparent language when detectable; otherwise use concise English.',
-    };
-  }
-
-  if (
-    second &&
-    second.score >= 2 &&
-    top.score - second.score <= 1
-  ) {
-    if (top.language === 'English') {
-      return {
-        targetLanguage: 'English',
-        confidence: 'medium',
-        instruction:
-          `Write every user-facing string value primarily in English. The original case is mixed with ${second.language}; preserve short original-language phrases only where natural, but do not switch fully out of English.`,
-      };
-    }
-
-    return {
-      targetLanguage:
-        top.language === 'Romanized Hindi/Urdu'
-          ? 'Romanized Hindi/Urdu (Latin script)'
-          : `${top.language}-led mixed-language`,
-      confidence: 'medium',
-      instruction:
-        top.language === 'Romanized Hindi/Urdu'
-          ? 'Write every user-facing string value in romanized Hindi/Urdu using Latin characters. Do not switch to Devanagari or Arabic script.'
-          : `The original case appears mixed-language. Write primarily in ${top.language}, with only natural borrowed words from ${second.language}. Do not switch fully to ${second.language}.`,
-    };
-  }
-
-  if (top.language === 'Romanized Hindi/Urdu') {
+  // Romanized Hindi/Urdu needs an explicit script instruction even at medium
+  // confidence; its markers are distinctive enough to be safe.
+  if (top && top.score >= 2 && top.language === 'Romanized Hindi/Urdu') {
     return {
       targetLanguage: 'Romanized Hindi/Urdu (Latin script)',
-      confidence: top.score >= 4 ? 'high' : 'medium',
+      confidence: top.score >= 4 && !isAmbiguousTie ? 'high' : 'medium',
       instruction:
         'Write every user-facing string value in romanized Hindi/Urdu using Latin characters. Do not switch to Devanagari or Arabic script.',
+    };
+  }
+
+  if (!top || top.score < 4 || isAmbiguousTie) {
+    return {
+      targetLanguage: MIRROR_LANGUAGE_TARGET,
+      confidence: top && top.score >= 2 ? 'medium' : 'low',
+      instruction: MIRROR_LANGUAGE_INSTRUCTION,
     };
   }
 
   if (top.language === 'English' && second && second.score > 0) {
     return {
       targetLanguage: 'English',
-      confidence: top.score >= 4 ? 'high' : 'medium',
+      confidence: 'high',
       instruction:
         `Write every user-facing string value primarily in English. The original case includes a few ${second.language} words; preserve them only where natural, but do not switch fully out of English.`,
     };
@@ -1581,7 +1594,7 @@ function buildAiVerdictLanguageHint(inputText: string): {
 
   return {
     targetLanguage: top.language,
-    confidence: top.score >= 4 ? 'high' : 'medium',
+    confidence: 'high',
     instruction: `Write every user-facing string value in ${top.language}.`,
   };
 }
@@ -1669,9 +1682,11 @@ Tone:
 - no generic AI hedging
 - use details from the case
 - each text field must reference or clearly depend on the exact case details
+- explanationText and evidenceCheckText must quote or paraphrase at least one exact detail from the case: a number, a timespan, a word the person used, or a specific action
 - every field except nextMoveText needs a sharp image, punchline, or roast of the weak evidence
 - avoid soft validation, advice-column language, career-coach phrasing, and corporate performance-review voice
 - avoid reusable lines like "concrete actions matter," "direct words and follow-through," or "making the maybe louder"
+- vary sentence openers across fields; never start evidenceCheckText with formulaic templates like "The receipts show", "The only receipt is", or "The only evidence is"
 - never use markdown formatting characters like asterisks, underscores, backticks, or code fences
 
 Grounded-case calibration:
@@ -1702,7 +1717,7 @@ Response language:
 Field style:
 - displayLabel: screenshot-worthy, not generic.
 - explanationText: lead with the roast, then the useful read.
-- evidenceCheckText: name the actual receipt and what it does or does not prove.
+- evidenceCheckText: name the actual receipt and what it does or does not prove; open with the receipt itself, not a template phrase.
 - overreadingText: call out the exact fantasy the user is building.
 - whatMattersText: case-specific standard using the concrete receipt; never start with "What matters is" or "The important thing is".
 - nextMoveText: direct, useful, and short; this is the only field allowed to sound practical.

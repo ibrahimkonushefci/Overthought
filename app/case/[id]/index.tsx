@@ -35,6 +35,7 @@ import { getCachedCaseById } from '../../../src/features/cases/services/useCases
 import {
   isAiVerdictDeepReadAccountLocked,
   isAiVerdictDeepReadCaseLocked,
+  isCurrentDailyQuotaAccess,
 } from '../../../src/features/ai-verdict/aiVerdictAccess';
 import { deepReadService } from '../../../src/features/deep-read/deepReadService';
 import type { CaseEntity, CaseUpdateEntity } from '../../../src/features/cases/types';
@@ -855,6 +856,12 @@ function accessCopy({
 
   if (access.accessTier === 'guest') {
     return `${access.remaining} of ${access.limit} free Smart Verdicts left`;
+  }
+
+  // A persisted daily count from an earlier UTC day is stale; the server has
+  // already reset it, so show the generic allowance instead of yesterday's 0.
+  if (!isCurrentDailyQuotaAccess(access)) {
+    return `${access.limit} Smart Verdicts/day`;
   }
 
   return `${access.remaining} of ${access.limit} Smart Verdicts left today`;

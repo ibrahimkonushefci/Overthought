@@ -93,11 +93,20 @@ function applyScenarioBounds(score: number, scenario?: ScenarioOverride): number
   return adjustedScore;
 }
 
+const BLANK_SLATE_SYNTHETIC_PATTERN = 'short_prompt_without_action';
+
 function countDistinctActiveWeakSignals(signals: TriggeredSignal[]): number {
+  // The blank-slate rule injects two synthetic signals from the single
+  // "short prompt without action" condition. They are not independent
+  // observations, so they count once toward the generic-fallback guard.
   return new Set(
     signals
       .filter((signal) => signal.type === 'weak_evidence' && signal.weightApplied > 0)
-      .map((signal) => signal.id),
+      .map((signal) =>
+        signal.matchedPatterns.length === 1 && signal.matchedPatterns[0] === BLANK_SLATE_SYNTHETIC_PATTERN
+          ? BLANK_SLATE_SYNTHETIC_PATTERN
+          : signal.id,
+      ),
   ).size;
 }
 
