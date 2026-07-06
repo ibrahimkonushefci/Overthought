@@ -1,23 +1,25 @@
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Animated, Keyboard, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Alert, Animated, Keyboard, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, Sparkles } from 'lucide-react-native';
-import type { CaseCategory } from '../src/types/shared';
+import type { AiVerdictResponse, CaseCategory } from '../src/types/shared';
 import { aiVerdictService } from '../src/features/ai-verdict/aiVerdictService';
 import { caseRepository } from '../src/features/cases/repositories/caseRepository';
 import { pickExamplePrompts } from '../src/features/cases/examplePrompts';
-import { getCaseId } from '../src/features/cases/types';
+import { getCaseId, type CaseEntity } from '../src/features/cases/types';
 import { CategoryPill } from '../src/features/cases/components/CategoryPill';
+import { VerdictRevealOverlay, type VerdictRevealOutcome } from '../src/features/cases/components/VerdictRevealOverlay';
 import { Button } from '../src/shared/ui/Button';
 import { AppText } from '../src/shared/ui/Text';
 import { Screen } from '../src/shared/ui/Screen';
 import { colors, radii, spacing, typography } from '../src/shared/theme/tokens';
 import { assessCaseInputQuality } from '../src/shared/utils/caseInputQuality';
+import { getVerdictDisplayLabel } from '../src/shared/utils/verdict';
 import { useAuthStore } from '../src/store/authStore';
 import { useGuestStore } from '../src/store/guestStore';
 
 const categories: CaseCategory[] = ['romance', 'friendship', 'social', 'general'];
-const ANALYZING_DELAY_MS = 2000;
+const MIN_REVEAL_DURATION_MS = 1600;
 const MIN_CASE_CHARACTERS = 30;
 const MIN_CASE_HELPER_COPY = "Give us at least 30 characters so there's enough drama to judge.";
 
@@ -25,6 +27,27 @@ function wait(milliseconds: number) {
   return new Promise((resolve) => {
     setTimeout(resolve, milliseconds);
   });
+}
+
+function revealOutcomeFromResult(record: CaseEntity, aiResult: AiVerdictResponse): VerdictRevealOutcome {
+  if (aiResult.ok) {
+    return {
+      displayLabel: aiResult.verdict.displayLabel,
+      score: aiResult.verdict.delusionScore,
+      source: 'smart',
+      verdictLabel: aiResult.verdict.verdictLabel,
+    };
+  }
+
+  return {
+    displayLabel: getVerdictDisplayLabel(
+      record.verdictLabel,
+      `${getCaseId(record)}|${record.inputText}|${record.delusionScore}`,
+    ),
+    score: record.delusionScore,
+    source: 'basic',
+    verdictLabel: record.verdictLabel,
+  };
 }
 
 export default function NewCaseRoute() {
@@ -35,6 +58,9 @@ export default function NewCaseRoute() {
   const [inputText, setInputText] = useState(draft);
   const [category, setCategory] = useState<CaseCategory>('romance');
   const [loading, setLoading] = useState(false);
+  const [revealCategory, setRevealCategory] = useState<CaseCategory>('romance');
+  const [revealOutcome, setRevealOutcome] = useState<VerdictRevealOutcome | null>(null);
+  const [pendingResultRoute, setPendingResultRoute] = useState<string | null>(null);
   const [examples, setExamples] = useState(() => pickExamplePrompts(4));
   const helperPulse = useRef(new Animated.Value(0)).current;
   const previousHelperAttentionKey = useRef('');
@@ -114,8 +140,11 @@ export default function NewCaseRoute() {
     }
 
     Keyboard.dismiss();
+    setRevealCategory(category);
+    setRevealOutcome(null);
+    setPendingResultRoute(null);
     setLoading(true);
-    const minimumAnalyzingTime = wait(ANALYZING_DELAY_MS);
+    const minimumRevealTime = wait(MIN_REVEAL_DURATION_MS);
 
     try {
       const record = await caseRepository.createCase({ inputText: trimmed, category });
@@ -124,28 +153,34 @@ export default function NewCaseRoute() {
       setInputText('');
       setCategory('romance');
       setExamples(pickExamplePrompts(4));
-      const [, aiResult] = await Promise.all([minimumAnalyzingTime, aiVerdictRequest]);
+      const [, aiResult] = await Promise.all([minimumRevealTime, aiVerdictRequest]);
+      const outcome = revealOutcomeFromResult(record, aiResult);
       const quotaParam = !aiResult.ok && aiResult.code === 'quota_exceeded' ? '&aiQuota=1' : '';
-      router.push(`/case/${getCaseId(record)}?fromAnalysis=1${quotaParam}`);
+      setPendingResultRoute(`/case/${getCaseId(record)}?fromAnalysis=1${quotaParam}`);
+      setRevealOutcome(outcome);
     } catch (error) {
-      Alert.alert('Could not save the case', error instanceof Error ? error.message : 'Try again.');
-    } finally {
+      setRevealOutcome(null);
+      setPendingResultRoute(null);
       setLoading(false);
+      Alert.alert('Could not save the case', error instanceof Error ? error.message : 'Try again.');
     }
+  };
+
+  const completeReveal = () => {
+    if (!pendingResultRoute) {
+      return;
+    }
+
+    router.push(pendingResultRoute);
+    setLoading(false);
+    setRevealOutcome(null);
+    setPendingResultRoute(null);
   };
 
   if (loading) {
     return (
-      <Screen scroll={false}>
-        <View style={styles.analyzingScreen}>
-          <ActivityIndicator color={colors.brand.pink} size="large" />
-          <AppText variant="display" center style={styles.analyzingTitle}>
-            Getting the read...
-          </AppText>
-          <AppText variant="subtitle" center style={styles.analyzingSubtitle}>
-            Trying Smart Verdict first. Basic Verdict is ready if it is unavailable.
-          </AppText>
-        </View>
+      <Screen bottomInset={0} scroll={false}>
+        <VerdictRevealOverlay category={revealCategory} outcome={revealOutcome} onComplete={completeReveal} />
       </Screen>
     );
   }
@@ -358,17 +393,5 @@ const styles = StyleSheet.create({
   },
   submitWrap: {
     marginTop: spacing.xl,
-  },
-  analyzingScreen: {
-    alignItems: 'center',
-    flex: 1,
-    gap: spacing.lg,
-    justifyContent: 'center',
-  },
-  analyzingTitle: {
-    marginTop: spacing.md,
-  },
-  analyzingSubtitle: {
-    maxWidth: 280,
   },
 });

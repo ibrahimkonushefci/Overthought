@@ -251,8 +251,18 @@ export default function CaseDetailRoute() {
       return;
     }
 
-    quotaUpgradePromptedCaseIds.add(currentCaseId);
-    setQuotaUpgradePromptVisible(true);
+    const promptTimer = setTimeout(() => {
+      if (quotaUpgradePromptedCaseIds.has(currentCaseId)) {
+        return;
+      }
+
+      quotaUpgradePromptedCaseIds.add(currentCaseId);
+      setQuotaUpgradePromptVisible(true);
+    }, 900);
+
+    return () => {
+      clearTimeout(promptTimer);
+    };
   }, [aiQuota, aiVerdictRequestsByCaseId, record, shouldPresentNewResult]);
 
   const resultPresentationKey = shouldRunResultIntro
