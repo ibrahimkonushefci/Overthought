@@ -21,7 +21,17 @@ interface VerdictRevealOverlayProps {
   onComplete: () => void;
 }
 
-const beats = ['Reading the receipts…', 'Checking the delusion level…', 'Preparing the ruling…'];
+const beats = [
+  'Reading the receipts…',
+  'Checking the delusion level…',
+  'Cross-examining the vibes…',
+  'Consulting the group chat…',
+  'Weighing the evidence…',
+  'Preparing the ruling…',
+];
+const beatCycleMs = 1400;
+const waitingScoreCreepTarget = 15;
+const waitingScoreCreepDurationMs = 7000;
 const receiptLabels = ['Receipts filed', 'Vibes checked', 'Timeline reviewed'];
 const meterSize = 176;
 const meterRadius = 68;
@@ -138,17 +148,38 @@ export function VerdictRevealOverlay({ category, outcome, onComplete }: VerdictR
     }
 
     setBeatIndex(0);
-    const secondBeatDelay = reducedMotion ? 700 : 560;
-    const finalBeatDelay = reducedMotion ? 1250 : 1120;
-    const timers = [
-      setTimeout(() => setBeatIndex(1), secondBeatDelay),
-      setTimeout(() => setBeatIndex(2), finalBeatDelay),
-    ];
+
+    if (reducedMotion) {
+      return;
+    }
+
+    const interval = setInterval(() => {
+      setBeatIndex((current) => (current + 1) % beats.length);
+    }, beatCycleMs);
 
     return () => {
-      timers.forEach((timer) => clearTimeout(timer));
+      clearInterval(interval);
     };
   }, [outcome, reducedMotion]);
+
+  useEffect(() => {
+    if (outcome || reducedMotion) {
+      return;
+    }
+
+    scoreAnim.setValue(0);
+    const creep = Animated.timing(scoreAnim, {
+      toValue: waitingScoreCreepTarget,
+      duration: waitingScoreCreepDurationMs,
+      easing: Easing.out(Easing.quad),
+      useNativeDriver: false,
+    });
+    creep.start();
+
+    return () => {
+      creep.stop();
+    };
+  }, [outcome, reducedMotion, scoreAnim]);
 
   useEffect(() => {
     const scoreListener = scoreAnim.addListener(({ value }) => {
@@ -166,12 +197,9 @@ export function VerdictRevealOverlay({ category, outcome, onComplete }: VerdictR
     }
 
     completedOutcomeRef.current = outcome;
-    setBeatIndex(2);
     setStampVisible(false);
     setFinalCopyVisible(false);
     stampAnim.setValue(0);
-    scoreAnim.setValue(0);
-    setDisplayScore(0);
 
     if (completionTimeoutRef.current) {
       clearTimeout(completionTimeoutRef.current);

@@ -65,6 +65,7 @@ const quotaUpgradePromptedCaseIds = new Set<string>();
 const quotaRetryAttemptedCaseIds = new Set<string>();
 const caseDetailBackground = '#FBF9F2';
 const aiVerdictTimeoutRecoveryDelaysMs = [2_000, 5_000, 10_000];
+const quotaUpgradePromptDelayMs = 4_000;
 
 type DeepReadStatus = 'idle' | 'loading' | 'ready' | 'not_authenticated' | 'quota' | 'fair_use' | 'error';
 
@@ -259,7 +260,7 @@ export default function CaseDetailRoute() {
 
       quotaUpgradePromptedCaseIds.add(currentCaseId);
       setQuotaUpgradePromptVisible(true);
-    }, 900);
+    }, quotaUpgradePromptDelayMs);
 
     return () => {
       clearTimeout(promptTimer);
@@ -550,7 +551,6 @@ export default function CaseDetailRoute() {
               requestState={aiVerdictRequest}
               access={aiVerdict?.access ?? aiVerdictRequest?.access}
               isGuest={isGuestCase(record)}
-              onUpgrade={quotaUpgradeEligible && !quotaRetryEligible ? () => routeToQuotaUpgrade(aiVerdictRequest) : undefined}
               onRetry={quotaRetryEligible ? () => void retryAiVerdict() : undefined}
             />
             <ScorePanel
@@ -841,6 +841,17 @@ function quotaUpgradeCopy(requestState?: AiVerdictRequestState) {
   };
 }
 
+function deepReadLockedUpgradeCopy(requestState?: AiVerdictRequestState) {
+  const isGuest = requestState?.access?.accessTier === 'guest';
+
+  return {
+    body: isGuest
+      ? "You've seen the Smart read. Sign in and you get 2 fresh Smart Verdicts every day — this case included."
+      : "Today's free Smart Verdicts are used up. Premium gets you more Smart reads for the cases you can't stop replaying.",
+    cta: isGuest ? 'Sign in for daily Smart Verdicts' : 'Upgrade to Premium',
+  };
+}
+
 function accessCopy({
   requestState,
   isGuest,
@@ -941,14 +952,12 @@ function AiVerdictStatusStrip({
   requestState,
   access,
   isGuest,
-  onUpgrade,
   onRetry,
 }: {
   source: AiVerdictDisplaySource;
   requestState?: AiVerdictRequestState;
   access?: AiVerdictRequestState['access'];
   isGuest: boolean;
-  onUpgrade?: () => void;
   onRetry?: () => void;
 }) {
   const statusText = aiVerdictStatusText({
@@ -956,7 +965,6 @@ function AiVerdictStatusStrip({
     requestState: requestState ?? (access ? { status: 'idle', access, updatedAt: '' } : undefined),
     isGuest,
   });
-  const upgradeCopy = onUpgrade ? quotaUpgradeCopy(requestState) : null;
   const bodyText = onRetry
     ? 'Smart Verdict quota may be available again. Try Smart Verdict when you want to use one for this case.'
     : statusText.body;
@@ -986,9 +994,6 @@ function AiVerdictStatusStrip({
       <AppText variant="meta" color={colors.text.secondary} style={styles.aiVerdictStatusBody}>
         {bodyText}
       </AppText>
-      {upgradeCopy && onUpgrade ? (
-        <QuotaUpgradeButton label={upgradeCopy.cta} onPress={onUpgrade} />
-      ) : null}
       {onRetry ? <QuotaUpgradeButton label="Try Smart Verdict" onPress={onRetry} /> : null}
     </View>
   );
@@ -1211,7 +1216,7 @@ function DeepReadContent({
   const [openSection, setOpenSection] = useState<DeepReadSectionKey>('whatsActuallyHappening');
 
   if (locked) {
-    const upgradeCopy = quotaUpgradeRequestState ? quotaUpgradeCopy(quotaUpgradeRequestState) : null;
+    const upgradeCopy = quotaUpgradeRequestState ? deepReadLockedUpgradeCopy(quotaUpgradeRequestState) : null;
 
     return (
       <View style={styles.deepStateStack}>
@@ -1220,7 +1225,7 @@ function DeepReadContent({
             quotaRetryEligible
               ? 'Smart Verdict quota may be available again. Try Smart Verdict before opening Deep Read for this case.'
               : upgradeCopy
-                ? `${upgradeCopy.title} Your Basic Verdict is still available.`
+                ? upgradeCopy.body
                 : 'Smart reads are locked for this case. Your Basic Verdict is still available.'
           }
         />
@@ -2133,7 +2138,7 @@ const styles = StyleSheet.create({
   },
   shareModalOverlay: {
     alignItems: 'center',
-    backgroundColor: 'rgba(31, 23, 34, 0.72)',
+    backgroundColor: 'rgba(20, 15, 22, 0.96)',
     flex: 1,
     justifyContent: 'center',
     paddingHorizontal: spacing.xl,

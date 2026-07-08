@@ -200,14 +200,6 @@ export default function NewCaseRoute() {
       <AppText variant="subtitle" style={styles.subtitle}>
         A few details. No essay. We'll judge accordingly.
       </AppText>
-      <View style={styles.aiAccessNote}>
-        <Sparkles color={colors.text.secondary} size={15} strokeWidth={2.5} />
-        <AppText variant="meta" color={colors.text.secondary} style={styles.aiAccessText}>
-          {sessionMode === 'authenticated'
-            ? 'Smart Verdicts run first when available: 2 free per day. Basic Verdict is the fallback.'
-            : 'Guest trial includes 2 free Smart Verdicts. Sign in later for 2 Smart Verdicts per day.'}
-        </AppText>
-      </View>
 
       <View style={styles.categoryRow}>
         {categories.map((item) => (
@@ -274,6 +266,15 @@ export default function NewCaseRoute() {
         ))}
       </View>
 
+      <View style={styles.aiAccessNote}>
+        <Sparkles color={colors.text.secondary} size={15} strokeWidth={2.5} />
+        <AppText variant="meta" color={colors.text.secondary} style={styles.aiAccessText}>
+          {sessionMode === 'authenticated'
+            ? "Smart Verdict runs first when it's available. Basic Verdict has your back if not."
+            : 'Your first 2 cases get the full Smart Verdict read — on us.'}
+        </AppText>
+      </View>
+
       <View style={styles.submitWrap}>
         <Button
           title="Judge this"
@@ -324,15 +325,10 @@ const styles = StyleSheet.create({
   },
   aiAccessNote: {
     alignItems: 'center',
-    backgroundColor: colors.bg.surface,
-    borderColor: colors.ui.border,
-    borderRadius: radii.lg,
-    borderWidth: 1,
     flexDirection: 'row',
     gap: spacing.sm,
-    marginTop: spacing.lg,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+    marginTop: spacing.xl,
+    paddingHorizontal: spacing.xs,
   },
   aiAccessText: {
     flex: 1,
@@ -392,6 +388,6 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   submitWrap: {
-    marginTop: spacing.xl,
+    marginTop: spacing.md,
   },
 });
