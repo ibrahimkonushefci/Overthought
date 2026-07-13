@@ -17,7 +17,7 @@ export function accountDeletionConfirmationMessage(isGuest: boolean, hasPremium:
 
 export function accountDeletionDetailText(isGuest: boolean, hasPremium: boolean): string {
   if (isGuest) {
-    return 'This clears guest cases, drafts, and local session markers from this device.';
+    return 'This permanently deletes guest cases, drafts, local session markers, and guest Smart Verdict data tied to this installation.';
   }
 
   if (hasPremium) {

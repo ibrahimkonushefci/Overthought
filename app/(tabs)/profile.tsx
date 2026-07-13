@@ -4,6 +4,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { ChevronRight, LogIn, Shield, Trash2, Crown, FileText, Sparkles, User } from 'lucide-react-native';
 import type { LucideProps } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import Constants from 'expo-constants';
 import { useCallback, useState } from 'react';
 import { authService } from '../../src/features/auth/authService';
 import { premiumService } from '../../src/features/premium/premiumService';
@@ -19,6 +20,14 @@ import { caseRepository } from '../../src/features/cases/repositories/caseReposi
 import { env } from '../../src/lib/env';
 import { colors, gradients, radii, shadows, spacing, typography } from '../../src/shared/theme/tokens';
 
+function installedAppVersion(): string {
+  try {
+    return Constants.expoConfig?.version?.trim() ?? '';
+  } catch {
+    return '';
+  }
+}
+
 export default function ProfileRoute() {
   const router = useRouter();
   const auth = useAuthStore();
@@ -33,6 +42,7 @@ export default function ProfileRoute() {
   const isGuest = auth.sessionMode !== 'authenticated';
   const hasPremium = isPremiumStateActive(premiumState);
   const accountDisplayName = isGuest ? 'Guest' : auth.profile?.displayName ?? auth.user?.email?.split('@')[0] ?? 'Account';
+  const appVersion = installedAppVersion();
 
   useFocusEffect(
     useCallback(() => {
@@ -253,7 +263,7 @@ export default function ProfileRoute() {
       </View>
 
       <AppText variant="meta" center style={styles.footer}>
-        Overthought · v0.1 · Made with ❤️ and concerning questions
+        Overthought{appVersion ? ` · v${appVersion}` : ''} · Made with ❤️ and concerning questions
       </AppText>
 
       <Modal

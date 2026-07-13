@@ -4,6 +4,11 @@ import { useAuthStore } from '../../store/authStore';
 import { usePremiumStore } from '../../store/premiumStore';
 import type { DeepReadResponse } from '../../types/shared';
 import { deepReadService } from './deepReadService';
+import {
+  dangerousCaseSafetyFixtures,
+  falsePositiveCaseSafetyFixtures,
+} from '../../shared/utils/caseSafety.fixtures';
+import { CASE_SAFETY_MESSAGE } from '../../shared/utils/caseSafety';
 
 var mockSupabaseFrom = jest.fn();
 
@@ -107,6 +112,41 @@ describe('deepReadService', () => {
       },
     });
   });
+
+  it.each(dangerousCaseSafetyFixtures)(
+    'routes dangerous input before quota checks or Supabase invocation: $name',
+    async (fixture) => {
+      useAuthStore.getState().setAuthenticated({
+        id: 'user-1',
+        email: 'person@example.com',
+        provider: 'email',
+      });
+
+      await expect(deepReadService.requestCaseDeepRead('case-1', fixture.inputText)).resolves.toEqual({
+        ok: false,
+        code: 'safety_routed',
+        message: CASE_SAFETY_MESSAGE,
+      });
+      expect(mockSupabase.functions.invoke).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(falsePositiveCaseSafetyFixtures)(
+    'keeps normal Deep Read invocation for false positive: $name',
+    async (fixture) => {
+      useAuthStore.getState().setAuthenticated({
+        id: 'user-1',
+        email: 'person@example.com',
+        provider: 'email',
+      });
+      mockSupabase.functions.invoke.mockResolvedValue({ data: successResponse(), error: null });
+
+      await expect(deepReadService.requestCaseDeepRead('case-1', fixture.inputText)).resolves.toMatchObject({
+        ok: true,
+      });
+      expect(mockSupabase.functions.invoke).toHaveBeenCalledTimes(1);
+    },
+  );
 
   it('loads a cached Deep Read for an authenticated case without invoking the Edge Function', async () => {
     useAuthStore.getState().setAuthenticated({

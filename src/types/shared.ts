@@ -19,6 +19,7 @@ export type DeepReadUsageStatus = 'reserved' | 'succeeded' | 'failed' | 'expired
 export type DeepReadFailureCode =
   | 'not_authenticated'
   | 'case_not_found'
+  | 'safety_routed'
   | 'deep_read_not_configured'
   | 'quota_exceeded'
   | 'fair_use_exceeded'
@@ -33,6 +34,7 @@ export type AiVerdictFailureCode =
   | 'not_authenticated'
   | 'case_not_found'
   | 'guest_key_required'
+  | 'safety_routed'
   | 'global_daily_cap_exceeded'
   | 'ip_daily_cap_exceeded'
   | 'quota_exceeded'
@@ -167,6 +169,7 @@ export type AiVerdictRequestStatus =
   | 'ai_timeout'
   | 'unauthenticated'
   | 'guest_key_required'
+  | 'safety_routed'
   | 'case_not_found'
   | 'fair_use_exceeded'
   | 'invalid_ai_response'

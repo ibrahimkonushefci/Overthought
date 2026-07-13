@@ -9,6 +9,7 @@ import { EmptyState } from '../../src/shared/ui/EmptyState';
 import { CaseCard } from '../../src/features/cases/components/CaseCard';
 import { CategoryPill } from '../../src/features/cases/components/CategoryPill';
 import { useCases } from '../../src/features/cases/services/useCases';
+import { categoryLabels } from '../../src/shared/utils/verdict';
 import { colors, radii, spacing, typography } from '../../src/shared/theme/tokens';
 
 type Filter = CaseCategory | 'all';
@@ -42,6 +43,30 @@ export default function CasesRoute() {
       return matchesFilter && matchesQuery;
     });
   }, [cases, filter, query]);
+  const hasQuery = query.trim().length > 0;
+  const hasFilter = filter !== 'all';
+  const noMatchTitle =
+    hasQuery && hasFilter
+      ? 'Nothing matches these filters.'
+      : hasQuery
+        ? 'No case matches that search.'
+        : `No ${categoryLabels[filter as CaseCategory]} cases yet.`;
+  const noMatchBody =
+    hasQuery && hasFilter
+      ? 'The archive is here. These filters are doing too much.'
+      : hasQuery
+        ? 'Try a different term or clear the search.'
+        : 'The archive has drama, just not in this category.';
+  const noMatchActionLabel = hasQuery && hasFilter ? 'Reset' : hasQuery ? 'Clear search' : 'Show all cases';
+  const resetNoMatch = () => {
+    if (hasQuery) {
+      setQuery('');
+    }
+
+    if (hasFilter) {
+      setFilter('all');
+    }
+  };
 
   return (
     <Screen>
@@ -84,7 +109,7 @@ export default function CasesRoute() {
             <CaseCard key={'localId' in item ? item.localId : item.id} item={item} />
           ))}
         </View>
-      ) : (
+      ) : cases.length === 0 ? (
         <EmptyState
           title="Your archive is suspiciously empty."
           body="Add your first case to get started."
@@ -92,6 +117,15 @@ export default function CasesRoute() {
           icon={Archive}
           actionLabel="Create a case"
           onAction={() => router.push('/new-case')}
+        />
+      ) : (
+        <EmptyState
+          title={noMatchTitle}
+          body={noMatchBody}
+          emoji="🔎"
+          icon={Search}
+          actionLabel={noMatchActionLabel}
+          onAction={resetNoMatch}
         />
       )}
     </Screen>

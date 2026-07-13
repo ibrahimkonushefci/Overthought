@@ -13,6 +13,7 @@ const categories: CaseCategory[] = ['romance', 'friendship', 'social', 'general'
 
 export default function StatsRoute() {
   const { cases } = useCases();
+  const hasCases = cases.length > 0;
   const categoryStats = categories.map((category) => {
     const categoryCases = cases.filter((item) => item.category === category);
     const averageScore =
@@ -56,25 +57,38 @@ export default function StatsRoute() {
             <View style={styles.badge}>
               <Sparkles color={colors.text.onBrand} size={12} strokeWidth={2.5} />
               <AppText variant="eyebrow" color={colors.text.onBrand} style={styles.badgeText}>
-                Main spiral
+                {hasCases ? 'Main spiral' : 'No evidence yet'}
               </AppText>
             </View>
             <AppText variant="eyebrow" color={colors.text.onBrand} style={styles.monthLabel}>
-              This month
+              All time
             </AppText>
           </View>
-          <View style={styles.heroTitleRow}>
-            <AppText style={styles.heroEmoji}>{categoryIcons[mostCommon.category]}</AppText>
-            <AppText variant="display" color={colors.text.onBrand} style={styles.heroTitle}>
-              {categoryLabels[mostCommon.category]}
-            </AppText>
-          </View>
-          <AppText variant="subtitle" color={colors.text.onBrand} style={styles.heroSubtitle}>
-            "Reading rooms that aren't there."
-          </AppText>
-          <AppText variant="eyebrow" color={colors.text.onBrand} style={styles.heroMeta}>
-            Avg {mostCommon.averageScore}/100 · {mostCommon.count} cases
-          </AppText>
+          {hasCases ? (
+            <>
+              <View style={styles.heroTitleRow}>
+                <AppText style={styles.heroEmoji}>{categoryIcons[mostCommon.category]}</AppText>
+                <AppText variant="display" color={colors.text.onBrand} style={styles.heroTitle}>
+                  {categoryLabels[mostCommon.category]}
+                </AppText>
+              </View>
+              <AppText variant="subtitle" color={colors.text.onBrand} style={styles.heroSubtitle}>
+                "Reading rooms that aren't there."
+              </AppText>
+              <AppText variant="eyebrow" color={colors.text.onBrand} style={styles.heroMeta}>
+                Avg {mostCommon.averageScore}/100 · {mostCommon.count} cases
+              </AppText>
+            </>
+          ) : (
+            <>
+              <AppText variant="display" color={colors.text.onBrand} style={styles.heroTitle}>
+                No main spiral yet.
+              </AppText>
+              <AppText variant="subtitle" color={colors.text.onBrand} style={styles.heroSubtitle}>
+                File a case and we’ll expose the pattern.
+              </AppText>
+            </>
+          )}
         </LinearGradient>
 
         <View style={styles.statsRow}>

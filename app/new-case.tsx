@@ -14,6 +14,11 @@ import { AppText } from '../src/shared/ui/Text';
 import { Screen } from '../src/shared/ui/Screen';
 import { colors, radii, spacing, typography } from '../src/shared/theme/tokens';
 import { assessCaseInputQuality } from '../src/shared/utils/caseInputQuality';
+import {
+  assessCaseSafety,
+  CASE_SAFETY_MESSAGE,
+  CaseSafetyRoutingError,
+} from '../src/shared/utils/caseSafety';
 import { getVerdictDisplayLabel } from '../src/shared/utils/verdict';
 import { useAuthStore } from '../src/store/authStore';
 import { useGuestStore } from '../src/store/guestStore';
@@ -65,9 +70,11 @@ export default function NewCaseRoute() {
   const helperPulse = useRef(new Animated.Value(0)).current;
   const previousHelperAttentionKey = useRef('');
   const trimmedInput = inputText.trim();
+  const caseSafety = assessCaseSafety(trimmedInput);
   const inputQuality = assessCaseInputQuality(trimmedInput);
   const inputQualityBlocked = inputQuality.status === 'block';
-  const canSubmit = !loading && trimmedInput.length >= MIN_CASE_CHARACTERS && !inputQualityBlocked;
+  const canSubmit =
+    !loading && (caseSafety.shouldRoute || (trimmedInput.length >= MIN_CASE_CHARACTERS && !inputQualityBlocked));
   const shouldShowInputQualityMessage =
     inputQualityBlocked || inputQuality.reason === 'too_vague' || inputQuality.reason === 'low_context';
   const shouldAnimateInputHelper = trimmedInput.length >= MIN_CASE_CHARACTERS && shouldShowInputQualityMessage;
@@ -127,6 +134,11 @@ export default function NewCaseRoute() {
   const submit = async () => {
     const trimmed = inputText.trim();
 
+    if (assessCaseSafety(trimmed).shouldRoute) {
+      Alert.alert('Your safety comes first', CASE_SAFETY_MESSAGE);
+      return;
+    }
+
     if (trimmed.length < MIN_CASE_CHARACTERS) {
       Alert.alert('Add a little more', MIN_CASE_HELPER_COPY);
       return;
@@ -162,6 +174,10 @@ export default function NewCaseRoute() {
       setRevealOutcome(null);
       setPendingResultRoute(null);
       setLoading(false);
+      if (error instanceof CaseSafetyRoutingError) {
+        Alert.alert('Your safety comes first', CASE_SAFETY_MESSAGE);
+        return;
+      }
       Alert.alert('Could not save the case', error instanceof Error ? error.message : 'Try again.');
     }
   };

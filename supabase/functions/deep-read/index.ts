@@ -1,6 +1,8 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
+// @ts-ignore -- Deno Edge Functions require explicit local TypeScript extensions.
+import { assessCaseSafety, CASE_SAFETY_MESSAGE } from '../../../src/shared/utils/caseSafety.ts';
 
 type CaseCategory = 'romance' | 'friendship' | 'social' | 'general';
 type VerdictLabel =
@@ -14,6 +16,7 @@ type DeepReadAccessTier = 'free' | 'premium';
 type DeepReadFailureCode =
   | 'not_authenticated'
   | 'case_not_found'
+  | 'safety_routed'
   | 'quota_exceeded'
   | 'fair_use_exceeded'
   | 'ai_timeout'
@@ -950,6 +953,11 @@ Deno.serve(async (request) => {
     }
 
     const caseRow = caseData as CaseRow;
+
+    if (assessCaseSafety(caseRow.input_text).shouldRoute) {
+      return json({ ok: false, code: 'safety_routed', message: CASE_SAFETY_MESSAGE });
+    }
+
     const targetFingerprint = await fingerprintCase(caseRow);
 
     const { data: cachedData, error: cacheLookupError } = await adminClient

@@ -41,6 +41,10 @@ interface DeleteAccountFunctionFailure {
 
 type DeleteAccountFunctionResponse = DeleteAccountFunctionSuccess | DeleteAccountFunctionFailure;
 
+type DeleteGuestDataFunctionResponse =
+  | { ok: true }
+  | { ok: false; code: 'invalid_guest_key' | 'delete_failed'; message: string };
+
 let listenersStarted = false;
 const transientEmailSignInRetryDelayMs = 400;
 
@@ -597,12 +601,38 @@ export const authService = {
   },
   async deleteAccount(): Promise<AuthActionResult> {
     if (useAuthStore.getState().sessionMode !== 'authenticated') {
+      const guestKey = useGuestStore.getState().guestAiKey;
+      let remoteCleanupFailed = false;
+
+      if (guestKey) {
+        if (!supabase) {
+          remoteCleanupFailed = true;
+        } else {
+          try {
+            const { data, error } = await supabase.functions.invoke<DeleteGuestDataFunctionResponse>(
+              'delete-guest-data',
+              { body: { guestKey } },
+            );
+            remoteCleanupFailed = Boolean(error || !data?.ok);
+          } catch {
+            remoteCleanupFailed = true;
+          }
+        }
+      }
+
       useGuestStore.getState().clearAllLocalData();
       useAiVerdictStore.getState().clearAllAiVerdicts();
       useUiPreferencesStore.getState().resetFirstUseHelp();
       useAuthStore.getState().resetSession();
       await premiumService.handleAuthStateChange(null);
-      return { ok: true, message: 'Local data deleted.' };
+      return {
+        ok: true,
+        message: remoteCleanupFailed
+          ? 'Local guest data was deleted, but server Smart Verdict cleanup failed and server AI data may remain.'
+          : guestKey
+            ? 'Guest data was deleted from this device and the server.'
+            : 'Guest data was deleted from this device.',
+      };
     }
 
     if (!supabase) {

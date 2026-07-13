@@ -67,7 +67,15 @@ const caseDetailBackground = '#FBF9F2';
 const aiVerdictTimeoutRecoveryDelaysMs = [2_000, 5_000, 10_000];
 const quotaUpgradePromptDelayMs = 4_000;
 
-type DeepReadStatus = 'idle' | 'loading' | 'ready' | 'not_authenticated' | 'quota' | 'fair_use' | 'error';
+type DeepReadStatus =
+  | 'idle'
+  | 'loading'
+  | 'ready'
+  | 'not_authenticated'
+  | 'quota'
+  | 'fair_use'
+  | 'safety'
+  | 'error';
 
 function sortUpdatesNewestFirst(items: CaseUpdateEntity[]): CaseUpdateEntity[] {
   return [...items].sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime());
@@ -477,7 +485,7 @@ export default function CaseDetailRoute() {
     setDeepReadFailureAccess(null);
 
     try {
-      const result = await deepReadService.requestCaseDeepRead(getCaseId(record));
+      const result = await deepReadService.requestCaseDeepRead(getCaseId(record), record.inputText);
 
       if (result.ok) {
         setDeepReadResult(result);
@@ -502,6 +510,11 @@ export default function CaseDetailRoute() {
 
       if (result.code === 'fair_use_exceeded') {
         setDeepReadStatus('fair_use');
+        return;
+      }
+
+      if (result.code === 'safety_routed') {
+        setDeepReadStatus('safety');
         return;
       }
 
@@ -1319,6 +1332,10 @@ function DeepReadContent({
         <DeepReadButton label="Try again" onPress={onRequest} />
       </View>
     );
+  }
+
+  if (status === 'safety') {
+    return <DeepReadStateText text={message ?? 'Your safety comes first.'} />;
   }
 
   if (status === 'error') {

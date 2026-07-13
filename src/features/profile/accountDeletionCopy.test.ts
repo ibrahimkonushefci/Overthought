@@ -14,5 +14,6 @@ describe('account deletion copy', () => {
   it('does not show subscription billing copy for guest deletion', () => {
     expect(accountDeletionConfirmationMessage(true, true)).not.toContain('Apple subscription');
     expect(accountDeletionDetailText(true, true)).toContain('guest cases');
+    expect(accountDeletionDetailText(true, true)).toContain('Smart Verdict data');
   });
 });

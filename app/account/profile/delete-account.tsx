@@ -41,6 +41,13 @@ export default function DeleteAccountRoute() {
                 return;
               }
 
+              if (isGuest) {
+                Alert.alert('Data deletion finished', result.message ?? 'Guest data deleted.', [
+                  { text: 'OK', onPress: () => router.replace('/welcome') },
+                ]);
+                return;
+              }
+
               router.replace('/welcome');
             } catch (error) {
               Alert.alert('Could not delete', error instanceof Error ? error.message : 'Try again.');
@@ -72,7 +79,7 @@ export default function DeleteAccountRoute() {
         Delete <AppText variant="display" color={colors.brand.pink} style={styles.script}>{isGuest ? 'data' : 'account'}</AppText>.
       </AppText>
       <Card>
-        <AppText variant="title">{isGuest ? 'Local guest data' : 'Account deletion'}</AppText>
+        <AppText variant="title">{isGuest ? 'Guest data' : 'Account deletion'}</AppText>
         <AppText variant="subtitle" style={styles.body}>
           {accountDeletionDetailText(isGuest, hasPremium)}
         </AppText>
@@ -86,7 +93,7 @@ export default function DeleteAccountRoute() {
       </Card>
       <View style={styles.action}>
         <Button
-          title={isGuest ? 'Delete all local data' : 'Delete my account'}
+          title={isGuest ? 'Delete all data' : 'Delete my account'}
           variant="danger"
           icon={Trash2}
           loading={loading}

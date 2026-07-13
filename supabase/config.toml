@@ -1,2 +1,5 @@
 [functions.ai-verdict]
 verify_jwt = false
+
+[functions.delete-guest-data]
+verify_jwt = false

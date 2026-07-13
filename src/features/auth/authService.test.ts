@@ -215,7 +215,7 @@ describe('authService.deleteAccount', () => {
 
     const result = await authService.deleteAccount();
 
-    expect(result).toEqual({ ok: true, message: 'Local data deleted.' });
+    expect(result).toEqual({ ok: true, message: 'Guest data was deleted from this device.' });
     expect(useGuestStore.getState().cases).toHaveLength(0);
     expect(useGuestStore.getState().drafts.caseText).toBe('');
     expect(useAiVerdictStore.getState().byCaseId).toEqual({});
@@ -224,6 +224,45 @@ describe('authService.deleteAccount', () => {
     expect(useAuthStore.getState().sessionMode).toBe('guest');
     expect(useAuthStore.getState().hasCompletedEntry).toBe(false);
     expect(premiumService.handleAuthStateChange).toHaveBeenCalledWith(null);
+  });
+
+  it('deletes guest server data with the current key before clearing local state', async () => {
+    useAuthStore.getState().setGuest();
+    const guestKey = useGuestStore.getState().ensureGuestAiKey();
+    mockSupabase.functions.invoke.mockImplementationOnce(async () => {
+      expect(useGuestStore.getState().guestAiKey).toBe(guestKey);
+      return { data: { ok: true }, error: null };
+    });
+
+    const result = await authService.deleteAccount();
+
+    expect(mockSupabase.functions.invoke).toHaveBeenCalledWith('delete-guest-data', {
+      body: { guestKey },
+    });
+    expect(result).toEqual({ ok: true, message: 'Guest data was deleted from this device and the server.' });
+    expect(useGuestStore.getState().guestAiKey).toBeNull();
+  });
+
+  it('still clears guest local data and reports when server cleanup fails', async () => {
+    useAuthStore.getState().setGuest();
+    const guestKey = useGuestStore.getState().ensureGuestAiKey();
+    useGuestStore.getState().addCase(buildGuestCase());
+    mockSupabase.functions.invoke.mockResolvedValueOnce({
+      data: null,
+      error: { message: 'Function unavailable' },
+    });
+
+    const result = await authService.deleteAccount();
+
+    expect(mockSupabase.functions.invoke).toHaveBeenCalledWith('delete-guest-data', {
+      body: { guestKey },
+    });
+    expect(result).toEqual({
+      ok: true,
+      message: 'Local guest data was deleted, but server Smart Verdict cleanup failed and server AI data may remain.',
+    });
+    expect(useGuestStore.getState().guestAiKey).toBeNull();
+    expect(useGuestStore.getState().cases).toEqual([]);
   });
 
   it('deletes an authenticated account through the secure backend path and clears local state', async () => {

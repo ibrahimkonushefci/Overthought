@@ -2,6 +2,7 @@ import { supabase } from '../../lib/supabase/client';
 import { useAuthStore } from '../../store/authStore';
 import { isPremiumStateActive, usePremiumStore } from '../../store/premiumStore';
 import { getAiVerdictDeepReadLockState } from '../ai-verdict/aiVerdictAccess';
+import { assessCaseSafety, CASE_SAFETY_MESSAGE } from '../../shared/utils/caseSafety';
 import type { DeepReadCacheMetadata, DeepReadFailureCode, DeepReadOutput, DeepReadResponse } from '../../types/shared';
 import type { CaseEntity } from '../cases/types';
 import { getCaseId } from '../cases/types';
@@ -35,6 +36,7 @@ interface StoredDeepReadRow {
 const deepReadFailureCodes = new Set<DeepReadFailureCode>([
   'not_authenticated',
   'case_not_found',
+  'safety_routed',
   'deep_read_not_configured',
   'quota_exceeded',
   'fair_use_exceeded',
@@ -217,11 +219,15 @@ export const deepReadService = {
     }
   },
 
-  async requestCaseDeepRead(caseId: string): Promise<DeepReadResponse> {
+  async requestCaseDeepRead(caseId: string, inputText?: string): Promise<DeepReadResponse> {
     const trimmedCaseId = caseId.trim();
 
     if (!trimmedCaseId) {
       return failure('case_not_found', 'Case not found.');
+    }
+
+    if (inputText && assessCaseSafety(inputText).shouldRoute) {
+      return failure('safety_routed', CASE_SAFETY_MESSAGE);
     }
 
     const premiumActive = isPremiumStateActive(usePremiumStore.getState().premiumState);

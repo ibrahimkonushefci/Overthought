@@ -4,6 +4,7 @@ import { useAiVerdictStore } from '../../store/aiVerdictStore';
 import { useAuthStore } from '../../store/authStore';
 import { useGuestStore } from '../../store/guestStore';
 import { nowIso } from '../../shared/utils/date';
+import { assessCaseSafety, CASE_SAFETY_MESSAGE } from '../../shared/utils/caseSafety';
 import type {
   AiVerdictAccessState,
   AiVerdictCacheMetadata,
@@ -49,6 +50,7 @@ const aiVerdictFailureCodes = new Set<AiVerdictFailureCode>([
   'not_authenticated',
   'case_not_found',
   'guest_key_required',
+  'safety_routed',
   'global_daily_cap_exceeded',
   'ip_daily_cap_exceeded',
   'quota_exceeded',
@@ -493,6 +495,13 @@ export const aiVerdictService = {
     try {
       const auth = useAuthStore.getState();
       const aiStore = useAiVerdictStore.getState();
+      const safetyAssessment = assessCaseSafety(record.inputText);
+
+      if (safetyAssessment.shouldRoute) {
+        const response = failure('safety_routed', CASE_SAFETY_MESSAGE);
+        aiStore.setRequestState(caseId, requestStateFromFailure(response));
+        return response;
+      }
 
       if (isGuestCase(record)) {
         aiStore.setRequestState(record.localId, loadingState());

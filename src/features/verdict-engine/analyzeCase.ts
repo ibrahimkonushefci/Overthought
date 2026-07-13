@@ -3,6 +3,7 @@ import { extractSemanticFacts, findSemanticScenarioOverride } from './facts';
 import { clampNumber, buildHaystack } from './normalize';
 import { matchSignal } from './patterns';
 import { assessCaseInputQuality, type CaseInputQualityReason } from '../../shared/utils/caseInputQuality';
+import { assessCaseSafety, CaseSafetyRoutingError } from '../../shared/utils/caseSafety';
 import type {
   CaseAnalysisInput,
   CaseAnalysisResult,
@@ -311,6 +312,12 @@ export function analyzeCase(
   input: CaseAnalysisInput,
   options: { includeDebug?: boolean } = {},
 ): CaseAnalysisResult {
+  const safetyAssessment = assessCaseSafety(input.inputText);
+
+  if (safetyAssessment.shouldRoute && safetyAssessment.reason) {
+    throw new CaseSafetyRoutingError(safetyAssessment.reason);
+  }
+
   const { normalizedInput, normalizedUpdate, combined } = buildHaystack(
     input.inputText,
     input.updateText,

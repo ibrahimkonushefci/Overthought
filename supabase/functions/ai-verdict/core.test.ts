@@ -12,6 +12,11 @@ import {
   type InsertAuthenticatedAiVerdictInput,
   type InsertGuestAiVerdictInput,
 } from './core';
+import {
+  dangerousCaseSafetyFixtures,
+  falsePositiveCaseSafetyFixtures,
+} from '../../../src/shared/utils/caseSafety.fixtures';
+import { CASE_SAFETY_MESSAGE } from '../../../src/shared/utils/caseSafety';
 
 function caseRow(overrides: Partial<CaseRow> = {}): CaseRow {
   return {
@@ -562,6 +567,95 @@ describe('ai-verdict core authenticated path', () => {
       expect(result.body.cache.source).toBe('generated');
     }
   });
+});
+
+describe('ai-verdict safety routing', () => {
+  it.each(dangerousCaseSafetyFixtures)(
+    'routes dangerous authenticated input before cache, quota, or provider work: $name',
+    async (fixture) => {
+      const adapter = createAdapter({
+        getOwnedActiveCase: jest.fn(async () => caseRow({
+          category: fixture.category,
+          input_text: fixture.inputText,
+        })),
+      });
+      const generateVerdict = successProvider();
+
+      const result = await handleAiVerdictRequest(
+        'token',
+        authenticatedPayload(),
+        handlerDeps(adapter, generateVerdict),
+      );
+
+      expect(result).toEqual({
+        status: 200,
+        body: { ok: false, code: 'safety_routed', message: CASE_SAFETY_MESSAGE },
+      });
+      expect(adapter.getCachedVerdict).not.toHaveBeenCalled();
+      expect(adapter.reserveUsage).not.toHaveBeenCalled();
+      expect(adapter.insertVerdict).not.toHaveBeenCalled();
+      expect(generateVerdict).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(dangerousCaseSafetyFixtures)(
+    'routes dangerous guest input before hashing, cache, quota, or provider work: $name',
+    async (fixture) => {
+      const adapter = createAdapter();
+      const generateVerdict = successProvider();
+      const deps = handlerDeps(adapter, generateVerdict);
+      const result = await handleAiVerdictRequest(
+        null,
+        guestPayload({
+          target: {
+            targetType: 'guest_case',
+            guestCaseId: 'guest-case-1',
+            category: fixture.category,
+            inputText: fixture.inputText,
+            localVerdictLabel: 'mild_delusion',
+            localDelusionScore: 61,
+            localExplanationText: 'Local fallback.',
+            localNextMoveText: 'Wait for evidence.',
+            localVerdictVersion: 1,
+          },
+        }),
+        deps,
+      );
+
+      expect(result).toEqual({
+        status: 200,
+        body: { ok: false, code: 'safety_routed', message: CASE_SAFETY_MESSAGE },
+      });
+      expect(deps.hash).not.toHaveBeenCalled();
+      expect(adapter.getCachedGuestVerdict).not.toHaveBeenCalled();
+      expect(adapter.reserveUsage).not.toHaveBeenCalled();
+      expect(adapter.insertGuestVerdict).not.toHaveBeenCalled();
+      expect(generateVerdict).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(falsePositiveCaseSafetyFixtures)(
+    'keeps normal authenticated generation for false positive: $name',
+    async (fixture) => {
+      const adapter = createAdapter({
+        getOwnedActiveCase: jest.fn(async () => caseRow({
+          category: fixture.category,
+          input_text: fixture.inputText,
+        })),
+      });
+      const generateVerdict = successProvider();
+
+      const result = await handleAiVerdictRequest(
+        'token',
+        authenticatedPayload(),
+        handlerDeps(adapter, generateVerdict),
+      );
+
+      expect(result.body.ok).toBe(true);
+      expect(adapter.reserveUsage).toHaveBeenCalledTimes(1);
+      expect(generateVerdict).toHaveBeenCalledTimes(1);
+    },
+  );
 });
 
 describe('ai-verdict core guest path', () => {

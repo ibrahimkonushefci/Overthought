@@ -3,6 +3,8 @@ import { useAiVerdictStore } from '../../store/aiVerdictStore';
 import { useAuthStore } from '../../store/authStore';
 import { useGuestStore } from '../../store/guestStore';
 import { aiVerdictService } from './aiVerdictService';
+import { dangerousCaseSafetyFixtures } from '../../shared/utils/caseSafety.fixtures';
+import { CASE_SAFETY_MESSAGE } from '../../shared/utils/caseSafety';
 
 var mockSupabaseFrom = jest.fn();
 
@@ -182,6 +184,24 @@ describe('aiVerdictService', () => {
       httpStatus: 200,
     });
   });
+
+  it.each(dangerousCaseSafetyFixtures)(
+    'routes dangerous guest input before guest key creation or fetch: $name',
+    async (fixture) => {
+      useAuthStore.getState().setGuest();
+      const record = guestCase({ inputText: fixture.inputText, category: fixture.category });
+      global.fetch = jest.fn() as unknown as typeof fetch;
+
+      await expect(aiVerdictService.requestForCase(record)).resolves.toEqual({
+        ok: false,
+        code: 'safety_routed',
+        message: CASE_SAFETY_MESSAGE,
+      });
+      expect(global.fetch).not.toHaveBeenCalled();
+      expect(useGuestStore.getState().guestAiKey).toBeNull();
+      expect(useAiVerdictStore.getState().byCaseId[record.localId]).toBeUndefined();
+    },
+  );
 
   it('requests authenticated AI verdicts with the session access token and stores a display cache', async () => {
     useAuthStore.getState().setAuthenticated({

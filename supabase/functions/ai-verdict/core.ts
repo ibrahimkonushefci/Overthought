@@ -1,3 +1,6 @@
+// @ts-ignore -- Deno Edge Functions require explicit local TypeScript extensions.
+import { assessCaseSafety, CASE_SAFETY_MESSAGE } from '../../../src/shared/utils/caseSafety.ts';
+
 type CaseCategory = 'romance' | 'friendship' | 'social' | 'general';
 type VerdictLabel =
   | 'barely_delusional'
@@ -5,6 +8,7 @@ type VerdictLabel =
   | 'mild_delusion'
   | 'dangerous_overthinking'
   | 'full_clown_territory';
+
 type AiVerdictAccessTier = 'guest' | 'free' | 'premium';
 type AiVerdictQuotaScope = 'daily' | 'lifetime';
 type AiVerdictAccessReason =
@@ -17,6 +21,7 @@ type AiVerdictFailureCode =
   | 'not_authenticated'
   | 'case_not_found'
   | 'guest_key_required'
+  | 'safety_routed'
   | 'global_daily_cap_exceeded'
   | 'ip_daily_cap_exceeded'
   | 'quota_exceeded'
@@ -861,6 +866,8 @@ function statusForFailure(code: AiVerdictFailureCode): number {
       return 401;
     case 'case_not_found':
       return 404;
+    case 'safety_routed':
+      return 200;
     case 'guest_key_required':
       return 400;
     case 'quota_exceeded':
@@ -888,6 +895,8 @@ function messageForFailure(code: AiVerdictFailureCode): string {
       return 'Case not found.';
     case 'guest_key_required':
       return 'Guest AI verdicts need a valid guest key.';
+    case 'safety_routed':
+      return CASE_SAFETY_MESSAGE;
     case 'quota_exceeded':
       return 'Free AI verdicts are used up.';
     case 'fair_use_exceeded':
@@ -1008,6 +1017,10 @@ async function handleAuthenticatedRequest(
 
     if (!caseRow) {
       return failure(404, 'case_not_found', messageForFailure('case_not_found'));
+    }
+
+    if (assessCaseSafety(caseRow.input_text).shouldRoute) {
+      return failure(200, 'safety_routed', CASE_SAFETY_MESSAGE);
     }
 
     const localFallback = localFallbackFromCase(caseRow);
@@ -1188,6 +1201,11 @@ async function handleGuestRequest(
     localNextMoveText: request.target.localNextMoveText,
     localVerdictVersion: request.target.localVerdictVersion,
   };
+
+  if (assessCaseSafety(snapshot.inputText).shouldRoute) {
+    return failure(200, 'safety_routed', CASE_SAFETY_MESSAGE);
+  }
+
   const guestKeyHash = await runtime.hash(`guest-key:${request.guestKey.trim()}`);
   const targetFingerprint = await fingerprintGuestCase(snapshot, runtime.hash);
   const localFallback = localFallbackFromGuest(snapshot);
