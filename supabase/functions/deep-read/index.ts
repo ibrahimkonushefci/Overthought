@@ -604,7 +604,6 @@ function parseDeepReadJson(value: string, context: GeminiParseContext): DeepRead
 
 async function generateDeepRead(row: CaseRow, apiKey: string): Promise<DeepReadProviderResult> {
   logDeepReadDiagnostic('deep_read_gemini_start', {
-    hasGeminiApiKey: Boolean(apiKey),
     modelName: MODEL_NAME,
   });
 
@@ -995,7 +994,6 @@ Deno.serve(async (request) => {
     const geminiApiKey = Deno.env.get('GEMINI_API_KEY')?.trim() ?? '';
 
     logDeepReadDiagnostic('deep_read_gemini_secret_checked', {
-      hasGeminiApiKey: Boolean(geminiApiKey),
       modelName: MODEL_NAME,
     });
 

@@ -1,207 +1,49 @@
 # Overthought
 
-iOS-first Expo React Native foundation for Overthought, a case-based app for analyzing social overthinking. The current v1 flow uses AI Verdict first when quota/access allows, keeps the deterministic Basic Verdict as local fallback, supports guest mode, and scaffolds optional Supabase auth/sync plus RevenueCat-ready premium boundaries.
+Overthought is an iOS-first Expo React Native app for analyzing social overthinking as structured cases. The v1 flow uses AI Verdict when access and quota allow, falls back to a deterministic Basic Verdict, supports guest mode, and includes optional Supabase auth/sync and RevenueCat-ready premium boundaries.
 
-## Run Locally With A Development Build
+## What is included
 
-This app does **not** target Expo Go. It uses `react-native-mmkv` v4, which depends on Nitro/native modules, so it must run in an Expo development build or a normal native iOS build.
+- Guest case creation and local persistence.
+- AI Verdict with a deterministic local fallback.
+- Case history, detail, updates, outcomes, and stats.
+- Email/password, Apple, and Google authentication scaffolding.
+- Optional Supabase sync and RevenueCat integration boundaries.
 
-1. Install dependencies:
+## Technology
 
-   ```sh
-   npm install
-   ```
+- Expo 55 and React Native 0.83.
+- Expo Router and TypeScript.
+- Zustand with `react-native-mmkv`.
+- Supabase for optional authentication, data sync, and backend functions.
 
-2. Add environment values:
+## Run locally
 
-   ```sh
-   cp .env.example .env
-   ```
-
-   Supabase keys are optional for guest mode. Email login and authenticated sync need:
-
-   - `EXPO_PUBLIC_SUPABASE_URL`
-   - `EXPO_PUBLIC_SUPABASE_ANON_KEY`
-   - `EXPO_PUBLIC_SUPABASE_REDIRECT_URL`
-
-   Apple Sign In is available behind an explicit flag after Apple Developer and Supabase provider setup:
-
-   - `EXPO_PUBLIC_ENABLE_APPLE_AUTH=false`
-
-   Native Google Sign-In is also behind an explicit flag:
-
-   - `EXPO_PUBLIC_ENABLE_GOOGLE_AUTH=false`
-
-   Enable it only after Google Cloud and Supabase provider setup. Native Google sign-in also needs:
-
-   - `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`
-   - `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`
-   - `EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME` as the reversed iOS client ID, for example `com.googleusercontent.apps.1234567890-abcdef`, not the normal `...apps.googleusercontent.com` client ID.
-
-   In Supabase Auth > Providers > Google, include the web, dev iOS, and production iOS client IDs. For native iOS Google Sign-In, enable `Skip nonce check`; the React Native Google Sign-In SDK used here does not expose a matching raw nonce to pass through to Supabase.
-
-   Profile legal links use:
-
-   - `EXPO_PUBLIC_PRIVACY_POLICY_URL`
-   - `EXPO_PUBLIC_TERMS_URL`
-
-3. Build and run the iOS development app on a simulator:
-
-   ```sh
-   npm run ios
-   ```
-
-4. Build and install the iOS development app on a physical iPhone:
-
-   ```sh
-   npm run ios:device
-   ```
-
-   Choose your connected iPhone when prompted. For local physical-device development, Xcode signing must be configured for the current dev bundle identifier:
-
-   - `com.ibrahim.overthought.dev`
-
-   This is intentionally a development bundle ID. TestFlight/App Store builds use the production bundle identifier `com.ibrahim.overthought` via `APP_VARIANT=production`.
-
-   If the device install fails with a signing or bundle identifier error:
-
-   - Open `ios/Overthought.xcworkspace` in Xcode.
-   - Select the `Overthought` target, then Signing & Capabilities.
-   - Choose your Apple account/team.
-   - Confirm the bundle identifier is `com.ibrahim.overthought.dev`.
-   - Make sure the provisioning profile Xcode creates or selects also matches `com.ibrahim.overthought.dev`.
-   - If an older Overthought app is already installed on the iPhone, delete it from the phone before reinstalling.
-   - Do not run `npm run prebuild:ios` just for signing cleanup; the Expo config and native Xcode bundle identifiers already match.
-
-5. Start Metro for an already-installed development build:
-
-   ```sh
-   npm start
-   ```
-
-   Local development defaults to the development bundle identifier:
-
-   - `com.ibrahim.overthought.dev`
-
-   If the dev build is already installed on your phone, open that app, not Expo Go. Pressing `i` from Expo CLI should target the installed `.dev` development build.
-
-6. Clear Metro cache if the phone keeps loading stale JavaScript:
-
-   ```sh
-   npm run start:clear
-   ```
-
-### EAS development build option
-
-Use EAS when you want to install the dev build without a local Xcode device build, distribute it to another device, or avoid local signing issues:
+This project requires an Expo development build or native iOS build. It does not run in Expo Go because `react-native-mmkv` uses native modules.
 
 ```sh
-npx eas login
-npx eas device:create
-npx eas build --profile development --platform ios
+npm install
+cp .env.example .env
+npm run ios
 ```
 
-After installing the EAS development build on the phone, start Metro locally:
+Supabase values are optional for guest mode. See the [development and release guide](docs/development-and-release.md) for environment variables, physical-device setup, authentication providers, EAS, and TestFlight notes.
 
-```sh
-npm start
-```
-
-Then open the installed Overthought development build on the iPhone.
-
-### TestFlight bundle identity
-
-Local development builds default to:
-
-- `com.ibrahim.overthought.dev`
-
-Production/TestFlight config uses:
-
-- `com.ibrahim.overthought`
-
-The EAS `production` profile sets `APP_VARIANT=production`, which makes `app.config.js` use the production bundle identifier. Apple Sign In is wired natively but remains hidden unless `EXPO_PUBLIC_ENABLE_APPLE_AUTH=true`; native Google Sign-In remains hidden unless `EXPO_PUBLIC_ENABLE_GOOGLE_AUTH=true`.
-
-Local development leaves `APP_VARIANT` unset, so Expo config uses `com.ibrahim.overthought.dev` and disables premium/RevenueCat even if RevenueCat keys exist in a local `.env`. Production/TestFlight builds use `APP_VARIANT=production`; premium is only enabled there when `EXPO_PUBLIC_ENABLE_PREMIUM=true`.
-
-Production iOS builds use Hermes V1. The post-hardening production build was created with a clean EAS cache and submitted successfully to TestFlight. Keep `ios/Podfile.properties.json` set to `"expo.useHermesV1": "true"` and keep `babel-preset-expo` on the Expo 55-compatible line (`~55.0.22`) until the whole Expo SDK is upgraded. After native dependency or Hermes changes, prefer a clean EAS retry:
-
-```sh
-npx eas build --profile production --platform ios --clear-cache
-```
-
-### Production/TestFlight auth environment
-
-Before the next TestFlight build that ships Apple and Google sign-in, set the production EAS environment to:
-
-- `APP_VARIANT=production`
-- `EXPO_PUBLIC_ENABLE_APPLE_AUTH=true`
-- `EXPO_PUBLIC_ENABLE_GOOGLE_AUTH=true`
-- `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID=<Google web OAuth client ID>`
-- `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID=<Google iOS OAuth client ID for com.ibrahim.overthought>`
-- `EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME=<reversed Google iOS client ID for com.ibrahim.overthought>`
-
-Also confirm external provider setup:
-
-- Supabase Auth Site URL is `https://overthought.app`, not a local Metro URL.
-- Supabase Auth redirect URLs include `overthought://auth` and `overthought://reset-password`.
-- Supabase Auth custom SMTP is enabled for production email, currently via the verified Resend domain `mail.overthought.app`.
-- Confirm Signup and Reset Password templates use `{{ .ConfirmationURL }}` and clearly say the link opens Overthought.
-- Password reset emails should contain `redirect_to=overthought://reset-password`, not a local Metro URL.
-- Apple Developer has Sign in with Apple enabled for `com.ibrahim.overthought`.
-- Supabase Apple provider allows the production bundle ID.
-- Supabase Google provider includes the web, dev iOS, and production iOS client IDs.
-- Supabase Google provider has `Skip nonce check` enabled for native iOS Google Sign-In.
-
-Confirm the active bundle identifiers with:
-
-```sh
-npx expo config --type public
-APP_VARIANT=production npx expo config --type public
-```
-
-## What is implemented
-
-- Expo Router route structure for public auth, tabs, case detail, add update, result redirect, paywall placeholder, and delete-account flow.
-- Palette-backed theme tokens and reusable UI primitives.
-- Guest persistence with Zustand, `persist`, and `react-native-mmkv`.
-- Supabase client wiring with environment handling.
-- Auth/session scaffolding for guest, email/password, forgot/reset password, native Apple Sign In, and native Google Sign-In.
-- Repository/service boundaries for cases, updates, profiles, premium, migration, share payloads, and deterministic analysis.
-- AI Verdict integration with local Basic Verdict fallback.
-- Base screens aligned to the supplied design references: welcome, home, new case, cases, case detail/result, add update, stats, profile, delete account.
-
-## Native setup still required
-
-- Configure Supabase project URL/key and apply the SQL files under `supabase/migrations/`.
-- Use an iOS development build, not Expo Go, because MMKV/Nitro requires native pods and New Architecture codegen.
-- Enable Sign in with Apple for both Apple Developer App IDs: `com.ibrahim.overthought.dev` and `com.ibrahim.overthought`.
-- Enable the Supabase Apple provider and add both bundle IDs as allowed native client IDs before setting `EXPO_PUBLIC_ENABLE_APPLE_AUTH=true`.
-- Configure Google OAuth client IDs, the reversed iOS URL scheme, and the Supabase Google provider before setting `EXPO_PUBLIC_ENABLE_GOOGLE_AUTH=true`. For native iOS Google Sign-In, the Supabase Google provider must have `Skip nonce check` enabled.
-- Rebuild the native iOS app after changing `EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME`; the scheme is embedded in `Info.plist`.
-- Configure RevenueCat products/API keys for TestFlight and validate purchase/restore end to end.
-- Verify the deployed `delete-account` Supabase Edge Function before each release build; it performs final `auth.users` deletion for authenticated account deletion.
-- Rebuild the iOS development build after changing native auth credentials or config plugins.
-
-## Test immediately
-
-- Continue as guest.
-- Create a case and see a deterministic result.
-- View the case in history and detail.
-- Add a light update and see it on the case timeline (v1 stores the update as a receipt; it does not re-run the verdict).
-- Mark outcome status.
-- View stats generated from local cases.
-- Delete guest local data.
-
-## Test Commands
+## Validate
 
 ```sh
 npm run typecheck
 npm test
 ```
 
-## Next build pass
+## Documentation
 
-- The unified AI quota migration has been applied and the updated `ai-verdict` Edge Function has been deployed.
-- The latest TestFlight build includes the premium/quota stale-state fix and display-name profile editor. Both flows were manually verified on device.
-- Keep richer profile fields as a future schema + type + repository + UI phase.
-- Investigate Supabase email deliverability/custom SMTP if confirmation emails continue going to junk.
+- [Development and release guide](docs/development-and-release.md)
+- [API contracts](docs/overthought-api-contracts.md)
+- [V1 architecture addendum](docs/overthought-v1-architecture-addendum.md)
+- [Verdict engine specification](docs/overthought-verdict-engine-spec.md)
+- [Supabase keepalive operations](infra/supabase-keepalive/README.md)
+
+## Security
+
+Do not commit `.env` files or privileged credentials. Client builds use only public Supabase anonymous credentials; service-role keys must remain outside the app and repository.

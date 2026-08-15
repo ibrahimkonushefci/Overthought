@@ -27,11 +27,8 @@ export function normalizeText(value: string): string {
     .replace(/\bchill\b/g, 'hang out')
     .replace(/\bcancelled\b/g, 'canceled')
     .replace(/\bleft on delivered\b/g, 'left me on delivered')
-    .replace(/\bon delivered\b/g, 'on delivered')
     .replace(/\bposted a picture\b/g, 'posted')
     .replace(/\bput (?:it )?on (?:her |his |their )?story\b/g, 'posted story')
-    .replace(/\bperformance review\b/g, 'performance review')
-    .replace(/\bquietly fired\b/g, 'quietly fired')
     .replace(/\s+/g, ' ')
     .trim();
 }
