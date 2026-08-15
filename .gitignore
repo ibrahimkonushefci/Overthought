@@ -27,6 +27,9 @@ supabase/.temp/
 supabase/.env
 supabase/.env.*
 
+# Cloudflare Wrangler local
+**/.wrangler/
+
 # macOS
 .DS_Store
 **/.DS_Store
