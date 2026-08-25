@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { StyleProp, TextStyle } from 'react-native';
-import { Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { usePathname, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { authService } from '../../src/features/auth/authService';
@@ -14,9 +14,13 @@ import { colors, gradients, shadows, spacing, typography } from '../../src/share
 export default function WelcomeRoute() {
   const router = useRouter();
   const pathname = usePathname();
+  const { width } = useWindowDimensions();
   const sessionMode = useAuthStore((state) => state.sessionMode);
   const [appleAvailable, setAppleAvailable] = useState(false);
   const [appleLoading, setAppleLoading] = useState(false);
+  const titleFontSize = Math.max(40, Math.min(50, (width - spacing.xl * 2 - spacing.sm * 2) * 0.145));
+  const titleLineHeight = Math.round(titleFontSize * 1.02);
+  const responsiveTitleStyle = { fontSize: titleFontSize, lineHeight: titleLineHeight };
 
   useEffect(() => {
     if (sessionMode === 'authenticated' && pathname !== '/reset-password') {
@@ -81,32 +85,50 @@ export default function WelcomeRoute() {
         style={styles.glow}
       />
       <View style={styles.brandRow}>
-        <View style={styles.logo}>
-          <Image
-            accessibilityIgnoresInvertColors
-            accessibilityLabel="Overthought"
-            resizeMode="contain"
-            source={require('../../assets/brand/app-logo-transparent.png')}
-            style={styles.logoImage}
-          />
+        <View style={styles.brandLockup}>
+          <View style={styles.logo}>
+            <Image
+              accessibilityIgnoresInvertColors
+              accessibilityLabel="Overthought"
+              resizeMode="contain"
+              source={require('../../assets/brand/app-logo-transparent.png')}
+              style={styles.logoImage}
+            />
+          </View>
+          <AppText variant="title" style={styles.wordmark}>Overthought</AppText>
         </View>
-        <AppText variant="title" style={styles.wordmark}>Overthought</AppText>
+        <LinearGradient colors={gradients.acid} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.floatingBadge}>
+          <AppText variant="title" center style={styles.badgeFace}>
+            🤡
+          </AppText>
+        </LinearGradient>
       </View>
 
       <View style={styles.heroCopy}>
-        <AppText variant="display" style={styles.welcomeTitle}>
-          Are you{'\n'}<AppText variant="display" color={colors.brand.pink} style={[styles.script, styles.welcomeScript]}>overthinking</AppText> it,{'\n'}or are you{'\n'}right?
-        </AppText>
+        <View style={styles.titleBlock}>
+          <AppText
+            adjustsFontSizeToFit
+            minimumFontScale={0.82}
+            numberOfLines={1}
+            variant="display"
+            style={[styles.welcomeTitle, responsiveTitleStyle]}
+          >
+            Overthinking
+          </AppText>
+          <AppText
+            adjustsFontSizeToFit
+            minimumFontScale={0.82}
+            numberOfLines={1}
+            variant="display"
+            style={[styles.welcomeTitle, responsiveTitleStyle]}
+          >
+            a <AppText variant="display" color={colors.brand.pink} style={[styles.script, styles.welcomeScript, responsiveTitleStyle]}>dating text</AppText>?
+          </AppText>
+        </View>
         <AppText variant="subtitle" style={styles.subtitle}>
-          Drop the situation. Get the read, the score, and one honest next move.
+          Describe what happened. Get a funny verdict, Delusion Score, evidence check, and one honest next move.
         </AppText>
       </View>
-
-      <LinearGradient colors={gradients.acid} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.floatingBadge}>
-        <AppText variant="title" center style={styles.badgeFace}>
-          🤡
-        </AppText>
-      </LinearGradient>
 
       <View style={styles.actions}>
         <Button title="Continue as guest →" onPress={continueGuest} />
@@ -170,7 +192,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
     gap: spacing.md,
+    justifyContent: 'space-between',
     marginTop: spacing.xl,
+  },
+  brandLockup: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    flexShrink: 1,
+    gap: spacing.md,
   },
   logo: {
     alignItems: 'center',
@@ -189,18 +218,22 @@ const styles = StyleSheet.create({
   },
   heroCopy: {
     gap: spacing.xl,
-    marginTop: 76,
+    marginTop: 64,
+    paddingHorizontal: spacing.xs,
+    width: '100%',
+  },
+  titleBlock: {
+    width: '100%',
   },
   script: {
     fontFamily: typography.family.editorial,
   },
   welcomeTitle: {
-    fontSize: 52,
-    lineHeight: 50,
+    flexShrink: 0,
+    letterSpacing: -0.8,
   },
   welcomeScript: {
-    fontSize: 52,
-    lineHeight: 50,
+    letterSpacing: -0.5,
   },
   subtitle: {
     fontFamily: typography.family.body,
@@ -211,20 +244,18 @@ const styles = StyleSheet.create({
   floatingBadge: {
     alignItems: 'center',
     borderColor: colors.brand.ink,
-    borderRadius: 22,
+    borderRadius: 20,
     borderWidth: 2,
-    height: 64,
+    flexShrink: 0,
+    height: 58,
     justifyContent: 'center',
-    position: 'absolute',
-    right: 30,
-    top: 112,
     transform: [{ rotate: '-7deg' }],
-    width: 76,
+    width: 68,
     ...shadows.hardSmall,
   },
   badgeFace: {
-    fontSize: 31,
-    lineHeight: 35,
+    fontSize: 29,
+    lineHeight: 33,
   },
   actions: {
     gap: spacing.lg,

@@ -2,7 +2,7 @@ import type { CaseCategory, VerdictLabel } from '../../types/shared';
 import { colors } from '../theme/tokens';
 
 export const categoryLabels: Record<CaseCategory, string> = {
-  romance: 'Romance',
+  romance: 'Dating',
   friendship: 'Friendship',
   social: 'Social',
   general: 'General',

@@ -14,17 +14,17 @@ export function HeroActionCard({ onStart }: HeroActionCardProps) {
     <LinearGradient colors={gradients.hero} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.wrap}>
       <View style={styles.badge}>
         <AppText variant="eyebrow" color={colors.text.onBrand}>
-          New case
+          Start a dating case
         </AppText>
       </View>
       <AppText variant="title" color={colors.text.onBrand} style={styles.title}>
-        Tell me what they did.
+        Tell me what they texted or did.
       </AppText>
       <AppText variant="subtitle" color={colors.text.onBrand} style={styles.subtitle}>
-        I will tell you if you are reading too much into it.
+        I will check the evidence, score the overthinking, and give you one next move.
       </AppText>
       <View style={styles.buttonWrap}>
-        <Button title="Start a case" variant="outline" icon={Plus} onPress={onStart} />
+        <Button title="Start a dating case" variant="outline" icon={Plus} onPress={onStart} />
       </View>
     </LinearGradient>
   );

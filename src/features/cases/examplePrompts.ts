@@ -1,71 +1,39 @@
-export const EXAMPLE_PROMPTS = [
-  "She liked my story but replied after 9 hours.",
-  "He said we should hang out sometime but did not set a date.",
-  "My friend suddenly started texting more this week.",
-  "They watched my story but did not react.",
-  "He liked my newest post after leaving me on read all week.",
-  "She said maybe sometime next week and then never followed up.",
-  "My coworker checks in every morning and uses smiley faces.",
-  "They asked for my number but only sent memes after.",
-  "My friend said happy birthday but forgot to make plans.",
-  "He texts good morning every day but avoids meeting up.",
-  "She booked dinner but replied dry today.",
-  "They viewed every story but never sent a message.",
-  "My best friend left me on read for two days.",
-  "He said he is not ready for a relationship but calls at 2am.",
-  "She remembered my coffee order but takes hours to reply.",
-  "They stood near me at the gym twice but we have never talked.",
-  "My boss buys me coffee during our 1-on-1s.",
-  "He invited the whole office, but I think it was for me.",
-  "She said she wants something casual but acts jealous.",
-  "They followed back quickly but have not DM'd.",
-  "My friend always replies nicely but never asks anything back.",
-  "He sent a fire emoji after ghosting me for a month.",
-  "She said she had fun and picked Saturday for dinner.",
-  "They post stories after my texts but do not open my message.",
-  "My roommate was quiet this morning. Are they mad?",
-  "He liked an old photo from 47 weeks ago.",
-  "She invited me to a party but said no pressure.",
-  "They asked if I am free Friday and then went quiet.",
-  "My friend keeps canceling but says we are good.",
-  "He introduced me as his friend after eight months.",
-  "She apologized for the delay and asked to hang this weekend.",
-  "They laughed at my joke in a meeting.",
-  "My ex watched my story twice after no contact.",
-  "He paid for dinner but talked about crypto the whole time.",
-  "She said we should celebrate my birthday this weekend.",
-  "They keep ending up near me but never speak.",
-  "My friend stopped initiating but still replies fast.",
-  "He asked me out officially, and I am still overthinking.",
-  "She sent a heart emoji but has not made plans.",
-  "They said work is crazy every time I suggest drinks.",
-  "My coworker asked about my project and smiled.",
-  "He called me late at night and then ignored my reply.",
-  "She watched all my stories but skipped my text.",
-  "They said I should drop by if I want.",
-  "My best friend said sorry and explained work was overwhelming.",
-  "He says he misses me but never plans anything.",
-  "She asked personal questions but never follows up.",
-  "They liked my BeReal after leaving me on delivered.",
-  "My friend is nice in person but dry over text.",
-  "He bought lunch to talk about my promotion.",
-  "She said let's get dinner Friday and booked a table.",
-  "They added me to close friends but never text.",
-  "My group chat went quiet when I walked in.",
-  "He remembered my dog's birthday but not our plans.",
-  "She sent a TikTok but ignored my actual question.",
-  "They said long time no see after disappearing.",
-  "My friend always lets me choose the plan.",
-  "He asked if we can hang this weekend.",
-  "She replied lol to a serious message.",
-  "They invited a few people over and said I can come.",
-] as const;
+import type { CaseCategory } from '../../types/shared';
+
+export interface ExamplePrompt {
+  category: CaseCategory;
+  text: string;
+}
+
+export const EXAMPLE_PROMPTS: readonly ExamplePrompt[] = [
+  { category: 'romance', text: 'He asked if I was free Friday, then never made a plan.' },
+  { category: 'romance', text: 'He watches every story but takes a day to reply.' },
+  { category: 'romance', text: 'My ex came back saying he misses me but still avoids commitment.' },
+  { category: 'romance', text: 'We had a great date, but his dating profile is still active.' },
+  { category: 'romance', text: 'He says he likes me, but only texts after 11 p.m.' },
+  { category: 'friendship', text: 'My best friend left me on read for two days but keeps posting.' },
+  { category: 'friendship', text: 'My friend keeps canceling plans but says everything is fine.' },
+  { category: 'friendship', text: 'They are warm in person but suddenly dry in our messages.' },
+  { category: 'friendship', text: 'My friend stopped initiating but still replies right away.' },
+  { category: 'friendship', text: 'The group chat went quiet right after I joined the conversation.' },
+  { category: 'social', text: 'They added me to Close Friends but never talk to me directly.' },
+  { category: 'social', text: 'My coworker checks in every morning and always uses heart emojis.' },
+  { category: 'social', text: 'They laughed at every joke I made during the meeting.' },
+  { category: 'social', text: 'Someone keeps standing near me at the gym but never says hello.' },
+  { category: 'social', text: 'They followed me back immediately but have not sent a message.' },
+  { category: 'general', text: 'My roommate was unusually quiet this morning. Are they mad at me?' },
+  { category: 'general', text: 'My manager said we need to talk tomorrow without explaining why.' },
+  { category: 'general', text: 'Someone replied “sure” and now I cannot tell if they are annoyed.' },
+  { category: 'general', text: 'I made one awkward comment and keep replaying it hours later.' },
+  { category: 'general', text: 'They changed the plan at the last minute and I think it was personal.' },
+];
 
 export function pickExamplePrompts(
+  category: CaseCategory,
   count = 4,
   random: () => number = Math.random,
 ): string[] {
-  const pool = [...EXAMPLE_PROMPTS];
+  const pool = EXAMPLE_PROMPTS.filter((prompt) => prompt.category === category).map((prompt) => prompt.text);
 
   for (let index = pool.length - 1; index > 0; index -= 1) {
     const randomIndex = Math.floor(random() * (index + 1));

@@ -1,5 +1,6 @@
+import { useCallback } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ArrowRight, FileText, Lock, Plus, Sparkles } from 'lucide-react-native';
 import { AppText } from '../../src/shared/ui/Text';
@@ -10,6 +11,7 @@ import { CaseCard } from '../../src/features/cases/components/CaseCard';
 import { useCases } from '../../src/features/cases/services/useCases';
 import { getCaseId } from '../../src/features/cases/types';
 import { useAuthStore } from '../../src/store/authStore';
+import { reviewPromptService } from '../../src/features/reviews/reviewPromptService';
 import { colors, gradients, radii, shadows, spacing, typography } from '../../src/shared/theme/tokens';
 
 export default function HomeRoute() {
@@ -20,14 +22,20 @@ export default function HomeRoute() {
     cases.length > 0 ? Math.round(cases.reduce((total, item) => total + item.delusionScore, 0) / cases.length) : null;
   const recent = cases.slice(0, 5);
 
+  useFocusEffect(
+    useCallback(() => {
+      void reviewPromptService.requestWhenEligible();
+    }, []),
+  );
+
   return (
     <Screen>
       <View style={styles.header}>
         <AppText variant="eyebrow" style={styles.brandLabel}>Overthought</AppText>
         <View style={styles.headlineBlock}>
-          <AppText variant="display" style={styles.headline}>What's the</AppText>
+          <AppText variant="display" style={styles.headline}>What did they</AppText>
           <AppText variant="display" style={styles.headlineSecondLine}>
-            <AppText variant="display" color={colors.brand.pink} style={styles.script}>situation</AppText>?
+            <AppText variant="display" color={colors.brand.pink} style={styles.script}>text—or do</AppText>?
           </AppText>
         </View>
         <Pressable accessibilityRole="button" onPress={() => router.push('/profile')} style={styles.faceButton}>
@@ -45,20 +53,20 @@ export default function HomeRoute() {
             <View style={styles.heroBadge}>
               <Sparkles color={colors.text.onBrand} size={12} strokeWidth={2.5} />
               <AppText variant="eyebrow" color={colors.text.onBrand} style={styles.heroBadgeText}>
-                New case
+                Start a dating case
               </AppText>
             </View>
             <AppText variant="eyebrow" color={colors.text.onBrand} style={styles.dropIt}>
-              Drop it
+              Get verdict
             </AppText>
           </View>
           <View style={styles.heroBody}>
             <View style={styles.heroCopy}>
               <AppText variant="title" color={colors.text.onBrand} style={styles.heroTitle}>
-                Tell me what they did.
+                Tell me what they texted or did.
               </AppText>
               <AppText variant="subtitle" color={colors.text.onBrand} style={styles.heroSubtitle}>
-                I'll tell you if it's giving clown.
+                I'll check the evidence and give you one next move.
               </AppText>
             </View>
             <View style={styles.heroPlus}>

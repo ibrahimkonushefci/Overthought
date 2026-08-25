@@ -1,0 +1,75 @@
+{
+  "version": "1.0.4",
+  "locale": "en-US",
+  "canvas": {
+    "width": 1242,
+    "height": 2688,
+    "format": "png",
+    "alpha": false
+  },
+  "creativeDirection": "Dating Evidence Lab",
+  "screenshots": [
+    {
+      "order": 1,
+      "file": "01-dating-verdict.png",
+      "headline": "MIXED SIGNALS? GET THE DATING VERDICT.",
+      "subhead": "A funny read, Delusion Score & one honest next move.",
+      "interface": "smart-verdict",
+      "purpose": "Explain the product category and core result immediately."
+    },
+    {
+      "order": 2,
+      "file": "02-describe-the-text.png",
+      "headline": "WHAT DID HE MEAN BY THAT?",
+      "subhead": "Describe the text or situation—no screenshot upload needed.",
+      "interface": "new-case",
+      "purpose": "Explain the input and prevent screenshot-upload confusion."
+    },
+    {
+      "order": 3,
+      "file": "03-evidence-check.png",
+      "headline": "SEE THE SIGNAL. SPOT THE REACH.",
+      "subhead": "Get a verdict, Delusion Score and evidence check.",
+      "interface": "case-002-evidence-dossier",
+      "case": {
+        "id": "CASE 002",
+        "label": "WORDS VS. ACTIONS",
+        "title": "Booked It, Then Texted Dry",
+        "delusionScore": 42,
+        "verdict": "Reaching, Slightly"
+      },
+      "purpose": "Show the structured output instead of positioning the app as a chatbot."
+    },
+    {
+      "order": 4,
+      "file": "04-next-move.png",
+      "headline": "KNOW WHAT TO DO NEXT.",
+      "subhead": "Reply, wait, ask directly—or step back.",
+      "interface": "smart-verdict-next-move",
+      "purpose": "Show the actionable payoff."
+    },
+    {
+      "order": 5,
+      "file": "05-track-patterns.png",
+      "headline": "TRACK THE PATTERN, NOT THE PROMISE.",
+      "subhead": "Save updates and see how the situation actually ended.",
+      "interface": "cases-and-stats",
+      "purpose": "Show repeat value beyond one verdict."
+    },
+    {
+      "order": 6,
+      "file": "06-start-free.png",
+      "headline": "START FREE. NO ACCOUNT REQUIRED.",
+      "subhead": "Your first two guest cases include Smart Verdict.",
+      "interface": "welcome",
+      "purpose": "Remove signup and pricing uncertainty."
+    }
+  ],
+  "claimChecks": {
+    "screenshotUpload": false,
+    "guestAccountRequired": false,
+    "guestSmartVerdicts": 2,
+    "delusionScoreRange": "0-100",
+    "fabricatedRatingsOrReviews": false
+  }
+}

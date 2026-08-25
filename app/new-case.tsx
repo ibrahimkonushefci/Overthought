@@ -22,6 +22,7 @@ import {
 import { getVerdictDisplayLabel } from '../src/shared/utils/verdict';
 import { useAuthStore } from '../src/store/authStore';
 import { useGuestStore } from '../src/store/guestStore';
+import { reviewPromptService } from '../src/features/reviews/reviewPromptService';
 
 const categories: CaseCategory[] = ['romance', 'friendship', 'social', 'general'];
 const MIN_REVEAL_DURATION_MS = 1600;
@@ -66,7 +67,7 @@ export default function NewCaseRoute() {
   const [revealCategory, setRevealCategory] = useState<CaseCategory>('romance');
   const [revealOutcome, setRevealOutcome] = useState<VerdictRevealOutcome | null>(null);
   const [pendingResultRoute, setPendingResultRoute] = useState<string | null>(null);
-  const [examples, setExamples] = useState(() => pickExamplePrompts(4));
+  const [examples, setExamples] = useState(() => pickExamplePrompts('romance', 4));
   const helperPulse = useRef(new Animated.Value(0)).current;
   const previousHelperAttentionKey = useRef('');
   const trimmedInput = inputText.trim();
@@ -131,6 +132,11 @@ export default function NewCaseRoute() {
     router.replace('/home');
   };
 
+  const selectCategory = (nextCategory: CaseCategory) => {
+    setCategory(nextCategory);
+    setExamples(pickExamplePrompts(nextCategory, 4));
+  };
+
   const submit = async () => {
     const trimmed = inputText.trim();
 
@@ -164,9 +170,12 @@ export default function NewCaseRoute() {
       setCaseDraft('');
       setInputText('');
       setCategory('romance');
-      setExamples(pickExamplePrompts(4));
+      setExamples(pickExamplePrompts('romance', 4));
       const [, aiResult] = await Promise.all([minimumRevealTime, aiVerdictRequest]);
       const outcome = revealOutcomeFromResult(record, aiResult);
+      if (outcome.source === 'smart') {
+        reviewPromptService.recordSuccessfulSmartVerdict();
+      }
       const quotaParam = !aiResult.ok && aiResult.code === 'quota_exceeded' ? '&aiQuota=1' : '';
       setPendingResultRoute(`/case/${getCaseId(record)}?fromAnalysis=1${quotaParam}`);
       setRevealOutcome(outcome);
@@ -224,7 +233,7 @@ export default function NewCaseRoute() {
             category={item}
             selected={item === category}
             mode="category"
-            onPress={() => setCategory(item)}
+            onPress={() => selectCategory(item)}
           />
         ))}
       </View>

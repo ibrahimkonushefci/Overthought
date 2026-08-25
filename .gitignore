@@ -39,3 +39,7 @@ supabase/.env.*
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Transient marketing exports and working renders
+docs/marketing/**/exports/
+docs/marketing/**/renders/

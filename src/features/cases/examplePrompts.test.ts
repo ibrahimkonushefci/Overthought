@@ -1,21 +1,23 @@
 import { EXAMPLE_PROMPTS, pickExamplePrompts } from './examplePrompts';
 
 describe('example prompts', () => {
-  it('keeps a larger pool while showing only four prompts', () => {
-    const prompts = pickExamplePrompts(4, () => 0.42);
+  it('shows only prompts for the selected category', () => {
+    const prompts = pickExamplePrompts('romance', 4, () => 0.42);
+    const romancePrompts = EXAMPLE_PROMPTS.filter((prompt) => prompt.category === 'romance').map((prompt) => prompt.text);
 
-    expect(EXAMPLE_PROMPTS).toHaveLength(60);
+    expect(romancePrompts).toHaveLength(5);
     expect(prompts).toHaveLength(4);
     expect(new Set(prompts).size).toBe(4);
     prompts.forEach((prompt) => {
-      expect(EXAMPLE_PROMPTS).toContain(prompt);
+      expect(romancePrompts).toContain(prompt);
     });
   });
 
   it('caps the requested count to the available prompt pool', () => {
-    const prompts = pickExamplePrompts(100, () => 0.1);
+    const prompts = pickExamplePrompts('friendship', 100, () => 0.1);
+    const friendshipPrompts = EXAMPLE_PROMPTS.filter((prompt) => prompt.category === 'friendship');
 
-    expect(prompts).toHaveLength(EXAMPLE_PROMPTS.length);
-    expect(new Set(prompts).size).toBe(EXAMPLE_PROMPTS.length);
+    expect(prompts).toHaveLength(friendshipPrompts.length);
+    expect(new Set(prompts).size).toBe(friendshipPrompts.length);
   });
 });

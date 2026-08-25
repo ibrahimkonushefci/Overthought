@@ -298,6 +298,8 @@ PODS:
     - RNScreens
   - ExpoSharing (55.0.20):
     - ExpoModulesCore
+  - ExpoStoreReview (55.0.17):
+    - ExpoModulesCore
   - ExpoSymbols (55.0.9):
     - ExpoModulesCore
   - ExpoWebBrowser (55.0.16):
@@ -3186,6 +3188,7 @@ DEPENDENCIES:
   - ExpoModulesJSI (from `../node_modules/expo-modules-core`)
   - ExpoRouter (from `../node_modules/expo-router/ios`)
   - ExpoSharing (from `../node_modules/expo-sharing/ios`)
+  - ExpoStoreReview (from `../node_modules/expo-store-review/ios`)
   - ExpoSymbols (from `../node_modules/expo-symbols/ios`)
   - ExpoWebBrowser (from `../node_modules/expo-web-browser/ios`)
   - EXUpdatesInterface (from `../node_modules/expo-updates-interface/ios`)
@@ -3352,6 +3355,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/expo-router/ios"
   ExpoSharing:
     :path: "../node_modules/expo-sharing/ios"
+  ExpoStoreReview:
+    :path: "../node_modules/expo-store-review/ios"
   ExpoSymbols:
     :path: "../node_modules/expo-symbols/ios"
   ExpoWebBrowser:
@@ -3558,6 +3563,7 @@ SPEC CHECKSUMS:
   ExpoModulesJSI: 964334271fc77832736f66ee1785761cdc778dbe
   ExpoRouter: e0e2aa4b03843e7abfa3e63e0cdd6c642d74780f
   ExpoSharing: ae902b28ac0eb274d771411f39a7daad2529309d
+  ExpoStoreReview: 895668d2c4f503286ef2100b431d9561d7039d1a
   ExpoSymbols: 896159288ad708e1a32dc12c92fe5f90bff01126
   ExpoWebBrowser: 5847267c496125abe38afccae97d34cb6ecc5340
   EXUpdatesInterface: 4c11f4d1594526258f14d09817dc407acbf24e3b
@@ -3664,4 +3670,4 @@ SPEC CHECKSUMS:
 
 PODFILE CHECKSUM: 341d2918da1a82e95775d79835251e445b647a6f
 
-COCOAPODS: 1.16.2
+COCOAPODS: 1.17.0

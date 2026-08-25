@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Modal, StyleSheet, View } from 'react-native';
-import { usePathname } from 'expo-router';
-import { CheckCircle2, FileText, Layers3, Plus, Sparkles } from 'lucide-react-native';
+import { usePathname, useRouter } from 'expo-router';
+import { CheckCircle2, FileText, Sparkles } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
 import { useAuthStore } from '../../store/authStore';
 import { useGuestStore } from '../../store/guestStore';
@@ -14,52 +14,45 @@ interface HelpStep {
   icon: LucideIcon;
   title: string;
   body: string;
-  tone: 'create' | 'write' | 'verdict' | 'cases';
+  tone: 'describe' | 'verdict' | 'move';
 }
 
 const helpSteps: HelpStep[] = [
   {
-    icon: Plus,
-    title: 'Tap + to create a case',
-    body: 'Start with the pink button. That is where the situation goes.',
-    tone: 'create',
-  },
-  {
     icon: FileText,
-    title: 'Write the situation',
-    body: 'Give a few real details. 1-3 sentences is enough.',
-    tone: 'write',
+    title: 'Describe it',
+    body: 'Tell us what they texted or did. No screenshot upload needed.',
+    tone: 'describe',
   },
   {
     icon: Sparkles,
-    title: 'Get a verdict',
-    body: 'Smart Verdict tries first. Basic Verdict is the fallback when smart reads are unavailable.',
+    title: 'Get the verdict',
+    body: 'Smart Verdict checks the evidence and gives you a Delusion Score.',
     tone: 'verdict',
   },
   {
-    icon: Layers3,
-    title: 'Find it later',
-    body: 'Cases live in the Cases tab. Add updates, then close the case when the plot resolves.',
-    tone: 'cases',
+    icon: CheckCircle2,
+    title: 'Take one next move',
+    body: 'Reply, ask directly, wait, or step back.',
+    tone: 'move',
   },
 ];
 
 function stepIconStyle(tone: HelpStep['tone']) {
   switch (tone) {
-    case 'create':
-      return styles.createIcon;
-    case 'write':
-      return styles.writeIcon;
+    case 'describe':
+      return styles.describeIcon;
     case 'verdict':
       return styles.verdictIcon;
-    case 'cases':
+    case 'move':
     default:
-      return styles.casesIcon;
+      return styles.moveIcon;
   }
 }
 
 export function FirstUseHelpModal() {
   const pathname = usePathname();
+  const router = useRouter();
   const sessionMode = useAuthStore((state) => state.sessionMode);
   const hasCompletedEntry = useAuthStore((state) => state.hasCompletedEntry);
   const userId = useAuthStore((state) => state.user?.id ?? null);
@@ -102,6 +95,11 @@ export function FirstUseHelpModal() {
     setVisible(false);
   };
 
+  const startCase = () => {
+    close();
+    router.push('/new-case');
+  };
+
   return (
     <Modal animationType="fade" onRequestClose={() => {}} transparent visible={visible}>
       <View style={styles.backdrop}>
@@ -115,10 +113,10 @@ export function FirstUseHelpModal() {
           </View>
 
           <AppText variant="display" style={styles.title}>
-            Here's how it works.
+            Dating drama, decoded.
           </AppText>
           <AppText variant="subtitle" style={styles.subtitle}>
-            Four steps. No tutorial spiral.
+            Three steps. No chatbot spiral.
           </AppText>
 
           <View style={styles.steps}>
@@ -128,7 +126,7 @@ export function FirstUseHelpModal() {
               return (
                 <View key={step.title} style={styles.stepRow}>
                   <View style={[styles.stepIcon, stepIconStyle(step.tone)]}>
-                    <Icon color={step.tone === 'create' ? colors.text.onBrand : colors.text.primary} size={18} strokeWidth={2.8} />
+                    <Icon color={step.tone === 'describe' ? colors.text.onBrand : colors.text.primary} size={18} strokeWidth={2.8} />
                   </View>
                   <View style={styles.stepCopy}>
                     <AppText variant="body" style={styles.stepTitle}>
@@ -150,7 +148,7 @@ export function FirstUseHelpModal() {
             </AppText>
           </View>
 
-          <Button title="Got it" variant="accent" onPress={close} />
+          <Button title="Start my case" variant="accent" onPress={startCase} />
         </View>
       </View>
     </Modal>
@@ -225,16 +223,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: 30,
   },
-  createIcon: {
+  describeIcon: {
     backgroundColor: colors.brand.pink,
-  },
-  writeIcon: {
-    backgroundColor: colors.bg.surface,
   },
   verdictIcon: {
     backgroundColor: colors.accent.lime,
   },
-  casesIcon: {
+  moveIcon: {
     backgroundColor: '#F8C7D4',
   },
   stepCopy: {
