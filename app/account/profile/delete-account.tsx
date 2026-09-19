@@ -14,7 +14,7 @@ import { Screen } from '../../../src/shared/ui/Screen';
 import { AppText } from '../../../src/shared/ui/Text';
 import { Button } from '../../../src/shared/ui/Button';
 import { Card } from '../../../src/shared/ui/Card';
-import { colors, radii, spacing, typography } from '../../../src/shared/theme/tokens';
+import { colors, spacing, typography } from '../../../src/shared/theme/tokens';
 
 export default function DeleteAccountRoute() {
   const router = useRouter();

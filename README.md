@@ -1,6 +1,6 @@
 # Overthought
 
-Overthought is an iOS-first Expo React Native app for analyzing social overthinking as structured cases. The corrective Smart-only client is live in TestFlight as `1.0.6 (28)`. Its quota presentation, branded limit modals, authoritative allowance refresh, Smart-only failure behavior, and activity timestamps were physically tested. A cached-result quota bypass found during that pass was fixed server-side and confirmed on device. Build 28 has not been released to the App Store; release is intentionally paused for the next product change and a fresh regression pass.
+Overthought is an iOS-first Expo React Native app for analyzing social overthinking as structured cases. The corrective Smart-only client is live in TestFlight as `1.0.6 (28)`. Its quota presentation, branded limit modals, authoritative allowance refresh, Smart-only failure behavior, and activity timestamps were physically tested. A cached-result quota bypass found during that pass was fixed server-side and confirmed on device. Build 28 has not been released to the App Store. A final repository review found two additional release blockers involving cached guest duplicates before exhaustion and saved Deep Read lookup after a legacy case is upgraded; both are intentionally deferred to the next implementation task.
 
 ## What is included
 
@@ -37,12 +37,11 @@ npm run typecheck
 npm test
 ```
 
-The Phase 2 corrective backend was deployed to the existing production Supabase project on 2026-09-19. Migrations are applied through `0012_timestamp_activity_integrity.sql`, the approved historical timestamp repair is complete, and backward-compatible `ai-verdict` version 26 is active. TestFlight build `1.0.6 (28)` was built, submitted, installed, and physically tested. It remains unreleased pending the next change and explicit App Store approval.
+The Phase 2 corrective backend was deployed to the existing production Supabase project on 2026-09-19. Migrations are applied through `0012_timestamp_activity_integrity.sql`, the approved historical timestamp repair is complete, and backward-compatible `ai-verdict` version 26 is active. TestFlight build `1.0.6 (28)` was built, submitted, installed, and physically tested. It remains unreleased pending the two final-audit fixes, a fresh regression pass, and explicit App Store approval.
 
 ## Documentation
 
 - [Development and release guide](docs/development-and-release.md)
-- [Phase 2 completion handoff](docs/phase-2-completion-handoff.md)
 - [API contracts](docs/overthought-api-contracts.md)
 - [V1 architecture addendum](docs/overthought-v1-architecture-addendum.md)
 - [Verdict engine specification](docs/overthought-verdict-engine-spec.md)

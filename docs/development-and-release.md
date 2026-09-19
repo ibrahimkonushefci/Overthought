@@ -1,6 +1,6 @@
 # Overthought development and release guide
 
-iOS-first Expo React Native foundation for Overthought, a case-based app for analyzing social overthinking. Corrective build `1.0.6 (28)` is live in TestFlight and passed the core physical-iPhone corrective flow. The App Store release is intentionally paused for the next product change and remains a separate explicit approval gate.
+iOS-first Expo React Native foundation for Overthought, a case-based app for analyzing social overthinking. Corrective build `1.0.6 (28)` is live in TestFlight and passed the core physical-iPhone corrective flow. The App Store release is intentionally paused. A final repository review found release blockers in cached guest duplicate handling before exhaustion and saved Deep Read lookup after a legacy case is upgraded; fix and regress those in a separate task before requesting release approval.
 
 ## Smart-only rollout boundary
 
@@ -164,6 +164,14 @@ Production iOS builds use Hermes V1. Corrective build `1.0.6 (28)` was submitted
 ```sh
 npx eas build --profile production --platform ios --clear-cache
 ```
+
+After a separately approved successful build, submit that exact build rather than relying on an ambiguous latest build:
+
+```sh
+npx eas submit --platform ios --profile production --id <eas-build-id>
+```
+
+Build, TestFlight submission, production backend deployment, production data repair, credential changes, and App Store release are separate approval gates. A successful preflight or build does not authorize the next gate.
 
 ### Production/TestFlight auth environment
 

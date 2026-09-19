@@ -26,12 +26,6 @@ function subscribeToRemoteCases(listener: () => void) {
   };
 }
 
-function setRemoteCaseSnapshot(nextCases: CaseEntity[], userId: string | null) {
-  cachedRemoteCases = nextCases;
-  cachedRemoteUserId = userId;
-  notifyRemoteCaseSubscribers();
-}
-
 function clearRemoteCaseSnapshot() {
   if (cachedRemoteCases.length === 0 && !cachedRemoteError && !cachedRemoteUserId && !cachedRemoteLoading) {
     return;

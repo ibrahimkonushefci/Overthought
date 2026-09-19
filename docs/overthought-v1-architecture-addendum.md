@@ -176,6 +176,10 @@ This section records the late v1 stabilization pass completed before the next ha
 - `babel-preset-expo` must stay on the Expo 55-compatible line (`~55.0.22`) unless the whole Expo SDK is upgraded.
 
 Known remaining open items:
+- Release blocker: repeated guest submissions of the same cached prompt can create extra local Smart cases without consuming the remaining allowance until the identity is fully exhausted.
+- Release blocker: after a legacy Basic case is explicitly upgraded, the saved Deep Read lookup uses the canonical Smart score instead of the original Basic snapshot and can hide the saved legacy result.
+- Medium follow-ups from the final audit: preserve compatibility presentation for older Smart rows whose expanded detail fields are null, harden allowance refresh across identity changes, and make the branded limit modal usable at very large text sizes.
+- Lower-risk follow-ups from the final audit: add a timeout to the read-only allowance request and preserve future production repair scripts as reviewed, allowlisted artifacts.
 - Email confirmation messages going to junk are likely Supabase email deliverability/custom SMTP/DNS work, not an app-code bug unless redirect URLs are wrong.
 - Richer profile fields beyond `display_name` are not implemented and should be handled as a schema + type + repository + UI phase.
 - Stricter one-subscription-to-one-Overthought-account transfer handling is deferred unless the v1 product policy changes.

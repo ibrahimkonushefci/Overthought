@@ -18,7 +18,7 @@ The approved Smart-only plan supersedes the original deterministic-only directio
 
 - Phase 1's additive backend, atomic creation RPCs, canonical result view, and backward-compatible Edge Function were deployed to the existing production Supabase project on 2026-09-17.
 - Phase 2 is implemented and validated locally. New cases expose only Smart Verdict and enter history only after Smart generation and persistence succeed. Failed submissions return to a preserved draft with a stable retry ID.
-- Canonical reads carry `resultSource: 'smart' | 'legacy_basic'`. Historical Basic results stay labeled and unchanged until the user explicitly upgrades them. Saved Deep Reads remain readable as legacy data, but the production UX cannot request new Deep Reads.
+- Canonical reads carry `resultSource: 'smart' | 'legacy_basic'`. Historical Basic results stay labeled and unchanged until the user explicitly upgrades them. Saved Deep Reads are intended to remain readable as legacy data, but the final audit found that lookup currently fails after a Basic case is upgraded to Smart. The production UX cannot request new Deep Reads.
 - Verified guest Smart migration is handled by migration `0011` and a service-role-only transaction that copies AI text only from the server-verified guest cache. Unverifiable older guest records are preserved as legacy Basic cases.
 - The canonical engine source now lives in `supabase/functions/_shared/verdict-engine/`; `src/features/verdict-engine/` contains app-compatible re-export entrypoints.
 
@@ -26,9 +26,17 @@ Production backend status (2026-09-19): migrations are applied through `0012`, t
 
 Validation status (2026-09-19): the corrective pass completed type checking, 630 Jest tests, a local migration reset through `0012`, four pgTAP checks, Expo dependency validation, and a production Release simulator build. Build 28 completed successfully on EAS and was submitted to TestFlight. The App Store release is deliberately paused for the next product change and a fresh regression pass.
 
-Repository checkpoint (2026-09-19): the primary Phase 2 commit was `7c3a67b691536b8749fc4c525d478202e10f7062`; the corrective implementation, build-28 records, and cache-quota hotfix are the next `main` checkpoint. Verify the latest commit and `origin/main` when resuming. Existing dependency alerts remain a separate, untriaged maintenance scope.
+Repository checkpoint (2026-09-19): the primary Phase 2 commit was `7c3a67b691536b8749fc4c525d478202e10f7062`; the corrective implementation, build-28 records, and exhausted-cache hotfix baseline is `90f7391647977bf65bf3b1684a250b0c3d38c0f8`. Verify the cleanup commit that follows it and `origin/main` when resuming. Existing dependency alerts remain a separate, untriaged maintenance scope.
 
-For a concise, pasteable continuation brief, read [`docs/phase-2-completion-handoff.md`](phase-2-completion-handoff.md) before starting new work.
+Permanent verification record:
+
+- The disposable local matrix passed guest Smart creation/reopen, offline draft preservation with no Basic fallback, retry after backend recovery, verified guest-to-account migration, signed-in Smart creation, and historical Basic display.
+- The corrective automated pass completed 630 Jest tests, TypeScript checks, local migrations through `0012`, four pgTAP checks, Expo dependency validation, and a production Release simulator build.
+- Physical TestFlight testing covered the main guest and signed-in Smart-only flows, authoritative allowance display, branded quota blocking, preserved drafts, no new Basic fallback, timestamps/activity ordering, and the cached-result quota hotfix.
+- Final code review found two release blockers: cached guest prompts can create extra local cases without spending the remaining allowance before exhaustion, and a saved Deep Read is looked up using Smart fields after a legacy upgrade instead of its original Basic fields.
+- Medium follow-ups are compatibility presentation for older Smart rows with nullable detail fields, allowance-refresh races during identity changes, and large-text scrolling in the branded limit modal. Lower-risk follow-ups are a quota-status request timeout and preserving the exact historical repair script for auditability.
+- Still-open release coverage includes Premium fair-use and purchase/restore, every service-cap message, late timeout recovery, fresh-install/cross-device hydration, explicit legacy upgrade, saved Deep Read after upgrade, full accessibility, account switching, and account deletion.
+- Do not deploy production services, modify production data or credentials, create/submit a build, or release to the App Store without separate explicit approval.
 
 ---
 

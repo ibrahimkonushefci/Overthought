@@ -153,17 +153,6 @@ function annualPackage() {
   };
 }
 
-function annualStoreProduct() {
-  return {
-    identifier: 'overthought_yearly',
-    title: 'Overthought Premium Yearly',
-    priceString: '29.99 €',
-    price: 29.99,
-    currencyCode: 'EUR',
-    subscriptionPeriod: 'P1Y',
-  };
-}
-
 describe('premiumService', () => {
   beforeEach(() => {
     jest.clearAllMocks();

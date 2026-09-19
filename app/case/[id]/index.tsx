@@ -6,12 +6,10 @@ import ViewShot from 'react-native-view-shot';
 import Svg, { Circle } from 'react-native-svg';
 import {
   ArrowLeft,
-  ArrowUpRight,
   Check,
   ChevronDown,
   ChevronUp,
   CircleHelp,
-  Crown,
   Plus,
   ScrollText,
   Share2,
@@ -935,56 +933,6 @@ function DeepReadSectionRow({
   );
 }
 
-function DeepReadStateText({ text, compact = false }: { text: string; compact?: boolean }) {
-  return (
-    <AppText
-      variant="subtitle"
-      color="rgba(255, 255, 255, 0.76)"
-      style={[styles.deepStateText, compact && styles.deepStateTextCompact]}
-    >
-      {text}
-    </AppText>
-  );
-}
-
-function DeepReadButton({
-  label,
-  loading = false,
-  onPress,
-}: {
-  label: string;
-  loading?: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityState={{ disabled: loading }}
-      disabled={loading}
-      onPress={onPress}
-      style={[styles.deepButton, loading && styles.deepButtonDisabled]}
-    >
-      {loading ? <ActivityIndicator color={colors.text.onAccent} /> : null}
-      <AppText variant="title" center color={colors.text.onAccent} style={styles.deepButtonText}>
-        {label}
-      </AppText>
-      {!loading ? <ArrowUpRight color={colors.text.onAccent} size={19} strokeWidth={2.8} /> : null}
-    </Pressable>
-  );
-}
-
-function RemainingReads({ remaining }: { remaining: number | null }) {
-  if (remaining === null) {
-    return null;
-  }
-
-  return (
-    <AppText variant="eyebrow" color="rgba(255, 255, 255, 0.58)" style={styles.remainingReads}>
-      {remaining} left
-    </AppText>
-  );
-}
-
 function CaseFileDivider() {
   return (
     <View style={styles.caseFileDivider}>
@@ -1315,34 +1263,13 @@ const styles = StyleSheet.create({
     letterSpacing: 0,
     lineHeight: 12,
   },
-  remainingReads: {
-    flexShrink: 0,
-    fontFamily: typography.family.displayBold,
-    fontSize: 9,
-    letterSpacing: 1.7,
-    lineHeight: 13,
-  },
   deepSubtitle: {
     fontFamily: typography.family.body,
     fontSize: 15,
     lineHeight: 20,
   },
-  deepButton: {
-    alignItems: 'center',
-    backgroundColor: colors.accent.lime,
-    borderRadius: radii.md,
-    flexDirection: 'row',
-    gap: spacing.sm,
-    justifyContent: 'center',
-    minHeight: 52,
-  },
   deepButtonDisabled: {
     opacity: 0.72,
-  },
-  deepButtonText: {
-    fontFamily: typography.family.displayBold,
-    fontSize: 14,
-    lineHeight: 19,
   },
   deepResult: {
     gap: spacing.md,
@@ -1421,18 +1348,6 @@ const styles = StyleSheet.create({
     fontFamily: typography.family.displayBold,
     fontSize: 16,
     lineHeight: 22,
-  },
-  deepStateStack: {
-    gap: spacing.md,
-    marginTop: spacing.xs,
-  },
-  deepStateText: {
-    fontFamily: typography.family.body,
-    fontSize: 13,
-    lineHeight: 19,
-  },
-  deepStateTextCompact: {
-    marginTop: -spacing.sm,
   },
   caseFileSection: {
     backgroundColor: caseDetailBackground,

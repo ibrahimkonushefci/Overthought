@@ -241,7 +241,7 @@ export function pickDeterministic<T>(items: T[], seed: string): T {
 
 export function scoreBucket(
   score: number,
-  config: VerdictEngineConfig,
+  _config: VerdictEngineConfig,
 ): keyof VerdictEngineConfig['explanationTemplates'] {
   if (score >= 71) {
     return 'high';
