@@ -138,6 +138,7 @@ function buildGuestCase() {
     updatedAt: '2026-04-22T10:00:00.000Z',
     archivedAt: null,
     deletedAt: null,
+    resultSource: 'legacy_basic' as const,
     updates: [],
     syncStatus: 'local_only' as const,
   };

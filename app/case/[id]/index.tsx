@@ -23,8 +23,7 @@ import type { LucideIcon } from 'lucide-react-native';
 import type {
   AnalysisOutput,
   AiVerdictOutput,
-  AiVerdictRequestState,
-  DeepReadAccessState,
+  AiVerdictResponse,
   DeepReadResponse,
   OutcomeStatus,
 } from '../../../src/types/shared';
@@ -32,11 +31,6 @@ import { caseRepository } from '../../../src/features/cases/repositories/caseRep
 import { caseUpdateRepository } from '../../../src/features/cases/repositories/caseUpdateRepository';
 import { aiVerdictService } from '../../../src/features/ai-verdict/aiVerdictService';
 import { getCachedCaseById } from '../../../src/features/cases/services/useCases';
-import {
-  isAiVerdictDeepReadAccountLocked,
-  isAiVerdictDeepReadCaseLocked,
-  isCurrentDailyQuotaAccess,
-} from '../../../src/features/ai-verdict/aiVerdictAccess';
 import { deepReadService } from '../../../src/features/deep-read/deepReadService';
 import type { CaseEntity, CaseUpdateEntity } from '../../../src/features/cases/types';
 import { getCaseId, isGuestCase } from '../../../src/features/cases/types';
@@ -57,25 +51,11 @@ import {
   verdictLabels,
 } from '../../../src/shared/utils/verdict';
 import { relativeTime } from '../../../src/shared/utils/date';
-import { useAiVerdictStore } from '../../../src/store/aiVerdictStore';
-import { isPremiumStateActive, usePremiumStore } from '../../../src/store/premiumStore';
 
 const detailScrollByCaseId = new Map<string, number>();
-const quotaUpgradePromptedCaseIds = new Set<string>();
-const quotaRetryAttemptedCaseIds = new Set<string>();
 const caseDetailBackground = '#FBF9F2';
-const aiVerdictTimeoutRecoveryDelaysMs = [2_000, 5_000, 10_000];
-const quotaUpgradePromptDelayMs = 4_000;
 
-type DeepReadStatus =
-  | 'idle'
-  | 'loading'
-  | 'ready'
-  | 'not_authenticated'
-  | 'quota'
-  | 'fair_use'
-  | 'safety'
-  | 'error';
+type DeepReadStatus = 'idle' | 'loading' | 'ready';
 
 function sortUpdatesNewestFirst(items: CaseUpdateEntity[]): CaseUpdateEntity[] {
   return [...items].sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime());
@@ -83,25 +63,18 @@ function sortUpdatesNewestFirst(items: CaseUpdateEntity[]): CaseUpdateEntity[] {
 
 export default function CaseDetailRoute() {
   const router = useRouter();
-  const { id, fromAnalysis, aiQuota } = useLocalSearchParams<{ id: string; fromAnalysis?: string; aiQuota?: string }>();
+  const { id, fromAnalysis } = useLocalSearchParams<{ id: string; fromAnalysis?: string }>();
   const initialCachedRecord = id ? getCachedCaseById(id) : null;
   const [record, setRecord] = useState<CaseEntity | null>(initialCachedRecord);
   const [updates, setUpdates] = useState<CaseUpdateEntity[]>([]);
   const [initialLoadComplete, setInitialLoadComplete] = useState(Boolean(initialCachedRecord));
   const [deepReadStatus, setDeepReadStatus] = useState<DeepReadStatus>('idle');
   const [deepReadResult, setDeepReadResult] = useState<Extract<DeepReadResponse, { ok: true }> | null>(null);
-  const [deepReadMessage, setDeepReadMessage] = useState<string | null>(null);
-  const [deepReadFailureAccess, setDeepReadFailureAccess] = useState<DeepReadAccessState | null>(null);
   const [sharePreviewVisible, setSharePreviewVisible] = useState(false);
   const [shareInProgress, setShareInProgress] = useState(false);
-  const [quotaUpgradePromptVisible, setQuotaUpgradePromptVisible] = useState(false);
-  const [, setQuotaRetryAttemptVersion] = useState(0);
-  const aiVerdictsByCaseId = useAiVerdictStore((state) => state.byCaseId);
-  const aiVerdictRequestsByCaseId = useAiVerdictStore((state) => state.requestByCaseId);
-  const premiumState = usePremiumStore((state) => state.premiumState);
+  const [legacyUpgradeLoading, setLegacyUpgradeLoading] = useState(false);
   const shareCardRef = useRef<ViewShot | null>(null);
   const recordRef = useRef<CaseEntity | null>(initialCachedRecord);
-  const deepReadRequestInFlightRef = useRef(false);
   const shouldPresentNewResult = fromAnalysis === '1';
   const [shouldRunResultIntro, setShouldRunResultIntro] = useState(shouldPresentNewResult);
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -158,8 +131,6 @@ export default function CaseDetailRoute() {
     setUpdates(cachedRecord && isGuestCase(cachedRecord) ? sortUpdatesNewestFirst(cachedRecord.updates) : []);
     setDeepReadStatus('idle');
     setDeepReadResult(null);
-    setDeepReadMessage(null);
-    setDeepReadFailureAccess(null);
     setShouldRunResultIntro(shouldPresentNewResult);
   }, [id]);
 
@@ -174,20 +145,6 @@ export default function CaseDetailRoute() {
   );
 
   useEffect(() => {
-    if (!record) {
-      return;
-    }
-
-    const currentCaseId = getCaseId(record);
-
-    if (isGuestCase(record) || aiVerdictsByCaseId[currentCaseId]) {
-      return;
-    }
-
-    void aiVerdictService.loadStoredVerdictForCase(record);
-  }, [aiVerdictsByCaseId, record]);
-
-  useEffect(() => {
     if (!record || isGuestCase(record) || deepReadStatus === 'loading' || deepReadStatus === 'ready') {
       return;
     }
@@ -200,8 +157,6 @@ export default function CaseDetailRoute() {
       }
 
       setDeepReadResult(storedDeepRead);
-      setDeepReadFailureAccess(null);
-      setDeepReadMessage(null);
       setDeepReadStatus('ready');
     });
 
@@ -209,71 +164,6 @@ export default function CaseDetailRoute() {
       cancelled = true;
     };
   }, [deepReadStatus, record]);
-
-  useEffect(() => {
-    if (!record) {
-      return;
-    }
-
-    const currentCaseId = getCaseId(record);
-    const requestState = aiVerdictRequestsByCaseId[currentCaseId];
-
-    if (isGuestCase(record) || aiVerdictsByCaseId[currentCaseId] || requestState?.status !== 'ai_timeout') {
-      return;
-    }
-
-    const timers = aiVerdictTimeoutRecoveryDelaysMs.map((delayMs) =>
-      setTimeout(() => {
-        void aiVerdictService.loadStoredVerdictForCase(record);
-      }, delayMs),
-    );
-
-    return () => {
-      timers.forEach((timer) => clearTimeout(timer));
-    };
-  }, [aiVerdictRequestsByCaseId, aiVerdictsByCaseId, record]);
-
-  const routeToQuotaUpgrade = useCallback(
-    (requestState?: AiVerdictRequestState) => {
-      setQuotaUpgradePromptVisible(false);
-
-      if (requestState?.access?.accessTier === 'guest') {
-        router.push('/auth');
-        return;
-      }
-
-      router.push('/paywall');
-    },
-    [router],
-  );
-
-  useEffect(() => {
-    if (!record || !shouldPresentNewResult) {
-      return;
-    }
-
-    const currentCaseId = getCaseId(record);
-    const requestState = aiVerdictRequestsByCaseId[currentCaseId];
-
-    const shouldPromptForQuota = aiQuota === '1' || isUpgradeEligibleAiQuotaState(requestState);
-
-    if (!shouldPromptForQuota || !isUpgradeEligibleAiQuotaState(requestState) || quotaUpgradePromptedCaseIds.has(currentCaseId)) {
-      return;
-    }
-
-    const promptTimer = setTimeout(() => {
-      if (quotaUpgradePromptedCaseIds.has(currentCaseId)) {
-        return;
-      }
-
-      quotaUpgradePromptedCaseIds.add(currentCaseId);
-      setQuotaUpgradePromptVisible(true);
-    }, quotaUpgradePromptDelayMs);
-
-    return () => {
-      clearTimeout(promptTimer);
-    };
-  }, [aiQuota, aiVerdictRequestsByCaseId, record, shouldPresentNewResult]);
 
   const resultPresentationKey = shouldRunResultIntro
     ? record
@@ -323,52 +213,22 @@ export default function CaseDetailRoute() {
   }
 
   const caseId = getCaseId(record);
-  const aiVerdict = aiVerdictsByCaseId[caseId] ?? (isGuestCase(record) ? record.aiVerdict : undefined);
-  const aiVerdictRequest = aiVerdictRequestsByCaseId[caseId];
-  const premiumActive = isPremiumStateActive(premiumState);
-  const aiVerdictLoading = aiVerdictRequest?.status === 'loading';
-  const localVerdict = {
+  const legacyVerdict: AnalysisOutput = record.legacyBasicSnapshot ?? {
     verdictLabel: record.verdictLabel,
     delusionScore: record.delusionScore,
     explanationText: record.explanationText,
     nextMoveText: record.nextMoveText,
     verdictVersion: record.verdictVersion,
   };
-  const visibleVerdict = !aiVerdictLoading && aiVerdict ? aiVerdict.verdict : localVerdict;
-  const verdictSource = aiVerdictLoading
-    ? 'loading'
-    : aiVerdict
-      ? aiVerdict.cache.source === 'cache'
-        ? 'cache'
-        : 'ai'
-      : 'basic';
-  const isAiVerdictVisible = verdictSource === 'ai' || verdictSource === 'cache';
-  const accountDeepReadLockState = Object.values(aiVerdictRequestsByCaseId).find((requestState) =>
-    isAiVerdictDeepReadAccountLocked(requestState, { premiumActive }),
-  );
-  const deepReadLockRequestState = isAiVerdictDeepReadCaseLocked(aiVerdictRequest, { premiumActive })
-    ? aiVerdictRequest
-    : accountDeepReadLockState;
-  const aiVerdictDeepReadLocked = Boolean(deepReadLockRequestState);
-  const quotaUpgradeEligible = !premiumActive && isUpgradeEligibleAiQuotaState(aiVerdictRequest);
-  const quotaRetryAlreadyAttempted = quotaRetryAttemptedCaseIds.has(caseId);
-  const migratedGuestQuotaRetryEligible =
-    !isGuestCase(record) && aiVerdictRequest?.status === 'quota_exceeded' && aiVerdictRequest.access?.accessTier === 'guest';
-  const quotaRetryEligible =
-    !shouldPresentNewResult &&
-    !quotaRetryAlreadyAttempted &&
-    (isRetryEligibleAiQuotaState(aiVerdictRequest) || migratedGuestQuotaRetryEligible) &&
-    !aiVerdict;
-  const shouldShowDeepRead =
-    !isAiVerdictVisible &&
-    (verdictSource === 'basic' || deepReadStatus === 'loading' || deepReadStatus === 'ready' || aiVerdictDeepReadLocked);
-  const heroDisplayLabel = aiVerdict
-    ? aiVerdict.verdict.displayLabel
+  const smartVerdict = record.resultSource === 'smart' ? record.smartVerdict : undefined;
+  const isSmartVerdictVisible = record.resultSource === 'smart' && Boolean(smartVerdict);
+  const visibleVerdict = smartVerdict ?? legacyVerdict;
+  const heroDisplayLabel = smartVerdict
+    ? smartVerdict.displayLabel
     : getVerdictDisplayLabel(visibleVerdict.verdictLabel, `${caseId}|${record.inputText}|${visibleVerdict.delusionScore}`);
   const displayCaseId = formatDisplayCaseId(getCaseId(record));
-  const deepReadShare = deepReadStatus === 'ready' ? deepReadResult?.deepRead : null;
   const sharePayload: ShareCardPayload = {
-    mode: deepReadShare ? 'deep_read' : 'result',
+    mode: 'result',
     title: heroDisplayLabel,
     caseDisplayId: displayCaseId,
     category: record.category,
@@ -376,14 +236,10 @@ export default function CaseDetailRoute() {
     delusionScore: visibleVerdict.delusionScore,
     explanationText: visibleVerdict.explanationText,
     nextMoveText: visibleVerdict.nextMoveText,
-    variant: isAiVerdictVisible ? 'ai' : 'basic',
-    deepReadRoastLine: deepReadShare?.roastLine,
-    deepReadTakeaway: deepReadShare?.whatToDoNext,
+    variant: isSmartVerdictVisible ? 'ai' : 'basic',
     appName: 'Overthought',
   };
-  const shareMessage = deepReadShare
-    ? `Overthought Deep Read: ${deepReadShare.roastLine} ${deepReadShare.whatToDoNext}`
-    : `Overthought verdict: ${verdictLabels[visibleVerdict.verdictLabel]} (${visibleVerdict.delusionScore}/100). ${visibleVerdict.nextMoveText}`;
+  const shareMessage = `Overthought verdict: ${verdictLabels[visibleVerdict.verdictLabel]} (${visibleVerdict.delusionScore}/100). ${visibleVerdict.nextMoveText}`;
 
   const shareTextFallback = async () => {
     await Share.share({
@@ -400,17 +256,33 @@ export default function CaseDetailRoute() {
     router.replace('/cases');
   };
 
-  const retryAiVerdict = async () => {
-    if (!record || aiVerdictLoading) {
+  const upgradeLegacyVerdict = async () => {
+    if (!record || record.resultSource !== 'legacy_basic' || legacyUpgradeLoading) {
       return;
     }
 
+    setLegacyUpgradeLoading(true);
     const result = await aiVerdictService.requestForCase(record);
 
-    if (!result.ok && result.code === 'quota_exceeded') {
-      quotaRetryAttemptedCaseIds.add(getCaseId(record));
-      setQuotaRetryAttemptVersion((current) => current + 1);
+    if (result.ok) {
+      await refresh();
+      setLegacyUpgradeLoading(false);
+      return;
     }
+
+    setLegacyUpgradeLoading(false);
+    showLegacyUpgradeFailure(result, router);
+  };
+
+  const confirmLegacyUpgrade = () => {
+    Alert.alert(
+      'Upgrade this legacy case?',
+      'This explicitly uses one Smart Verdict allowance. The original Basic result will be kept internally.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Upgrade', onPress: () => void upgradeLegacyVerdict() },
+      ],
+    );
   };
 
   const shareCard = async () => {
@@ -474,56 +346,6 @@ export default function CaseDetailRoute() {
     ]);
   };
 
-  const requestDeepRead = async () => {
-    if (!record || deepReadStatus === 'loading' || deepReadRequestInFlightRef.current) {
-      return;
-    }
-
-    deepReadRequestInFlightRef.current = true;
-    setDeepReadStatus('loading');
-    setDeepReadMessage(null);
-    setDeepReadFailureAccess(null);
-
-    try {
-      const result = await deepReadService.requestCaseDeepRead(getCaseId(record), record.inputText);
-
-      if (result.ok) {
-        setDeepReadResult(result);
-        setDeepReadFailureAccess(null);
-        setDeepReadStatus('ready');
-        return;
-      }
-
-      setDeepReadResult(null);
-      setDeepReadMessage(result.message);
-      setDeepReadFailureAccess(result.access ?? null);
-
-      if (result.code === 'not_authenticated') {
-        setDeepReadStatus('not_authenticated');
-        return;
-      }
-
-      if (result.code === 'quota_exceeded') {
-        setDeepReadStatus('quota');
-        return;
-      }
-
-      if (result.code === 'fair_use_exceeded') {
-        setDeepReadStatus('fair_use');
-        return;
-      }
-
-      if (result.code === 'safety_routed') {
-        setDeepReadStatus('safety');
-        return;
-      }
-
-      setDeepReadStatus('error');
-    } finally {
-      deepReadRequestInFlightRef.current = false;
-    }
-  };
-
   return (
     <Screen
       backgroundColor={caseDetailBackground}
@@ -551,21 +373,15 @@ export default function CaseDetailRoute() {
           </Pressable>
         </View>
 
-        {isAiVerdictVisible && aiVerdict ? (
+        {isSmartVerdictVisible && smartVerdict ? (
           <AiVerdictPremiumCard
-            verdict={aiVerdict.verdict}
+            verdict={smartVerdict}
             displayLabel={heroDisplayLabel}
-            remainingLabel={aiVerdictAccessLabel(aiVerdict?.access ?? aiVerdictRequest?.access, isGuestCase(record))}
+            remainingLabel={record.aiVerdict?.access ? aiVerdictAccessLabel(record.aiVerdict.access, isGuestCase(record)) : 'Saved'}
           />
         ) : (
           <>
-            <AiVerdictStatusStrip
-              source={verdictSource}
-              requestState={aiVerdictRequest}
-              access={aiVerdict?.access ?? aiVerdictRequest?.access}
-              isGuest={isGuestCase(record)}
-              onRetry={quotaRetryEligible ? () => void retryAiVerdict() : undefined}
-            />
+            <LegacyBasicVerdictBanner loading={legacyUpgradeLoading} onUpgrade={confirmLegacyUpgrade} />
             <ScorePanel
               caseId={caseId}
               score={visibleVerdict.delusionScore}
@@ -577,41 +393,26 @@ export default function CaseDetailRoute() {
           </>
         )}
 
-        {shouldShowDeepRead ? (
+        {deepReadStatus === 'ready' && deepReadResult ? (
           <View style={styles.deepRead}>
             <View style={styles.deepHeader}>
               <View style={styles.deepTitleRow}>
                 <AppText variant="title" color={colors.text.onBrand} style={styles.deepTitle}>
-                  Deep Read
+                  Saved Deep Read (legacy)
                 </AppText>
                 <View style={styles.aiBadge}>
                   <Sparkles color={colors.text.onAccent} size={14} strokeWidth={2.8} />
                   <AppText variant="eyebrow" color={colors.text.onAccent} style={styles.aiBadgeText}>
-                    Smart
+                    Read only
                   </AppText>
                 </View>
               </View>
-              <RemainingReads remaining={deepReadResult?.access.remaining ?? null} />
             </View>
             <AppText variant="subtitle" color="rgba(255, 255, 255, 0.72)" style={styles.deepSubtitle}>
-              Extra context after a Basic Verdict: what is happening, what you are overreading, and what to do next.
+              This saved result remains available, but new Deep Reads are no longer generated.
             </AppText>
             <DeepReadContent
-              locked={aiVerdictDeepReadLocked}
-              status={deepReadStatus}
               result={deepReadResult}
-              message={deepReadMessage}
-              failureAccess={deepReadFailureAccess}
-              quotaUpgradeRequestState={
-                isUpgradeEligibleAiQuotaState(deepReadLockRequestState) && !quotaRetryEligible
-                  ? deepReadLockRequestState
-                  : undefined
-              }
-              quotaRetryEligible={quotaRetryEligible}
-              onRequest={() => void requestDeepRead()}
-              onRetry={() => void retryAiVerdict()}
-              onSignIn={() => router.push('/auth')}
-              onUpgrade={() => routeToQuotaUpgrade(aiVerdictRequest)}
             />
           </View>
         ) : null}
@@ -707,12 +508,6 @@ export default function CaseDetailRoute() {
         onClose={() => setSharePreviewVisible(false)}
         onShare={() => void shareCard()}
       />
-      <AiQuotaUpgradeModal
-        requestState={aiVerdictRequest}
-        visible={quotaUpgradePromptVisible && quotaUpgradeEligible}
-        onClose={() => setQuotaUpgradePromptVisible(false)}
-        onUpgrade={() => routeToQuotaUpgrade(aiVerdictRequest)}
-      />
     </Screen>
   );
 }
@@ -775,256 +570,39 @@ function SharePreviewModal({
   );
 }
 
-function AiQuotaUpgradeModal({
-  requestState,
-  visible,
-  onClose,
-  onUpgrade,
-}: {
-  requestState?: AiVerdictRequestState;
-  visible: boolean;
-  onClose: () => void;
-  onUpgrade: () => void;
-}) {
-  const copy = quotaUpgradeCopy(requestState);
-
-  return (
-    <Modal animationType="fade" onRequestClose={onClose} transparent visible={visible}>
-      <View style={styles.upgradeModalOverlay}>
-        <View style={styles.upgradeModalContent}>
-          <View style={styles.upgradeModalBadge}>
-            <Crown color={colors.text.onAccent} size={15} strokeWidth={2.6} />
-            <AppText variant="eyebrow" color={colors.text.onAccent} style={styles.upgradeModalBadgeText}>
-              Premium
-            </AppText>
-          </View>
-          <AppText variant="display" center style={styles.upgradeModalTitle}>
-            {copy.title}
-          </AppText>
-          <AppText variant="subtitle" center style={styles.upgradeModalBody}>
-            {copy.body}
-          </AppText>
-          <Pressable accessibilityRole="button" onPress={onUpgrade} style={styles.upgradeModalPrimary}>
-            <Sparkles color={colors.text.onAccent} size={18} strokeWidth={2.8} />
-            <AppText variant="title" center color={colors.text.onAccent} style={styles.upgradeModalPrimaryText}>
-              {copy.cta}
-            </AppText>
-          </Pressable>
-          <Pressable accessibilityRole="button" onPress={onClose} style={styles.upgradeModalSecondary}>
-            <AppText variant="body" center color={colors.text.secondary} style={styles.upgradeModalSecondaryText}>
-              Keep Basic Verdict
-            </AppText>
-          </Pressable>
-        </View>
-      </View>
-    </Modal>
-  );
-}
-
 function formatDisplayCaseId(caseId: string): string {
   const suffix = caseId.replace(/[^a-zA-Z0-9]/g, '').slice(0, 4).toUpperCase();
   return suffix ? `OT-${suffix}` : 'OT';
 }
-
-type AiVerdictDisplaySource = 'loading' | 'ai' | 'cache' | 'basic';
-
-function isUpgradeEligibleAiQuotaState(requestState?: AiVerdictRequestState): boolean {
+function LegacyBasicVerdictBanner({ loading, onUpgrade }: { loading: boolean; onUpgrade: () => void }) {
   return (
-    requestState?.status === 'quota_exceeded' &&
-    (requestState.access?.accessTier === 'guest' || requestState.access?.accessTier === 'free')
-  );
-}
-
-function isRetryEligibleAiQuotaState(requestState?: AiVerdictRequestState): boolean {
-  return (
-    requestState?.status === 'quota_exceeded' &&
-    (requestState.access?.accessTier === 'free' || requestState.access?.quotaScope === 'daily')
-  );
-}
-
-function quotaUpgradeCopy(requestState?: AiVerdictRequestState) {
-  const isGuest = requestState?.access?.accessTier === 'guest';
-
-  return {
-    title: isGuest ? 'Your free Smart Verdicts are used up.' : "Today's free Smart Verdicts are used up.",
-    body: isGuest
-      ? 'Sign in to upgrade and get more Smart Verdicts for the cases you cannot stop replaying.'
-      : 'Upgrade to Premium for more Smart Verdicts and sharper reads when Basic is not enough.',
-    cta: isGuest ? 'Sign in to upgrade' : 'Upgrade',
-  };
-}
-
-function deepReadLockedUpgradeCopy(requestState?: AiVerdictRequestState) {
-  const isGuest = requestState?.access?.accessTier === 'guest';
-
-  return {
-    body: isGuest
-      ? "You've seen the Smart read. Sign in and you get 2 fresh Smart Verdicts every day — this case included."
-      : "Today's free Smart Verdicts are used up. Premium gets you more Smart reads for the cases you can't stop replaying.",
-    cta: isGuest ? 'Sign in for daily Smart Verdicts' : 'Upgrade to Premium',
-  };
-}
-
-function accessCopy({
-  requestState,
-  isGuest,
-}: {
-  requestState: AiVerdictRequestState | undefined;
-  isGuest: boolean;
-}): string {
-  const access = requestState?.access;
-
-  if (!access) {
-    return isGuest ? '2 free Smart Verdicts' : '2 Smart Verdicts/day';
-  }
-
-  if (access.accessTier === 'guest') {
-    return `${access.remaining} of ${access.limit} free Smart Verdicts left`;
-  }
-
-  // A persisted daily count from an earlier UTC day is stale; the server has
-  // already reset it, so show the generic allowance instead of yesterday's 0.
-  if (!isCurrentDailyQuotaAccess(access)) {
-    return `${access.limit} Smart Verdicts/day`;
-  }
-
-  return `${access.remaining} of ${access.limit} Smart Verdicts left today`;
-}
-
-function aiVerdictStatusText({
-  source,
-  requestState,
-  isGuest,
-}: {
-  source: AiVerdictDisplaySource;
-  requestState?: AiVerdictRequestState;
-  isGuest: boolean;
-}) {
-  if (source === 'loading') {
-    return {
-      label: 'Smart Verdict loading...',
-      body: `Showing a Basic Verdict preview while Smart Verdict finishes. If it succeeds, this result will update. ${accessCopy({ requestState, isGuest })}.`,
-      loading: true,
-      tone: 'loading' as const,
-    };
-  }
-
-  if (source === 'ai' || source === 'cache') {
-    return {
-      label: 'Smart Verdict',
-      body:
-        source === 'cache'
-          ? requestState?.message ?? `Cached result. ${accessCopy({ requestState, isGuest })}.`
-          : `${accessCopy({ requestState, isGuest })}.`,
-      loading: false,
-      tone: 'ai' as const,
-    };
-  }
-
-  if (!requestState || requestState.status === 'idle') {
-    return {
-      label: 'Basic Verdict',
-      body: isGuest ? 'Smart Verdict is available for the first 2 guest cases.' : 'Smart Verdict is available 2 times per day.',
-      loading: false,
-      tone: 'basic' as const,
-    };
-  }
-
-  const quotaExceededMessage =
-    requestState.status === 'quota_exceeded' && requestState.access?.accessTier === 'guest'
-      ? requestState.access.reason === 'guest_lifetime_limit'
-        ? "You've used your free guest Smart Verdicts. Sign in for daily Smart Verdicts."
-        : "You've used today's guest Smart Verdicts. Showing Basic Verdict."
-      : "You've used today's free Smart Verdicts. Showing Basic Verdict.";
-
-  const fallbackMessageByStatus: Partial<Record<AiVerdictRequestState['status'], string>> = {
-    quota_exceeded: quotaExceededMessage,
-    ip_daily_cap_exceeded: 'Smart Verdicts are temporarily limited. Showing Basic Verdict.',
-    global_daily_cap_exceeded: 'Smart Verdicts are temporarily limited. Showing Basic Verdict.',
-    ai_failed: 'Smart Verdict could not load. Showing Basic Verdict.',
-    ai_timeout: 'Smart Verdict timed out. Showing Basic Verdict.',
-    unauthenticated: 'Sign in to use Smart Verdicts. Showing Basic Verdict.',
-    guest_key_required: 'Guest Smart Verdict access could not start. Showing Basic Verdict.',
-    invalid_ai_response: 'Smart Verdict returned an invalid result. Showing Basic Verdict.',
-    case_not_found: 'Smart Verdict could not find this case. Showing Basic Verdict.',
-    fair_use_exceeded: 'Smart Verdict is temporarily limited for fair use. Showing Basic Verdict.',
-    cache_write_failed: 'Smart Verdict could not save the result. Showing Basic Verdict.',
-    unknown: 'Smart Verdict is unavailable right now. Showing Basic Verdict.',
-  };
-
-  return {
-    label: 'Basic Verdict',
-    body: fallbackMessageByStatus[requestState.status] ?? requestState.message ?? 'Showing Basic Verdict.',
-    loading: false,
-    tone: 'basic' as const,
-  };
-}
-
-function AiVerdictStatusStrip({
-  source,
-  requestState,
-  access,
-  isGuest,
-  onRetry,
-}: {
-  source: AiVerdictDisplaySource;
-  requestState?: AiVerdictRequestState;
-  access?: AiVerdictRequestState['access'];
-  isGuest: boolean;
-  onRetry?: () => void;
-}) {
-  const statusText = aiVerdictStatusText({
-    source,
-    requestState: requestState ?? (access ? { status: 'idle', access, updatedAt: '' } : undefined),
-    isGuest,
-  });
-  const bodyText = onRetry
-    ? 'Smart Verdict quota may be available again. Try Smart Verdict when you want to use one for this case.'
-    : statusText.body;
-
-  return (
-    <View style={[styles.aiVerdictStatus, statusText.tone === 'ai' && styles.aiVerdictStatusReady]}>
-      <View style={styles.aiVerdictStatusHeader}>
-        <View style={[styles.aiVerdictStatusBadge, statusText.tone === 'ai' && styles.aiVerdictStatusBadgeReady]}>
-          {statusText.loading ? (
-            <ActivityIndicator color={colors.text.secondary} size="small" />
-          ) : (
-            <Sparkles
-              color={statusText.tone === 'ai' ? colors.text.onAccent : colors.text.secondary}
-              size={13}
-              strokeWidth={2.6}
-            />
-          )}
-          <AppText
-            variant="eyebrow"
-            color={statusText.tone === 'ai' ? colors.text.onAccent : colors.text.secondary}
-            style={styles.aiVerdictStatusLabel}
-          >
-            {statusText.label}
-          </AppText>
-        </View>
+    <View style={styles.aiVerdictStatus}>
+      <View style={styles.aiVerdictStatusBadge}>
+        <ScrollText color={colors.text.secondary} size={13} strokeWidth={2.5} />
+        <AppText variant="eyebrow" color={colors.text.secondary} style={styles.aiVerdictStatusLabel}>
+          Legacy Basic Verdict
+        </AppText>
       </View>
       <AppText variant="meta" color={colors.text.secondary} style={styles.aiVerdictStatusBody}>
-        {bodyText}
+        This result was saved before Smart-only cases. Upgrade only when you choose to use a Smart Verdict allowance.
       </AppText>
-      {onRetry ? <QuotaUpgradeButton label="Try Smart Verdict" onPress={onRetry} /> : null}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ disabled: loading }}
+        disabled={loading}
+        onPress={onUpgrade}
+        style={[styles.quotaUpgradeButton, loading && styles.deepButtonDisabled]}
+      >
+        {loading ? <ActivityIndicator color={colors.text.onAccent} /> : <Sparkles color={colors.text.onAccent} size={16} strokeWidth={2.7} />}
+        <AppText variant="body" center color={colors.text.onAccent} style={styles.quotaUpgradeButtonText}>
+          {loading ? 'Upgrading...' : 'Upgrade to Smart Verdict'}
+        </AppText>
+      </Pressable>
     </View>
   );
 }
 
-function QuotaUpgradeButton({ label, onPress }: { label: string; onPress: () => void }) {
-  return (
-    <Pressable accessibilityRole="button" onPress={onPress} style={styles.quotaUpgradeButton}>
-      <Sparkles color={colors.text.onAccent} size={16} strokeWidth={2.7} />
-      <AppText variant="body" center color={colors.text.onAccent} style={styles.quotaUpgradeButtonText}>
-        {label}
-      </AppText>
-      <ArrowUpRight color={colors.text.onAccent} size={17} strokeWidth={2.8} />
-    </Pressable>
-  );
-}
-
-function aiVerdictAccessLabel(access: AiVerdictRequestState['access'] | undefined, isGuest: boolean): string {
+function aiVerdictAccessLabel(access: { remaining: number; accessTier?: string } | undefined, isGuest: boolean): string {
   if (!access) {
     return isGuest ? '2 free' : '2/day';
   }
@@ -1160,6 +738,39 @@ function AiVerdictPremiumCard({
   );
 }
 
+function showLegacyUpgradeFailure(
+  result: Extract<AiVerdictResponse, { ok: false }>,
+  router: ReturnType<typeof useRouter>,
+) {
+  if (result.code === 'quota_exceeded' && result.access?.accessTier === 'guest') {
+    Alert.alert('Free guest Smart Verdicts used', 'Sign in to get a daily Smart Verdict allowance.', [
+      { text: 'Not now', style: 'cancel' },
+      { text: 'Sign in', onPress: () => router.push('/auth') },
+    ]);
+    return;
+  }
+
+  if (result.code === 'quota_exceeded' && result.access?.accessTier === 'free') {
+    Alert.alert("Today's free Smart Verdicts are used", 'You can keep this Legacy Basic Verdict or view Premium.', [
+      { text: 'Keep legacy result', style: 'cancel' },
+      { text: 'View Premium', onPress: () => router.push('/paywall') },
+    ]);
+    return;
+  }
+
+  if (result.code === 'fair_use_exceeded') {
+    Alert.alert('Smart Verdict limit reached', 'Premium fair-use protection is active. Try again after the reset.');
+    return;
+  }
+
+  if (result.code === 'ip_daily_cap_exceeded' || result.code === 'global_daily_cap_exceeded') {
+    Alert.alert('Smart Verdicts temporarily limited', 'The service limit has been reached. Try again later.');
+    return;
+  }
+
+  Alert.alert('Could not upgrade', 'The Legacy Basic Verdict is unchanged. Check your internet connection and try again.');
+}
+
 type AiVerdictInsightKey = 'none' | 'evidenceCheck' | 'youreOverreading' | 'whatMatters';
 
 interface AiVerdictInsightSection {
@@ -1202,53 +813,13 @@ function AiVerdictInsightRow({
 }
 
 function DeepReadContent({
-  locked,
-  status,
   result,
-  message,
-  failureAccess,
-  quotaUpgradeRequestState,
-  quotaRetryEligible,
-  onRequest,
-  onRetry,
-  onSignIn,
-  onUpgrade,
 }: {
-  locked?: boolean;
-  status: DeepReadStatus;
   result: Extract<DeepReadResponse, { ok: true }> | null;
-  message: string | null;
-  failureAccess: DeepReadAccessState | null;
-  quotaUpgradeRequestState?: AiVerdictRequestState;
-  quotaRetryEligible?: boolean;
-  onRequest: () => void;
-  onRetry: () => void;
-  onSignIn: () => void;
-  onUpgrade: () => void;
 }) {
   const [openSection, setOpenSection] = useState<DeepReadSectionKey>('whatsActuallyHappening');
 
-  if (locked) {
-    const upgradeCopy = quotaUpgradeRequestState ? deepReadLockedUpgradeCopy(quotaUpgradeRequestState) : null;
-
-    return (
-      <View style={styles.deepStateStack}>
-        <DeepReadStateText
-          text={
-            quotaRetryEligible
-              ? 'Smart Verdict quota may be available again. Try Smart Verdict before opening Deep Read for this case.'
-              : upgradeCopy
-                ? upgradeCopy.body
-                : 'Smart reads are locked for this case. Your Basic Verdict is still available.'
-          }
-        />
-        {upgradeCopy ? <DeepReadButton label={upgradeCopy.cta} onPress={onUpgrade} /> : null}
-        {quotaRetryEligible ? <DeepReadButton label="Try Smart Verdict" onPress={onRetry} /> : null}
-      </View>
-    );
-  }
-
-  if (status === 'ready' && result) {
+  if (result) {
     const sections: DeepReadSection[] = [
       {
         key: 'whatsActuallyHappening',
@@ -1303,57 +874,7 @@ function DeepReadContent({
     );
   }
 
-  if (status === 'not_authenticated') {
-    return (
-      <View style={styles.deepStateStack}>
-        <DeepReadStateText text="Sign in to use Deep Read. Smart Verdicts run first when available." />
-        <DeepReadButton label="Sign in" onPress={onSignIn} />
-      </View>
-    );
-  }
-
-  if (status === 'quota') {
-    const quotaCopy =
-      failureAccess?.limit === null || failureAccess?.limit === undefined
-        ? "You've used today's Smart reads."
-        : `You've used today's Smart reads (${failureAccess.remaining} of ${failureAccess.limit} left).`;
-
-    return (
-      <View style={styles.deepStateStack}>
-        <DeepReadStateText text={`${quotaCopy} Your Basic Verdict above is unchanged.`} />
-      </View>
-    );
-  }
-
-  if (status === 'fair_use') {
-    return (
-      <View style={styles.deepStateStack}>
-        <DeepReadStateText text="Deep Read is temporarily limited for fair use. Your verdict above is unchanged." />
-        <DeepReadButton label="Try again" onPress={onRequest} />
-      </View>
-    );
-  }
-
-  if (status === 'safety') {
-    return <DeepReadStateText text={message ?? 'Your safety comes first.'} />;
-  }
-
-  if (status === 'error') {
-    return (
-      <View style={styles.deepStateStack}>
-        <DeepReadStateText text={message ?? "Deep Read couldn't load. Your verdict above is unchanged."} />
-        <DeepReadButton label="Try again" onPress={onRequest} />
-      </View>
-    );
-  }
-
-  return (
-    <DeepReadButton
-      label={status === 'loading' ? 'Reading...' : 'Get Deep Read'}
-      loading={status === 'loading'}
-      onPress={onRequest}
-    />
-  );
+  return null;
 }
 
 type DeepReadSectionKey =

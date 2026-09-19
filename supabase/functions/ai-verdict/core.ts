@@ -1,5 +1,7 @@
 // @ts-ignore -- Deno Edge Functions require explicit local TypeScript extensions.
-import { assessCaseSafety, CASE_SAFETY_MESSAGE } from '../../../src/shared/utils/caseSafety.ts';
+import { assessCaseSafety, CASE_SAFETY_MESSAGE } from '../_shared/caseSafety.ts';
+// @ts-ignore -- Deno Edge Functions require explicit local TypeScript extensions.
+import { assessCaseInputQuality } from '../_shared/caseInputQuality.ts';
 
 type CaseCategory = 'romance' | 'friendship' | 'social' | 'general';
 type VerdictLabel =
@@ -21,6 +23,8 @@ type AiVerdictFailureCode =
   | 'not_authenticated'
   | 'case_not_found'
   | 'guest_key_required'
+  | 'invalid_input'
+  | 'in_progress'
   | 'safety_routed'
   | 'global_daily_cap_exceeded'
   | 'ip_daily_cap_exceeded'
@@ -33,6 +37,25 @@ type AiVerdictFailureCode =
   | 'unknown';
 
 export type AiVerdictRequest =
+  | {
+      requestId?: string;
+      target?: {
+        targetType?: 'new_case';
+        category?: CaseCategory;
+        inputText?: string;
+        title?: string | null;
+      };
+    }
+  | {
+      requestId?: string;
+      guestKey?: string;
+      target?: {
+        targetType?: 'new_guest_case';
+        category?: CaseCategory;
+        inputText?: string;
+        title?: string | null;
+      };
+    }
   | {
       target?: {
         targetType?: 'case';
@@ -51,6 +74,21 @@ export type AiVerdictRequest =
         localExplanationText?: string;
         localNextMoveText?: string;
         localVerdictVersion?: number;
+      };
+    }
+  | {
+      guestKey?: string;
+      target?: {
+        targetType?: 'migrate_guest_case';
+        guestVerdictId?: string;
+        localCaseId?: string;
+        title?: string | null;
+        category?: CaseCategory;
+        inputText?: string;
+        outcomeStatus?: 'unknown' | 'right' | 'wrong' | 'unclear';
+        createdAt?: string;
+        updatedAt?: string;
+        archivedAt?: string | null;
       };
     };
 
@@ -95,7 +133,7 @@ export interface AiVerdictOutput {
   verdictVersion: number;
 }
 
-interface AiVerdictFallbackOutput {
+export interface AiVerdictFallbackOutput {
   verdictLabel: VerdictLabel;
   delusionScore: number;
   explanationText: string;
@@ -179,7 +217,13 @@ export interface AiVerdictAccessState {
   limit: number;
   quotaScope: AiVerdictQuotaScope;
   quotaBucket: string | null;
+  resetAt?: string | null;
   reason?: AiVerdictAccessReason;
+}
+
+export interface ExistingSmartCase {
+  caseId: string;
+  verdict: AiVerdictStoredRow;
 }
 
 export interface AiVerdictCacheLookupInput {
@@ -231,12 +275,69 @@ export type AiVerdictUsageReservationResult =
       access: AiVerdictAccessState;
     };
 
+export interface SmartCreationReservationInput extends AiVerdictUsageReservationInput {
+  requestId: string;
+}
+
+export type SmartCreationReservationResult =
+  | {
+      ok: true;
+      state: 'reserved';
+      usageEventId: string;
+      access: AiVerdictAccessState;
+    }
+  | {
+      ok: true;
+      state: 'completed';
+      caseId: string | null;
+      verdict: AiVerdictStoredRow;
+      access: AiVerdictAccessState;
+    }
+  | {
+      ok: false;
+      code: Extract<
+        AiVerdictFailureCode,
+        'in_progress' | 'quota_exceeded' | 'fair_use_exceeded' | 'global_daily_cap_exceeded' | 'ip_daily_cap_exceeded'
+      >;
+      access?: AiVerdictAccessState;
+    };
+
+export interface CompleteAuthenticatedSmartCaseInput {
+  usageEventId: string;
+  requestId: string;
+  userId: string;
+  title: string | null;
+  inputText: string;
+  verdict: InsertAuthenticatedAiVerdictInput;
+}
+
+export interface CompleteGuestSmartCaseInput {
+  usageEventId: string;
+  requestId: string;
+  verdict: InsertGuestAiVerdictInput;
+}
+
+export interface MigrateVerifiedGuestSmartCaseInput {
+  userId: string;
+  guestKeyHash: string;
+  guestVerdictId: string;
+  localCaseId: string;
+  title: string | null;
+  category: CaseCategory;
+  inputText: string;
+  outcomeStatus: 'unknown' | 'right' | 'wrong' | 'unclear';
+  createdAt: string;
+  updatedAt: string;
+  archivedAt: string | null;
+}
+
 export interface AiVerdictDataAdapter {
   authenticate: (token: string) => Promise<string | null>;
   getAuthenticatedAccessTier: (userId: string) => Promise<Extract<AiVerdictAccessTier, 'free' | 'premium'>>;
   getOwnedActiveCase: (userId: string, caseId: string) => Promise<CaseRow | null>;
   getCachedVerdict: (input: AiVerdictCacheLookupInput) => Promise<AiVerdictStoredRow | null>;
   getCachedGuestVerdict: (input: GuestAiVerdictCacheLookupInput) => Promise<AiVerdictStoredRow | null>;
+  getExistingSmartCase: (input: Omit<AiVerdictCacheLookupInput, 'caseId'>) => Promise<ExistingSmartCase | null>;
   getUsageAccess: (input: {
     userId?: string;
     guestKeyHash?: string;
@@ -246,6 +347,10 @@ export interface AiVerdictDataAdapter {
     limit: number;
   }) => Promise<AiVerdictAccessState>;
   reserveUsage: (input: AiVerdictUsageReservationInput) => Promise<AiVerdictUsageReservationResult>;
+  reserveSmartCreation: (input: SmartCreationReservationInput) => Promise<SmartCreationReservationResult>;
+  completeSmartCaseCreation: (input: CompleteAuthenticatedSmartCaseInput) => Promise<ExistingSmartCase>;
+  completeGuestSmartCaseCreation: (input: CompleteGuestSmartCaseInput) => Promise<AiVerdictStoredRow>;
+  migrateVerifiedGuestSmartCase: (input: MigrateVerifiedGuestSmartCaseInput) => Promise<{ caseId: string } | null>;
   finalizeUsageSucceeded: (input: {
     usageEventId: string;
     aiCaseVerdictId?: string;
@@ -260,6 +365,7 @@ export interface AiVerdictDataAdapter {
 export interface AiVerdictHandlerDeps {
   data: AiVerdictDataAdapter;
   generateVerdict: (target: AiVerdictGenerationTarget) => Promise<AiVerdictProviderResult>;
+  deriveLocalVerdict?: (input: { category: CaseCategory; inputText: string }) => AiVerdictFallbackOutput;
   now?: () => Date;
   hash?: (value: string) => Promise<string>;
   modelProvider?: string;
@@ -296,6 +402,9 @@ type AiVerdictResponse =
         createdAt: string;
       };
       access: AiVerdictAccessState;
+      requestId?: string;
+      caseId?: string | null;
+      localCalibration?: AiVerdictFallbackOutput;
     }
   | {
       ok: false;
@@ -676,6 +785,7 @@ function responseFromRow(
   source: 'cache' | 'generated',
   localFallback: AiVerdictFallbackOutput,
   access: AiVerdictAccessState,
+  creation?: { requestId: string; caseId: string | null },
 ): AiVerdictHttpResult {
   return {
     status: 200,
@@ -696,6 +806,13 @@ function responseFromRow(
         source: 'ai',
       },
       localFallback,
+      ...(creation
+        ? {
+            requestId: creation.requestId,
+            caseId: creation.caseId,
+            localCalibration: localFallback,
+          }
+        : {}),
       cache: {
         id: row.id,
         source,
@@ -870,6 +987,10 @@ function statusForFailure(code: AiVerdictFailureCode): number {
       return 200;
     case 'guest_key_required':
       return 400;
+    case 'invalid_input':
+      return 422;
+    case 'in_progress':
+      return 202;
     case 'quota_exceeded':
     case 'fair_use_exceeded':
     case 'global_daily_cap_exceeded':
@@ -895,6 +1016,10 @@ function messageForFailure(code: AiVerdictFailureCode): string {
       return 'Case not found.';
     case 'guest_key_required':
       return 'Guest AI verdicts need a valid guest key.';
+    case 'invalid_input':
+      return 'Add a real social situation between 30 and 400 characters.';
+    case 'in_progress':
+      return 'This Smart Verdict is still being generated.';
     case 'safety_routed':
       return CASE_SAFETY_MESSAGE;
     case 'quota_exceeded':
@@ -973,6 +1098,504 @@ function reservationFailureCode(reason?: AiVerdictAccessReason): Extract<
   }
 
   return 'quota_exceeded';
+}
+
+const NEW_CASE_MIN_LENGTH = 30;
+const NEW_CASE_MAX_LENGTH = 400;
+const NEW_CASE_TITLE_MAX_LENGTH = 120;
+const REQUEST_ID_PATTERN = /^[A-Za-z0-9:_-]{16,128}$/;
+
+interface NewCaseTarget {
+  category: CaseCategory;
+  inputText: string;
+  title: string | null;
+}
+
+function parseNewCaseTarget(payload: AiVerdictRequest, expectedType: 'new_case' | 'new_guest_case'):
+  | { ok: true; requestId: string; target: NewCaseTarget }
+  | { ok: false; message: string } {
+  const request = payload as {
+    requestId?: unknown;
+    target?: Record<string, unknown>;
+  };
+  const requestId = typeof request.requestId === 'string' ? request.requestId.trim() : '';
+  const target = request.target;
+
+  if (!REQUEST_ID_PATTERN.test(requestId)) {
+    return { ok: false, message: 'A stable request ID is required.' };
+  }
+
+  if (!target || target.targetType !== expectedType) {
+    return { ok: false, message: 'A Smart Verdict case payload is required.' };
+  }
+
+  if (typeof target.category !== 'string' || !CATEGORIES.has(target.category as CaseCategory)) {
+    return { ok: false, message: 'Choose a supported case category.' };
+  }
+
+  if (typeof target.inputText !== 'string') {
+    return { ok: false, message: messageForFailure('invalid_input') };
+  }
+
+  const inputText = target.inputText.trim();
+
+  if (inputText.length < NEW_CASE_MIN_LENGTH || inputText.length > NEW_CASE_MAX_LENGTH) {
+    return { ok: false, message: messageForFailure('invalid_input') };
+  }
+
+  if (target.title !== undefined && target.title !== null && typeof target.title !== 'string') {
+    return { ok: false, message: 'Title must be text.' };
+  }
+
+  const title = typeof target.title === 'string' ? target.title.trim() : '';
+
+  if (title.length > NEW_CASE_TITLE_MAX_LENGTH) {
+    return { ok: false, message: `Title must be ${NEW_CASE_TITLE_MAX_LENGTH} characters or fewer.` };
+  }
+
+  return {
+    ok: true,
+    requestId,
+    target: {
+      category: target.category as CaseCategory,
+      inputText,
+      title: title || null,
+    },
+  };
+}
+
+function validateNewCaseContent(inputText: string): AiVerdictHttpResult | null {
+  if (assessCaseSafety(inputText).shouldRoute) {
+    return failure(200, 'safety_routed', CASE_SAFETY_MESSAGE);
+  }
+
+  const quality = assessCaseInputQuality(inputText);
+
+  if (quality.status === 'block' || isInvalidNonCaseAiInput(inputText)) {
+    return failure(422, 'invalid_input', quality.message ?? messageForFailure('invalid_input'));
+  }
+
+  return null;
+}
+
+function localCaseRow(input: {
+  requestId: string;
+  userId: string;
+  target: NewCaseTarget;
+  localFallback: AiVerdictFallbackOutput;
+}): CaseRow {
+  return {
+    id: input.requestId,
+    user_id: input.userId,
+    category: input.target.category,
+    input_text: input.target.inputText,
+    verdict_label: input.localFallback.verdictLabel,
+    delusion_score: input.localFallback.delusionScore,
+    explanation_text: input.localFallback.explanationText,
+    next_move_text: input.localFallback.nextMoveText,
+    latest_verdict_version: input.localFallback.verdictVersion,
+    archived_at: null,
+    deleted_at: null,
+  };
+}
+
+function guestSnapshotFromNewCase(input: {
+  requestId: string;
+  target: NewCaseTarget;
+  localFallback: AiVerdictFallbackOutput;
+}): GuestCaseSnapshot {
+  return {
+    guestCaseId: input.requestId,
+    category: input.target.category,
+    inputText: input.target.inputText,
+    localVerdictLabel: input.localFallback.verdictLabel,
+    localDelusionScore: input.localFallback.delusionScore,
+    localExplanationText: input.localFallback.explanationText,
+    localNextMoveText: input.localFallback.nextMoveText,
+    localVerdictVersion: input.localFallback.verdictVersion,
+  };
+}
+
+function insertVerdictInput(input: {
+  userId: string;
+  caseId: string;
+  targetFingerprint: string;
+  category: CaseCategory;
+  localFallback: AiVerdictFallbackOutput;
+  providerResult: AiVerdictProviderSuccess;
+  runtime: {
+    modelProvider: string;
+    modelName: string;
+    promptVersion: number;
+    responseSchemaVersion: number;
+  };
+}): InsertAuthenticatedAiVerdictInput {
+  return {
+    user_id: input.userId,
+    case_id: input.caseId,
+    target_fingerprint: input.targetFingerprint,
+    category: input.category,
+    local_verdict_label: input.localFallback.verdictLabel,
+    local_delusion_score: input.localFallback.delusionScore,
+    local_explanation_text: input.localFallback.explanationText,
+    local_next_move_text: input.localFallback.nextMoveText,
+    local_verdict_version: input.localFallback.verdictVersion,
+    verdict_label: input.providerResult.verdict.verdictLabel,
+    delusion_score: input.providerResult.verdict.delusionScore,
+    display_label: input.providerResult.verdict.displayLabel,
+    explanation_text: input.providerResult.verdict.explanationText,
+    evidence_check_text: input.providerResult.verdict.evidenceCheckText,
+    overreading_text: input.providerResult.verdict.overreadingText,
+    what_matters_text: input.providerResult.verdict.whatMattersText,
+    next_move_text: input.providerResult.verdict.nextMoveText,
+    verdict_version: input.providerResult.verdict.verdictVersion,
+    model_provider: input.runtime.modelProvider,
+    model_name: input.runtime.modelName,
+    model_version: input.providerResult.modelVersion,
+    prompt_version: input.runtime.promptVersion,
+    response_schema_version: input.runtime.responseSchemaVersion,
+  };
+}
+
+async function handleAuthenticatedNewCaseRequest(
+  token: string,
+  payload: AiVerdictRequest,
+  deps: AiVerdictHandlerDeps,
+  runtime: {
+    nowIso: string;
+    quotaBucket: string;
+    modelProvider: string;
+    modelName: string;
+    promptVersion: number;
+    responseSchemaVersion: number;
+    signedInFreeDailyLimit: number;
+    premiumDailyLimit: number;
+    guestLifetimeLimit: number;
+    guestDailyLimit: number;
+    guestIpDailyLimit: number;
+    globalDailyLimit: number;
+    hash: (value: string) => Promise<string>;
+  },
+): Promise<AiVerdictHttpResult> {
+  const parsed = parseNewCaseTarget(payload, 'new_case');
+
+  if (!parsed.ok) {
+    return failure(422, 'invalid_input', parsed.message);
+  }
+
+  const invalid = validateNewCaseContent(parsed.target.inputText);
+  if (invalid) return invalid;
+
+  const userId = await deps.data.authenticate(token);
+  if (!userId) return failure(401, 'not_authenticated', 'Invalid auth token.');
+  if (!deps.deriveLocalVerdict) return failure(500, 'unknown', messageForFailure('unknown'));
+
+  let usageEventId: string | null = null;
+
+  try {
+    const localFallback = deps.deriveLocalVerdict(parsed.target);
+    const row = localCaseRow({ requestId: parsed.requestId, userId, target: parsed.target, localFallback });
+    const targetFingerprint = await fingerprintCase(row, runtime.hash);
+    const accessTier = await deps.data.getAuthenticatedAccessTier(userId);
+    const primaryLimit = accessTier === 'premium' ? runtime.premiumDailyLimit : runtime.signedInFreeDailyLimit;
+    const cacheInput = {
+      userId,
+      targetFingerprint,
+      modelProvider: runtime.modelProvider,
+      modelName: runtime.modelName,
+      promptVersion: runtime.promptVersion,
+      responseSchemaVersion: runtime.responseSchemaVersion,
+    };
+    const cached = await deps.data.getExistingSmartCase(cacheInput);
+
+    if (cached) {
+      const access = await deps.data.getUsageAccess({
+        userId,
+        accessTier,
+        quotaBucket: runtime.quotaBucket,
+        quotaScope: 'daily',
+        limit: primaryLimit,
+      });
+      return responseFromRow(cached.verdict, 'cache', localFallback, access, {
+        requestId: parsed.requestId,
+        caseId: cached.caseId,
+      });
+    }
+
+    const reservation = await deps.data.reserveSmartCreation({
+      requestId: parsed.requestId,
+      userId,
+      accessTier,
+      targetFingerprint,
+      quotaBucket: runtime.quotaBucket,
+      primaryLimit,
+      guestLifetimeLimit: runtime.guestLifetimeLimit,
+      guestDailyLimit: runtime.guestDailyLimit,
+      ipDailyLimit: runtime.guestIpDailyLimit,
+      globalDailyLimit: runtime.globalDailyLimit,
+      nowIso: runtime.nowIso,
+    });
+
+    if (!reservation.ok) {
+      return failure(statusForFailure(reservation.code), reservation.code, messageForFailure(reservation.code), undefined, reservation.access);
+    }
+
+    if (reservation.state === 'completed') {
+      return responseFromRow(reservation.verdict, 'cache', localFallback, reservation.access, {
+        requestId: parsed.requestId,
+        caseId: reservation.caseId,
+      });
+    }
+
+    usageEventId = reservation.usageEventId;
+    const providerResult = await deps.generateVerdict({ targetType: 'case', row });
+
+    if (!providerResult.ok) {
+      await deps.data.finalizeUsageFailed(usageEventId, providerResult.code);
+      const access = await deps.data.getUsageAccess({
+        userId,
+        accessTier,
+        quotaBucket: runtime.quotaBucket,
+        quotaScope: 'daily',
+        limit: primaryLimit,
+      }).catch(() => reservation.access);
+      return failure(
+        statusForFailure(providerResult.code),
+        providerResult.code,
+        messageForFailure(providerResult.code),
+        undefined,
+        access,
+      );
+    }
+
+    const completed = await deps.data.completeSmartCaseCreation({
+      usageEventId,
+      requestId: parsed.requestId,
+      userId,
+      title: parsed.target.title,
+      inputText: parsed.target.inputText,
+      verdict: insertVerdictInput({
+        userId,
+        caseId: parsed.requestId,
+        targetFingerprint,
+        category: parsed.target.category,
+        localFallback,
+        providerResult,
+        runtime,
+      }),
+    });
+
+    return responseFromRow(completed.verdict, 'generated', localFallback, reservation.access, {
+      requestId: parsed.requestId,
+      caseId: completed.caseId,
+    });
+  } catch {
+    if (usageEventId) {
+      await deps.data.finalizeUsageFailed(usageEventId, 'cache_write_failed').catch(() => undefined);
+    }
+    return failure(500, 'cache_write_failed', messageForFailure('cache_write_failed'));
+  }
+}
+
+async function handleGuestNewCaseRequest(
+  payload: AiVerdictRequest,
+  ipHash: string | null,
+  deps: AiVerdictHandlerDeps,
+  runtime: {
+    nowIso: string;
+    quotaBucket: string;
+    modelProvider: string;
+    modelName: string;
+    promptVersion: number;
+    responseSchemaVersion: number;
+    guestLifetimeLimit: number;
+    guestDailyLimit: number;
+    guestIpDailyLimit: number;
+    globalDailyLimit: number;
+    hash: (value: string) => Promise<string>;
+  },
+): Promise<AiVerdictHttpResult> {
+  const request = payload as { guestKey?: string };
+  if (!isValidGuestKey(request.guestKey)) return failure(400, 'guest_key_required', messageForFailure('guest_key_required'));
+
+  const parsed = parseNewCaseTarget(payload, 'new_guest_case');
+  if (!parsed.ok) return failure(422, 'invalid_input', parsed.message);
+  const invalid = validateNewCaseContent(parsed.target.inputText);
+  if (invalid) return invalid;
+  if (!deps.deriveLocalVerdict) return failure(500, 'unknown', messageForFailure('unknown'));
+
+  let usageEventId: string | null = null;
+
+  try {
+    const guestKeyHash = await runtime.hash(`guest-key:${request.guestKey!.trim()}`);
+    const localFallback = deps.deriveLocalVerdict(parsed.target);
+    const snapshot = guestSnapshotFromNewCase({ requestId: parsed.requestId, target: parsed.target, localFallback });
+    const targetFingerprint = await fingerprintGuestCase(snapshot, runtime.hash);
+    const lookup = {
+      guestKeyHash,
+      targetFingerprint,
+      modelProvider: runtime.modelProvider,
+      modelName: runtime.modelName,
+      promptVersion: runtime.promptVersion,
+      responseSchemaVersion: runtime.responseSchemaVersion,
+    };
+    const cached = await deps.data.getCachedGuestVerdict(lookup);
+
+    if (cached) {
+      const access = await deps.data.getUsageAccess({
+        guestKeyHash,
+        accessTier: 'guest',
+        quotaBucket: runtime.quotaBucket,
+        quotaScope: 'lifetime',
+        limit: runtime.guestLifetimeLimit,
+      });
+      return responseFromRow(cached, 'cache', localFallback, access, { requestId: parsed.requestId, caseId: null });
+    }
+
+    const reservation = await deps.data.reserveSmartCreation({
+      requestId: parsed.requestId,
+      guestKeyHash,
+      ipHash,
+      accessTier: 'guest',
+      targetFingerprint,
+      quotaBucket: runtime.quotaBucket,
+      primaryLimit: runtime.guestLifetimeLimit,
+      guestLifetimeLimit: runtime.guestLifetimeLimit,
+      guestDailyLimit: runtime.guestDailyLimit,
+      ipDailyLimit: runtime.guestIpDailyLimit,
+      globalDailyLimit: runtime.globalDailyLimit,
+      nowIso: runtime.nowIso,
+    });
+
+    if (!reservation.ok) {
+      return failure(statusForFailure(reservation.code), reservation.code, messageForFailure(reservation.code), undefined, reservation.access);
+    }
+
+    if (reservation.state === 'completed') {
+      return responseFromRow(reservation.verdict, 'cache', localFallback, reservation.access, {
+        requestId: parsed.requestId,
+        caseId: null,
+      });
+    }
+
+    usageEventId = reservation.usageEventId;
+    const providerResult = await deps.generateVerdict({ targetType: 'guest_case', snapshot });
+
+    if (!providerResult.ok) {
+      await deps.data.finalizeUsageFailed(usageEventId, providerResult.code);
+      const access = await deps.data.getUsageAccess({
+        guestKeyHash,
+        accessTier: 'guest',
+        quotaBucket: runtime.quotaBucket,
+        quotaScope: 'lifetime',
+        limit: runtime.guestLifetimeLimit,
+      }).catch(() => reservation.access);
+      return failure(
+        statusForFailure(providerResult.code),
+        providerResult.code,
+        messageForFailure(providerResult.code),
+        undefined,
+        access,
+      );
+    }
+
+    const authenticatedInput = insertVerdictInput({
+      userId: '',
+      caseId: '',
+      targetFingerprint,
+      category: parsed.target.category,
+      localFallback,
+      providerResult,
+      runtime,
+    });
+    const { user_id: _userId, case_id: _caseId, ...guestVerdict } = authenticatedInput;
+    const completed = await deps.data.completeGuestSmartCaseCreation({
+      usageEventId,
+      requestId: parsed.requestId,
+      verdict: { ...guestVerdict, guest_key_hash: guestKeyHash },
+    });
+
+    return responseFromRow(completed, 'generated', localFallback, reservation.access, {
+      requestId: parsed.requestId,
+      caseId: null,
+    });
+  } catch {
+    if (usageEventId) {
+      await deps.data.finalizeUsageFailed(usageEventId, 'cache_write_failed').catch(() => undefined);
+    }
+    return failure(500, 'cache_write_failed', messageForFailure('cache_write_failed'));
+  }
+}
+
+async function handleGuestSmartCaseMigration(
+  token: string,
+  payload: AiVerdictRequest,
+  deps: AiVerdictHandlerDeps,
+  hash: (value: string) => Promise<string>,
+): Promise<AiVerdictHttpResult> {
+  const request = payload as { guestKey?: unknown; target?: Record<string, unknown> };
+  const target = request.target;
+
+  if (!isValidGuestKey(request.guestKey)) {
+    return failure(400, 'guest_key_required', messageForFailure('guest_key_required'));
+  }
+
+  if (!target || target.targetType !== 'migrate_guest_case') {
+    return failure(422, 'invalid_input', 'A guest Smart case is required.');
+  }
+
+  const guestVerdictId = typeof target.guestVerdictId === 'string' ? target.guestVerdictId.trim() : '';
+  const localCaseId = typeof target.localCaseId === 'string' ? target.localCaseId.trim() : '';
+  const inputText = typeof target.inputText === 'string' ? target.inputText.trim() : '';
+  const title = typeof target.title === 'string' ? target.title.trim() : '';
+  const validOutcomeStatuses = new Set(['unknown', 'right', 'wrong', 'unclear']);
+  const createdAt = typeof target.createdAt === 'string' ? target.createdAt : '';
+  const updatedAt = typeof target.updatedAt === 'string' ? target.updatedAt : '';
+  const archivedAt = target.archivedAt === null || typeof target.archivedAt === 'string' ? target.archivedAt : undefined;
+
+  if (
+    !guestVerdictId ||
+    !localCaseId ||
+    localCaseId.length > 256 ||
+    typeof target.category !== 'string' ||
+    !CATEGORIES.has(target.category as CaseCategory) ||
+    inputText.length < NEW_CASE_MIN_LENGTH ||
+    inputText.length > NEW_CASE_MAX_LENGTH ||
+    title.length > NEW_CASE_TITLE_MAX_LENGTH ||
+    typeof target.outcomeStatus !== 'string' ||
+    !validOutcomeStatuses.has(target.outcomeStatus) ||
+    !Number.isFinite(Date.parse(createdAt)) ||
+    !Number.isFinite(Date.parse(updatedAt)) ||
+    archivedAt === undefined ||
+    (archivedAt !== null && !Number.isFinite(Date.parse(archivedAt)))
+  ) {
+    return failure(422, 'invalid_input', 'The saved guest case could not be verified.');
+  }
+
+  const userId = await deps.data.authenticate(token);
+  if (!userId) return failure(401, 'not_authenticated', messageForFailure('not_authenticated'));
+
+  try {
+    const result = await deps.data.migrateVerifiedGuestSmartCase({
+      userId,
+      guestKeyHash: await hash(`guest-key:${request.guestKey.trim()}`),
+      guestVerdictId,
+      localCaseId,
+      title: title || null,
+      category: target.category as CaseCategory,
+      inputText,
+      outcomeStatus: target.outcomeStatus as 'unknown' | 'right' | 'wrong' | 'unclear',
+      createdAt,
+      updatedAt,
+      archivedAt,
+    });
+
+    return result
+      ? { status: 200, body: { ok: true, caseId: result.caseId } as unknown as AiVerdictResponse }
+      : failure(404, 'case_not_found', 'The verified guest Smart Verdict was not found.');
+  } catch {
+    return failure(500, 'unknown', 'The guest Smart Verdict could not be moved right now.');
+  }
 }
 
 async function handleAuthenticatedRequest(
@@ -1370,6 +1993,32 @@ export async function handleAiVerdictRequest(
 
   if (!payload || typeof payload !== 'object') {
     return failure(400, 'case_not_found', messageForFailure('case_not_found'));
+  }
+
+  const targetType = (payload as { target?: { targetType?: unknown } }).target?.targetType;
+
+  if (targetType === 'new_case') {
+    if (!token) {
+      return failure(401, 'not_authenticated', messageForFailure('not_authenticated'));
+    }
+
+    return handleAuthenticatedNewCaseRequest(token, payload as AiVerdictRequest, deps, runtime);
+  }
+
+  if (targetType === 'new_guest_case') {
+    if (token) {
+      return failure(422, 'invalid_input', 'Guest Smart Verdict creation cannot use an authenticated session.');
+    }
+
+    return handleGuestNewCaseRequest(payload as AiVerdictRequest, ipHash, deps, runtime);
+  }
+
+  if (targetType === 'migrate_guest_case') {
+    if (!token) {
+      return failure(401, 'not_authenticated', messageForFailure('not_authenticated'));
+    }
+
+    return handleGuestSmartCaseMigration(token, payload as AiVerdictRequest, deps, hash);
   }
 
   if (token) {

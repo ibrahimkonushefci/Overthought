@@ -1,6 +1,24 @@
 # Overthought development and release guide
 
-iOS-first Expo React Native foundation for Overthought, a case-based app for analyzing social overthinking. The current v1 flow uses AI Verdict first when quota/access allows, keeps the deterministic Basic Verdict as local fallback, supports guest mode, and scaffolds optional Supabase auth/sync plus RevenueCat-ready premium boundaries.
+iOS-first Expo React Native foundation for Overthought, a case-based app for analyzing social overthinking. The repository contains the simulator-verified Phase 2 Smart-only client plus its deployed additive backend support. The App Store build remains on the backward-compatible v1 flow until the Phase 2 client receives a separately approved TestFlight build, physical-device QA, and release approval.
+
+## Smart-only rollout boundary
+
+Phase 1 added migrations `0009` and `0010` plus a backward-compatible `ai-verdict` handler. Phase 2 added migration `0011_verified_guest_smart_migration.sql`, the `migrate_guest_case` route, and the Smart-only client. The backend portion of this sequence is complete; the client build remains pending:
+
+1. Apply migration `0011_verified_guest_smart_migration.sql` to the existing Supabase project.
+2. Deploy the updated backward-compatible `ai-verdict` Edge Function.
+3. Re-run legacy `case`/`guest_case`, new `new_case`/`new_guest_case`, and authenticated `migrate_guest_case` smoke tests.
+4. Confirm the current App Store build still creates and reopens cases normally.
+5. Build the Phase 2 client for TestFlight and complete the physical-iPhone matrix before App Store release.
+
+Production status (2026-09-19): migrations are applied through `0011_verified_guest_smart_migration.sql`, and backward-compatible `ai-verdict` version 24 is active. Version 24 was created automatically by the Supabase key-set update; its deployed code hash is unchanged. Validation-only checks confirmed Auth health, new-case input rejection, legacy guest routing, and denial of direct public access to the service-role migration RPC. These checks generated no AI, spent no quota, and saved no cases. The current App Store client passed guest and signed-in physical-iPhone compatibility checks. The Phase 2 client remains local and unreleased.
+
+Local Phase 2 simulator status (2026-09-19): the native development build succeeded and the guest Smart, offline draft preservation, verified guest migration, signed-in Smart, and legacy Basic display flows passed using disposable local Supabase data. The localhost-only mock provider was used, so provider-quality testing still belongs in the separately approved TestFlight/physical-device phase. No Phase 2 TestFlight build has been started.
+
+Credential status (2026-09-19): local and EAS production configuration use the Supabase publishable key. The compromised default secret key was deleted after a dependency inventory found no active consumer. A clean `expo export --clear` bundle scan found the publishable key, no exact copy of the revoked key, and no secret-key credential. Cached copies may remain in local editor/Codex history, but they are revoked and are not active build inputs.
+
+The migration is additive. It preserves the old endpoint, Basic columns, AI cache tables, local engine, and Deep Read data so the previous client remains usable.
 
 ## Run Locally With A Development Build
 
@@ -91,6 +109,24 @@ This app does **not** target Expo Go. It uses `react-native-mmkv` v4, which depe
    npm run start:clear
    ```
 
+### Local Smart-only simulator verification
+
+Use the local Supabase stack when checking Smart-only creation without calling Gemini or spending production quota:
+
+1. Start Docker Desktop, then run `npx supabase start` from the repository.
+2. Create a temporary env file outside the repository containing only `AI_VERDICT_LOCAL_MOCK=true`.
+3. Serve the function with `npx supabase functions serve ai-verdict --env-file <temporary-file> --no-verify-jwt`.
+4. Run the development client with `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY` set to the local API URL and local anonymous key reported by `npx supabase status`.
+
+The simulator mock is deliberately unavailable for non-local Supabase URLs, even if `AI_VERDICT_LOCAL_MOCK` is set. It returns a clearly labeled deterministic Smart snapshot for end-to-end UI and persistence testing; it is not a Gemini-quality check. Do not place a production service-role or secret key in the temporary file, Expo environment, app bundle, or repository.
+
+The local verification sequence is:
+
+- create and reopen a guest Smart case;
+- stop the local function, submit a different draft, and confirm the error preserves the draft without creating a Basic case;
+- restart the function, create a disposable local account, and create a signed-in Smart case;
+- open a seeded legacy Basic case and confirm its label, light presentation, and explicit upgrade action.
+
 ### EAS development build option
 
 Use EAS when you want to install the dev build without a local Xcode device build, distribute it to another device, or avoid local signing issues:
@@ -123,7 +159,7 @@ The EAS `production` profile sets `APP_VARIANT=production`, which makes `app.con
 
 Local development leaves `APP_VARIANT` unset, so Expo config uses `com.ibrahim.overthought.dev` and disables premium/RevenueCat even if RevenueCat keys exist in a local `.env`. Production/TestFlight builds use `APP_VARIANT=production`; premium is only enabled there when `EXPO_PUBLIC_ENABLE_PREMIUM=true`.
 
-Production iOS builds use Hermes V1. The post-hardening production build was created with a clean EAS cache and submitted successfully to TestFlight. Keep `ios/Podfile.properties.json` set to `"expo.useHermesV1": "true"` and keep `babel-preset-expo` on the Expo 55-compatible line (`~55.0.22`) until the whole Expo SDK is upgraded. After native dependency or Hermes changes, prefer a clean EAS retry:
+Production iOS builds use Hermes V1. The pre-Phase-2 post-hardening production build was created with a clean EAS cache and submitted successfully to TestFlight; no Phase 2 TestFlight build exists yet. Keep `ios/Podfile.properties.json` set to `"expo.useHermesV1": "true"` and keep `babel-preset-expo` on the Expo 55-compatible line (`~55.0.22`) until the whole Expo SDK is upgraded. After native dependency or Hermes changes, prefer a clean EAS retry:
 
 ```sh
 npx eas build --profile production --platform ios --clear-cache
@@ -167,7 +203,10 @@ APP_VARIANT=production npx expo config --type public
 - Supabase client wiring with environment handling.
 - Auth/session scaffolding for guest, email/password, forgot/reset password, native Apple Sign In, and native Google Sign-In.
 - Repository/service boundaries for cases, updates, profiles, premium, migration, share payloads, and deterministic analysis.
-- AI Verdict integration with local Basic Verdict fallback.
+- Smart-only new-case creation: a case is saved only after Smart Verdict succeeds, with a preserved retryable draft on failure.
+- Canonical Smart/legacy result reads for history, detail, and Stats.
+- Explicit historical Basic-to-Smart upgrade and read-only saved Deep Read legacy display.
+- Server-verified Smart guest migration with lossless legacy fallback for unverifiable older records.
 - Base screens aligned to the supplied design references: welcome, home, new case, cases, case detail/result, add update, stats, profile, delete account.
 
 ## Native setup still required
@@ -185,11 +224,15 @@ APP_VARIANT=production npx expo config --type public
 ## Test immediately
 
 - Continue as guest.
-- Create a case and see a deterministic result.
+- Create a case online and see only a Smart Verdict after it is saved.
+- Retry an offline or failed submission and confirm the text/category remain filled in and no case appears in history.
 - View the case in history and detail.
+- Open a historical Basic case and confirm it is labeled `Legacy Basic Verdict`; upgrade it only by tapping the explicit action.
+- Open a case with a previously saved Deep Read and confirm it is shown read-only as `Saved Deep Read (legacy)`.
 - Add a light update and see it on the case timeline (v1 stores the update as a receipt; it does not re-run the verdict).
 - Mark outcome status.
-- View stats generated from local cases.
+- View Stats and confirm each case contributes its currently visible canonical score.
+- Sign in with guest history and verify Smart cases remain Smart while Basic-only history migrates without loss.
 - Delete guest local data.
 
 ## Test Commands
@@ -201,7 +244,9 @@ npm test
 
 ## Next build pass
 
-- The unified AI quota migration has been applied and the updated `ai-verdict` Edge Function has been deployed.
-- The latest TestFlight build includes the premium/quota stale-state fix and display-name profile editor. Both flows were manually verified on device.
+- Phase 2 migration `0011` and `ai-verdict` version 24 are deployed to the existing production project.
+- The current App Store build passed the post-deployment and post-credential-revocation guest/signed-in compatibility checks.
+- Create a TestFlight build and complete guest, signed-in free, Premium, quota/cap, offline/timeout, legacy, guest migration, accessibility, and cross-device QA before release.
+- The existing unified AI quota migration remains deployed; no pricing or quota amount changes are part of Phase 2.
 - Keep richer profile fields as a future schema + type + repository + UI phase.
 - Investigate Supabase email deliverability/custom SMTP if confirmation emails continue going to junk.

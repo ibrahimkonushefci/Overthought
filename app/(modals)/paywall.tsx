@@ -16,7 +16,7 @@ import { colors, gradients, radii, shadows, spacing, typography } from '../../sr
 
 const benefits = [
   '50 Smart Verdicts per day when free reads run out',
-  'Sharper Deep Reads with more context',
+  'Full evidence, overreading, and next-move breakdowns',
   'Premium access stays attached when signed in',
   'Priority access to future premium features',
 ];

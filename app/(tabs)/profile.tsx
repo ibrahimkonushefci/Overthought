@@ -199,7 +199,7 @@ export default function ProfileRoute() {
           </AppText>
         </View>
         <AppText variant="title" color={colors.text.onBrand} style={styles.premiumTitle}>
-          Sharper Deep Reads.
+          More Smart Verdicts.
         </AppText>
         <AppText variant="subtitle" color={colors.text.onBrand} style={styles.premiumSubtitle}>
           {hasPremium

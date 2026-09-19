@@ -5,7 +5,7 @@ import { useGuestStore } from '../../../store/guestStore';
 import { supabase } from '../../../lib/supabase/client';
 import { analysisService } from '../../analysis/analysisService';
 import { caseRepository } from './caseRepository';
-import type { CaseRow } from './caseMappers';
+import type { CanonicalCaseRow, CaseRow } from './caseMappers';
 
 jest.mock('../../../lib/supabase/client', () => ({
   supabase: {
@@ -26,7 +26,7 @@ const mockAnalysisService = analysisService as unknown as {
   analyzeCase: jest.Mock;
 };
 
-function caseRow(overrides: Partial<CaseRow> = {}): CaseRow {
+function caseRow(overrides: Partial<CaseRow & CanonicalCaseRow> = {}): CaseRow & CanonicalCaseRow {
   return {
     id: 'remote-case-1',
     user_id: 'user-1',
@@ -39,6 +39,15 @@ function caseRow(overrides: Partial<CaseRow> = {}): CaseRow {
     next_move_text: 'Wait for one more signal.',
     outcome_status: 'unknown',
     latest_verdict_version: 1,
+    creation_request_id: null,
+    result_source: 'legacy_basic',
+    verdict_version: 1,
+    display_label: null,
+    evidence_check_text: null,
+    overreading_text: null,
+    what_matters_text: null,
+    smart_verdict_id: null,
+    smart_created_at: null,
     last_analyzed_at: '2026-04-22T10:00:00.000Z',
     created_at: '2026-04-22T10:00:00.000Z',
     updated_at: '2026-04-22T10:00:00.000Z',
@@ -67,6 +76,7 @@ function guestCase(localId = 'local-case-1'): GuestCaseLocal {
     updatedAt: '2026-04-21T10:00:00.000Z',
     archivedAt: null,
     deletedAt: null,
+    resultSource: 'legacy_basic',
     updates: [],
     syncStatus: 'local_only',
   };
@@ -239,10 +249,41 @@ describe('caseRepository authenticated sync behavior', () => {
 
     expect(cases).toHaveLength(1);
     expect(cases[0].title).toBe('Remote story');
-    expect(mockSupabase.from).toHaveBeenCalledWith('cases');
+    expect(mockSupabase.from).toHaveBeenCalledWith('canonical_case_results');
     expect(builder.eq).toHaveBeenCalledWith('user_id', 'user-1');
     expect(builder.is).toHaveBeenCalledWith('archived_at', null);
     expect(builder.is).toHaveBeenCalledWith('deleted_at', null);
+  });
+
+  it('maps the canonical Smart result and detail fields without a transient client cache', async () => {
+    const builder = listBuilder([
+      caseRow({
+        result_source: 'smart',
+        verdict_label: 'dangerous_overthinking',
+        delusion_score: 81,
+        verdict_version: 2,
+        display_label: 'Weekend Plan Witness Protection',
+        explanation_text: 'The intention exists, but the actual plan is missing.',
+        evidence_check_text: 'No day or time was chosen.',
+        overreading_text: 'A vague intention is being treated like a booking.',
+        what_matters_text: 'Whether a specific plan appears.',
+        smart_verdict_id: 'smart-1',
+        smart_created_at: '2026-09-17T10:00:00.000Z',
+      }),
+    ]);
+    mockSupabase.from.mockReturnValue(builder);
+
+    const [record] = await caseRepository.listCases();
+
+    expect(record).toMatchObject({
+      resultSource: 'smart',
+      delusionScore: 81,
+      smartVerdict: {
+        displayLabel: 'Weekend Plan Witness Protection',
+        evidenceCheckText: 'No day or time was chosen.',
+      },
+    });
+    expect(useAiVerdictStore.getState().byCaseId).toEqual({});
   });
 
   it('normalizes and sorts remote timestamps newest first on the client', async () => {

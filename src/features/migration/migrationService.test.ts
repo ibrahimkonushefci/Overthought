@@ -6,9 +6,16 @@ import { useGuestStore } from '../../store/guestStore';
 const mockSupabase = {
   from: jest.fn(),
 };
+const mockMigrateGuestSmartCase = jest.fn();
 
 jest.mock('../../lib/supabase/client', () => ({
   supabase: mockSupabase,
+}));
+
+jest.mock('../ai-verdict/aiVerdictService', () => ({
+  aiVerdictService: {
+    migrateGuestSmartCase: mockMigrateGuestSmartCase,
+  },
 }));
 
 import { migrationService } from './migrationService';
@@ -32,6 +39,7 @@ function buildGuestCase(localId = 'case-local-1'): GuestCaseLocal {
     updatedAt: '2026-04-22T10:00:00.000Z',
     archivedAt: null,
     deletedAt: null,
+    resultSource: 'legacy_basic',
     updates: [],
     syncStatus: 'local_only',
   };
@@ -70,6 +78,8 @@ describe('migrationService', () => {
     useAiVerdictStore.getState().clearAllAiVerdicts();
     useGuestStore.getState().clearAllLocalData();
     useGuestStore.setState({ localGuestId: 'guest-local-1' });
+    useGuestStore.setState({ guestAiKey: 'guest_ai_verified_key_12345' });
+    mockMigrateGuestSmartCase.mockResolvedValue({ ok: true, caseId: 'remote-case-1' });
     useAuthStore.getState().setAuthenticated({
       id: 'user-1',
       email: 'person@example.com',
@@ -110,10 +120,11 @@ describe('migrationService', () => {
     expect(useGuestStore.getState().cases).toHaveLength(0);
   });
 
-  it('preserves a migrated guest AI verdict snapshot under the remote case id', async () => {
+  it('copies a guest Smart Verdict through the server-verified migration path', async () => {
     const guestCase = buildGuestCase();
     useGuestStore.getState().addCase({
       ...guestCase,
+      resultSource: 'smart',
       aiVerdict: {
         verdict: {
           verdictLabel: 'dangerous_overthinking',
@@ -158,16 +169,16 @@ describe('migrationService', () => {
       },
     });
 
-    const builder = caseLookupBuilder('remote-case-1');
-    mockSupabase.from.mockReturnValue(builder);
-
     const result = await migrationService.migrateGuestCases();
 
     expect(result).toEqual({ migrated: 1, skipped: 0, failed: 0 });
-    expect(useAiVerdictStore.getState().byCaseId['remote-case-1'].verdict.explanationText).toBe('AI read.');
-    expect(useAiVerdictStore.getState().requestByCaseId['remote-case-1']).toMatchObject({
-      status: 'cache',
-      message: 'Moved from your guest case.',
-    });
+    expect(mockMigrateGuestSmartCase).toHaveBeenCalledWith(
+      expect.objectContaining({
+        guestKey: 'guest_ai_verified_key_12345',
+        guestVerdictId: 'guest-ai-1',
+        localCaseId: guestCase.localId,
+      }),
+    );
+    expect(mockSupabase.from).not.toHaveBeenCalled();
   });
 });

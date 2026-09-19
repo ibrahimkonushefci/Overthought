@@ -1,22 +1,19 @@
 # Overthought Verdict Engine Starter
 
-This folder contains a drop-in TypeScript starter engine for the v1 deterministic verdict system.
+This folder contains app-facing entrypoints for the deterministic verdict system. The canonical implementation lives in `supabase/functions/_shared/verdict-engine/` so the app and Supabase Edge Function use the same calibration code.
 
 ## What is included
 
-- `types.ts` - shared engine types
-- `config.ts` - typed config loader and runtime validation
-- `normalize.ts` - input normalization helpers
-- `patterns.ts` - phrase matching helpers
-- `copy.ts` - human-readable signal copy and template helpers
-- `analyzeCase.ts` - main scoring function
-- `index.ts` - public exports
+- `types.ts` - re-exports shared engine types
+- `config.ts` - re-exports the shared typed config
+- `normalize.ts`, `patterns.ts`, and `copy.ts` - re-export shared helpers
+- `analyzeCase.ts` - re-exports the shared scoring function
+- `index.ts` - public app exports
 - `exampleUsage.ts` - simple usage example
-- `config/verdict-config.v1.json` - engine config copied locally
 
 ## Intended usage
 
-Put the whole `src/features/verdict-engine` folder into your Expo / React Native project and import:
+Import through the app-facing entrypoints:
 
 ```ts
 import { analyzeCase } from '@/features/verdict-engine';

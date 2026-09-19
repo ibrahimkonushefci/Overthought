@@ -125,6 +125,7 @@ function guestCase(overrides: Partial<GuestCaseLocal> = {}): GuestCaseLocal {
     updates: [],
     syncStatus: 'local_only',
     ...overrides,
+    resultSource: overrides.resultSource ?? 'legacy_basic',
   };
 }
 
@@ -143,6 +144,81 @@ describe('aiVerdictService', () => {
     useGuestStore.getState().clearAllLocalData();
     useAuthStore.getState().resetSession();
     useAiVerdictStore.getState().clearAllAiVerdicts();
+  });
+
+  it('creates a guest Smart case from raw input without sending Basic verdict fields', async () => {
+    useAuthStore.getState().setGuest();
+    global.fetch = jest.fn(async () => ({
+      status: 200,
+      json: async () => successResponse({ requestId: 'smart_case_1234567890abcdef', caseId: null }),
+    })) as unknown as typeof fetch;
+
+    const result = await aiVerdictService.createSmartCase({
+      requestId: 'smart_case_1234567890abcdef',
+      category: 'friendship',
+      inputText: 'My friend said they wanted to meet this weekend but never chose a specific day.',
+    });
+
+    expect(result.ok).toBe(true);
+    const [, init] = (global.fetch as jest.Mock).mock.calls[0];
+    const body = JSON.parse(init.body);
+    expect(body).toMatchObject({
+      requestId: 'smart_case_1234567890abcdef',
+      guestKey: expect.stringMatching(/^guest_ai_/),
+      target: {
+        targetType: 'new_guest_case',
+        category: 'friendship',
+      },
+    });
+    expect(JSON.stringify(body)).not.toMatch(/localVerdict|localDelusion|localExplanation|localNextMove/);
+  });
+
+  it('creates an authenticated Smart case with the access token and stable request ID', async () => {
+    useAuthStore.getState().setAuthenticated({ id: 'user-1', email: 'person@example.com', provider: 'email' });
+    global.fetch = jest.fn(async () => ({
+      status: 200,
+      json: async () => successResponse({ requestId: 'smart_case_1234567890abcdef', caseId: 'case-1' }),
+    })) as unknown as typeof fetch;
+
+    await aiVerdictService.createSmartCase({
+      requestId: 'smart_case_1234567890abcdef',
+      category: 'friendship',
+      inputText: 'My friend said they wanted to meet this weekend but never chose a specific day.',
+    });
+
+    const [, init] = (global.fetch as jest.Mock).mock.calls[0];
+    expect(init.headers.Authorization).toBe('Bearer user-token');
+    expect(JSON.parse(init.body)).toMatchObject({
+      requestId: 'smart_case_1234567890abcdef',
+      target: { targetType: 'new_case' },
+    });
+  });
+
+  it('migrates a guest Smart case without sending any AI-generated text', async () => {
+    useAuthStore.getState().setAuthenticated({ id: 'user-1', email: 'person@example.com', provider: 'email' });
+    global.fetch = jest.fn(async () => ({
+      status: 200,
+      json: async () => ({ ok: true, caseId: 'case-1' }),
+    })) as unknown as typeof fetch;
+
+    const result = await aiVerdictService.migrateGuestSmartCase({
+      guestKey: 'guest_ai_verified_key_12345',
+      guestVerdictId: 'guest-verdict-1',
+      localCaseId: 'local-case-1',
+      title: 'Friendship case',
+      category: 'friendship',
+      inputText: 'My friend said they wanted to meet this weekend but never chose a specific day.',
+      outcomeStatus: 'unknown',
+      createdAt: '2026-09-17T10:00:00.000Z',
+      updatedAt: '2026-09-17T10:00:00.000Z',
+      archivedAt: null,
+    });
+
+    expect(result).toEqual({ ok: true, caseId: 'case-1' });
+    const body = JSON.parse((global.fetch as jest.Mock).mock.calls[0][1].body);
+    expect(body.target.targetType).toBe('migrate_guest_case');
+    expect(JSON.stringify(body)).not.toContain('AI read');
+    expect(body.target).not.toHaveProperty('verdict');
   });
 
   it('requests guest AI verdicts with a persisted guest key and no Authorization header', async () => {
@@ -242,6 +318,7 @@ describe('aiVerdictService', () => {
       updatedAt: '2026-05-16T10:00:00.000Z',
       archivedAt: null,
       deletedAt: null,
+      resultSource: 'legacy_basic' as const,
     });
 
     expect(result.ok).toBe(true);
@@ -295,7 +372,7 @@ describe('aiVerdictService', () => {
     expect(result).toEqual({
       ok: false,
       code: 'ai_timeout',
-      message: 'Smart Verdict timed out. Showing Basic Verdict.',
+      message: 'Smart Verdict timed out. Your case was not added yet.',
     });
     expect(useGuestStore.getState().cases[0].aiVerdict).toBeUndefined();
     expect(useAiVerdictStore.getState().requestByCaseId['local-case-1']).toMatchObject({
@@ -327,6 +404,7 @@ describe('aiVerdictService', () => {
       updatedAt: '2026-05-16T10:00:00.000Z',
       archivedAt: null,
       deletedAt: null,
+      resultSource: 'legacy_basic' as const,
     };
     global.fetch = jest.fn(async () => {
       throw new DOMException('The operation was aborted.', 'AbortError');
@@ -465,6 +543,7 @@ describe('aiVerdictService', () => {
       updatedAt: '2026-05-16T10:00:00.000Z',
       archivedAt: null,
       deletedAt: null,
+      resultSource: 'legacy_basic' as const,
     });
 
     expect(global.fetch).not.toHaveBeenCalled();

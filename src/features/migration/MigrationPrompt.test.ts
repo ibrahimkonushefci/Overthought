@@ -27,6 +27,7 @@ function buildGuestCase(localId = 'case-local-1'): GuestCaseLocal {
     updatedAt: '2026-04-22T10:00:00.000Z',
     archivedAt: null,
     deletedAt: null,
+    resultSource: 'legacy_basic',
     updates: [],
     syncStatus: 'local_only',
   };

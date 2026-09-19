@@ -1,6 +1,14 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
+// @ts-ignore -- Deno Edge Functions require explicit local TypeScript extensions.
+import { analyzeCase } from '../_shared/verdict-engine/analyzeCase.ts';
+// @ts-ignore -- Deno Edge Functions load the shared JSON calibration with an import attribute.
+import rawVerdictConfig from '../_shared/verdict-engine/config/verdict-config.v1.json' with { type: 'json' };
+// @ts-ignore -- Deno Edge Functions require explicit local TypeScript extensions.
+import type { VerdictEngineConfig } from '../_shared/verdict-engine/types.ts';
+// @ts-ignore -- Deno Edge Functions require explicit local TypeScript extensions.
+import { canUseLocalSimulatorMock, generateLocalSimulatorVerdict } from './localSimulatorMock.ts';
 import {
   generateAiVerdictWithGemini,
   handleAiVerdictRequest,
@@ -10,9 +18,14 @@ import {
   type AiVerdictUsageReservationInput,
   type AiVerdictUsageReservationResult,
   type CaseRow,
+  type CompleteAuthenticatedSmartCaseInput,
+  type CompleteGuestSmartCaseInput,
   type GuestAiVerdictCacheLookupInput,
   type InsertAuthenticatedAiVerdictInput,
   type InsertGuestAiVerdictInput,
+  type MigrateVerifiedGuestSmartCaseInput,
+  type SmartCreationReservationInput,
+  type SmartCreationReservationResult,
 } from './core.ts';
 
 const MODEL_PROVIDER = 'gemini';
@@ -24,6 +37,9 @@ const GUEST_LIFETIME_LIMIT = 2;
 const GUEST_DAILY_LIMIT = 2;
 const GUEST_IP_DAILY_LIMIT = 20;
 const GLOBAL_DAILY_LIMIT = 300;
+const verdictConfig = rawVerdictConfig as VerdictEngineConfig;
+const AI_VERDICT_ROW_SELECT =
+  'id,target_fingerprint,verdict_label,delusion_score,display_label,explanation_text,evidence_check_text,overreading_text,what_matters_text,next_move_text,verdict_version,local_verdict_label,local_delusion_score,local_explanation_text,local_next_move_text,local_verdict_version,model_provider,model_name,model_version,prompt_version,response_schema_version,created_at';
 
 type EntitlementStatus = 'free' | 'premium' | 'grace_period' | 'expired';
 
@@ -125,7 +141,13 @@ function accessFromCounts({
     limit,
     quotaScope,
     quotaBucket,
+    resetAt: resetAtFor(quotaScope, quotaBucket),
   };
+}
+
+function resetAtFor(quotaScope: AiVerdictAccessState['quotaScope'], quotaBucket: string | null): string | null {
+  if (quotaScope !== 'daily' || !quotaBucket) return null;
+  return new Date(new Date(`${quotaBucket}T00:00:00.000Z`).getTime() + 86_400_000).toISOString();
 }
 
 function reservationFailureCode(reason: string | null): Extract<
@@ -193,6 +215,10 @@ Deno.serve(async (request) => {
   const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
   const geminiApiKey = Deno.env.get('GEMINI_API_KEY')?.trim() ?? '';
+  const localSimulatorMock = canUseLocalSimulatorMock(
+    supabaseUrl,
+    Deno.env.get('AI_VERDICT_LOCAL_MOCK'),
+  );
 
   if (!supabaseUrl || !anonKey || !serviceRoleKey) {
     return json({ ok: false, code: 'unknown', message: 'AI verdict is unavailable right now.' }, 503);
@@ -215,8 +241,8 @@ Deno.serve(async (request) => {
     token,
     payload,
     {
-      modelProvider: MODEL_PROVIDER,
-      modelName: MODEL_NAME,
+      modelProvider: localSimulatorMock ? 'local_mock' : MODEL_PROVIDER,
+      modelName: localSimulatorMock ? 'phase2-simulator' : MODEL_NAME,
       promptVersion: PROMPT_VERSION,
       responseSchemaVersion: RESPONSE_SCHEMA_VERSION,
       signedInFreeDailyLimit: config.signedInFreeDailyLimit,
@@ -297,6 +323,29 @@ Deno.serve(async (request) => {
           }
 
           return data ? (data as AiVerdictStoredRow) : null;
+        },
+        async getExistingSmartCase(input) {
+          const { data, error } = await adminClient
+            .from('ai_case_verdicts')
+            .select(`case_id,${AI_VERDICT_ROW_SELECT},cases!inner(id)`)
+            .eq('user_id', input.userId)
+            .is('cases.archived_at', null)
+            .is('cases.deleted_at', null)
+            .eq('target_fingerprint', input.targetFingerprint)
+            .eq('model_provider', input.modelProvider)
+            .eq('model_name', input.modelName)
+            .eq('prompt_version', input.promptVersion)
+            .eq('response_schema_version', input.responseSchemaVersion)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (error) throw error;
+          if (!data) return null;
+
+          const record = data as AiVerdictStoredRow & { case_id: string; cases: { id: string } };
+          const { case_id: caseId, cases: _cases, ...verdict } = record;
+          return { caseId, verdict: verdict as AiVerdictStoredRow };
         },
         async getUsageAccess(input) {
           const nowIso = new Date().toISOString();
@@ -411,6 +460,7 @@ Deno.serve(async (request) => {
                     : input.primaryLimit,
             quotaScope: row.quota_scope,
             quotaBucket: row.quota_scope === 'daily' ? input.quotaBucket : null,
+            resetAt: resetAtFor(row.quota_scope, row.quota_scope === 'daily' ? input.quotaBucket : null),
             reason: row.reason as AiVerdictAccessState['reason'],
           };
 
@@ -431,6 +481,175 @@ Deno.serve(async (request) => {
             usageEventId: row.usage_event_id,
             access,
           };
+        },
+        async reserveSmartCreation(input: SmartCreationReservationInput): Promise<SmartCreationReservationResult> {
+          const { data, error } = await adminClient
+            .rpc('reserve_smart_case_creation_usage', {
+              p_request_id: input.requestId,
+              p_user_id: input.userId ?? null,
+              p_guest_key_hash: input.guestKeyHash ?? null,
+              p_ip_hash: input.ipHash ?? null,
+              p_access_tier: input.accessTier,
+              p_target_fingerprint: input.targetFingerprint,
+              p_quota_bucket: input.quotaBucket,
+              p_now: input.nowIso,
+              p_primary_limit: input.primaryLimit,
+              p_guest_lifetime_limit: input.guestLifetimeLimit,
+              p_guest_daily_limit: input.guestDailyLimit,
+              p_ip_daily_limit: input.ipDailyLimit,
+              p_global_daily_limit: input.globalDailyLimit,
+            })
+            .single();
+
+          if (error || !data) throw error ?? new Error('Smart creation reservation returned no data.');
+
+          const row = data as {
+            allowed: boolean;
+            request_state: 'reserved' | 'completed' | 'in_progress' | 'rejected';
+            usage_event_id: string | null;
+            case_id: string | null;
+            ai_case_verdict_id: string | null;
+            ai_guest_case_verdict_id: string | null;
+            verdict: AiVerdictStoredRow | null;
+            used: number;
+            remaining: number;
+            quota_scope: 'daily' | 'lifetime';
+            reason: string | null;
+          };
+          let used = row.used;
+
+          if (row.request_state === 'completed') {
+            if (input.accessTier === 'guest') {
+              const [{ count: succeeded, error: succeededError }, { count: reserved, error: reservedError }] = await Promise.all([
+                adminClient
+                  .from('ai_case_verdict_usage_events')
+                  .select('id', { count: 'exact', head: true })
+                  .eq('guest_key_hash', input.guestKeyHash)
+                  .eq('status', 'succeeded'),
+                adminClient
+                  .from('ai_case_verdict_usage_events')
+                  .select('id', { count: 'exact', head: true })
+                  .eq('guest_key_hash', input.guestKeyHash)
+                  .eq('status', 'reserved')
+                  .gt('expires_at', input.nowIso),
+              ]);
+              if (succeededError || reservedError) throw succeededError ?? reservedError;
+              used = (succeeded ?? 0) + (reserved ?? 0);
+            } else if (input.userId) {
+              const [aiVerdictUsed, deepReadUsed] = await Promise.all([
+                countAuthenticatedActiveUsage(
+                  adminClient,
+                  'ai_case_verdict_usage_events',
+                  input.userId,
+                  input.accessTier,
+                  input.quotaBucket,
+                  input.nowIso,
+                ),
+                countAuthenticatedActiveUsage(
+                  adminClient,
+                  'ai_deep_read_usage_events',
+                  input.userId,
+                  input.accessTier,
+                  input.quotaBucket,
+                  input.nowIso,
+                ),
+              ]);
+              used = aiVerdictUsed + deepReadUsed;
+            }
+          }
+          const quotaBucket = row.quota_scope === 'daily' ? input.quotaBucket : null;
+          const access: AiVerdictAccessState = {
+            accessTier: input.accessTier,
+            allowed: row.allowed,
+            used,
+            remaining: Math.max(
+              (row.reason === 'global_daily_cap'
+                ? input.globalDailyLimit
+                : row.reason === 'ip_daily_cap'
+                  ? input.ipDailyLimit
+                  : row.quota_scope === 'daily' && input.accessTier === 'guest'
+                    ? input.guestDailyLimit
+                    : input.primaryLimit) - used,
+              0,
+            ),
+            limit:
+              row.reason === 'global_daily_cap'
+                ? input.globalDailyLimit
+                : row.reason === 'ip_daily_cap'
+                  ? input.ipDailyLimit
+                  : row.quota_scope === 'daily' && input.accessTier === 'guest'
+                    ? input.guestDailyLimit
+                    : input.primaryLimit,
+            quotaScope: row.quota_scope,
+            quotaBucket,
+            resetAt: resetAtFor(row.quota_scope, quotaBucket),
+            reason: row.reason === 'in_progress' ? undefined : row.reason as AiVerdictAccessState['reason'],
+          };
+
+          if (row.request_state === 'in_progress') return { ok: false, code: 'in_progress', access };
+
+          if (!row.allowed) {
+            return { ok: false, code: reservationFailureCode(row.reason), access };
+          }
+
+          if (row.request_state === 'completed') {
+            if (!row.verdict) throw new Error('Completed Smart creation is missing its verdict.');
+            return {
+              ok: true,
+              state: 'completed',
+              caseId: row.case_id,
+              verdict: row.verdict,
+              access,
+            };
+          }
+
+          if (!row.usage_event_id) throw new Error('Smart creation reservation is missing its id.');
+          return { ok: true, state: 'reserved', usageEventId: row.usage_event_id, access };
+        },
+        async completeSmartCaseCreation(input: CompleteAuthenticatedSmartCaseInput) {
+          const { data, error } = await adminClient
+            .rpc('complete_smart_case_creation', {
+              p_usage_event_id: input.usageEventId,
+              p_request_id: input.requestId,
+              p_user_id: input.userId,
+              p_title: input.title,
+              p_input_text: input.inputText,
+              p_verdict: input.verdict,
+            })
+            .single();
+          if (error || !data) throw error ?? new Error('Smart case completion returned no data.');
+          const result = data as { case_id: string; ai_case_verdict_id: string; verdict: AiVerdictStoredRow };
+          return { caseId: result.case_id, verdict: result.verdict };
+        },
+        async completeGuestSmartCaseCreation(input: CompleteGuestSmartCaseInput) {
+          const { data, error } = await adminClient
+            .rpc('complete_guest_smart_case_creation', {
+              p_usage_event_id: input.usageEventId,
+              p_request_id: input.requestId,
+              p_verdict: input.verdict,
+            })
+            .single();
+          if (error || !data) throw error ?? new Error('Guest Smart case completion returned no data.');
+          return (data as { ai_guest_case_verdict_id: string; verdict: AiVerdictStoredRow }).verdict;
+        },
+        async migrateVerifiedGuestSmartCase(input: MigrateVerifiedGuestSmartCaseInput) {
+          const { data, error } = await adminClient
+            .rpc('migrate_verified_guest_smart_case', {
+              p_user_id: input.userId,
+              p_guest_key_hash: input.guestKeyHash,
+              p_guest_verdict_id: input.guestVerdictId,
+              p_guest_local_id: input.localCaseId,
+              p_title: input.title,
+              p_category: input.category,
+              p_input_text: input.inputText,
+              p_outcome_status: input.outcomeStatus,
+              p_created_at: input.createdAt,
+              p_updated_at: input.updatedAt,
+              p_archived_at: input.archivedAt,
+            })
+            .maybeSingle();
+          if (error) throw error;
+          return data ? { caseId: (data as { case_id: string }).case_id } : null;
         },
         async finalizeUsageSucceeded({ usageEventId, aiCaseVerdictId, aiGuestCaseVerdictId }) {
           const { error } = await adminClient
@@ -493,7 +712,19 @@ Deno.serve(async (request) => {
         },
         isUniqueViolation,
       },
-      generateVerdict: (target) => generateAiVerdictWithGemini(target, geminiApiKey, MODEL_NAME),
+      generateVerdict: localSimulatorMock
+        ? generateLocalSimulatorVerdict
+        : (target) => generateAiVerdictWithGemini(target, geminiApiKey, MODEL_NAME),
+      deriveLocalVerdict: ({ category, inputText }) => {
+        const result = analyzeCase(verdictConfig, { category, inputText });
+        return {
+          verdictLabel: result.verdictLabel,
+          delusionScore: result.delusionScore,
+          explanationText: result.explanationText,
+          nextMoveText: result.nextMoveText,
+          verdictVersion: result.verdictVersion,
+        };
+      },
     },
     { ipAddress: forwardedIp(request) },
   );

@@ -12,6 +12,24 @@ Use this file first before reading the rest of the project docs.
 
 ---
 
+## Smart-only rollout override (September 2026)
+
+The approved Smart-only plan supersedes the original deterministic-only direction for **new** cases:
+
+- Phase 1's additive backend, atomic creation RPCs, canonical result view, and backward-compatible Edge Function were deployed to the existing production Supabase project on 2026-09-17.
+- Phase 2 is implemented and validated locally. New cases expose only Smart Verdict and enter history only after Smart generation and persistence succeed. Failed submissions return to a preserved draft with a stable retry ID.
+- Canonical reads carry `resultSource: 'smart' | 'legacy_basic'`. Historical Basic results stay labeled and unchanged until the user explicitly upgrades them. Saved Deep Reads remain readable as legacy data, but the production UX cannot request new Deep Reads.
+- Verified guest Smart migration is handled by migration `0011` and a service-role-only transaction that copies AI text only from the server-verified guest cache. Unverifiable older guest records are preserved as legacy Basic cases.
+- The canonical engine source now lives in `supabase/functions/_shared/verdict-engine/`; `src/features/verdict-engine/` contains app-compatible re-export entrypoints.
+
+Production backend status (2026-09-19): migrations are applied through `0011`, and backward-compatible `ai-verdict` version 24 is active. Version 24 was created automatically when the compromised default secret key was deleted; the deployed code hash is unchanged. New-contract validation, legacy guest-contract validation, Auth health, and the service-role-only RPC boundary passed post-revocation production checks without generating AI, spending quota, or saving a case. The current App Store client passed guest and signed-in compatibility tests; its Basic fallback after two signed-in Smart generations was expected daily-quota behavior. The local and EAS production configurations use the publishable key, and a clean Metro export contains that key with no secret-key credential. The Phase 2 client has a verified local simulator development build but still requires separate TestFlight approval and physical-iPhone QA; no Phase 2 TestFlight or App Store build exists yet.
+
+Local simulator status (2026-09-19): the Phase 2 development build completed successfully and the full Smart-only matrix passed against disposable local Supabase data. Verified flows were guest Smart creation and reopening, failed submission with draft persistence and no Basic case, verified guest-to-account Smart migration, signed-in atomic Smart creation, and opening a server-backed `legacy_basic` case without automatic generation. The simulator used the localhost-only deterministic Smart provider, so this proves client/backend flow and persistence—not Gemini response quality. TypeScript, 24 Jest suites/610 tests, the pgTAP migration test, dependency alignment, and the native Xcode build passed. TestFlight and physical-iPhone Phase 2 QA remain unstarted and require separate approval.
+
+For a concise, pasteable continuation brief, read [`docs/phase-2-completion-handoff.md`](phase-2-completion-handoff.md) before starting new work.
+
+---
+
 ## 1. Project snapshot
 
 **App name:** Overthought  
@@ -24,9 +42,9 @@ Use this file first before reading the rest of the project docs.
 **Core UX rule:** simple, fast, low-friction, not feature-heavy
 
 Current v1 stabilization state:
-- Production iOS TestFlight build opens correctly on physical devices.
+- The pre-Phase-2 production iOS TestFlight build opens correctly on physical devices.
 - Unified signed-in AI quota is deployed: migration `0006_unified_ai_read_quota.sql` has been applied, and the updated `ai-verdict` Edge Function is deployed.
-- The latest TestFlight build includes the premium/quota stale-state fix and minimal display-name profile editor; both were manually verified on device.
+- The latest pre-Phase-2 TestFlight build includes the premium/quota stale-state fix and minimal display-name profile editor; both were manually verified on device.
 
 ---
 
@@ -57,9 +75,9 @@ These are locked unless the product owner changes them later.
    - short explanation
    - suggested next move
 
-6. **The verdict engine is deterministic in v1.**
-   - No paid AI dependency is required at launch.
-   - Future AI/hybrid upgrades must be possible without rewriting the app.
+6. **The original v1 verdict engine is deterministic.**
+   - This remains the legacy/internal calibration and rollback component.
+   - The Smart-only rollout override above governs new cases after Phase 2 ships.
 
 7. **Architecture must be expansion-ready.**
    - Future premium, richer updates, deeper analysis, and new categories should be possible without breaking the data model.
@@ -120,7 +138,7 @@ Treat these as the source of truth for storage, persistence, and migration shape
 ### Step 3: Verdict system design
 **Files:**
 - `docs/overthought-verdict-engine-spec.md`
-- `src/features/verdict-engine/config/verdict-config.v1.json`
+- `supabase/functions/_shared/verdict-engine/config/verdict-config.v1.json`
 
 Purpose:
 - scoring philosophy
@@ -134,14 +152,14 @@ Read this before touching analysis logic.
 ---
 
 ### Step 4: Verdict starter implementation
-**Folder:** `src/features/verdict-engine/`
+**Canonical folder:** `supabase/functions/_shared/verdict-engine/`
 
 Important files:
 - `src/features/verdict-engine/README.md`
-- `src/features/verdict-engine/analyzeCase.ts`
-- `src/features/verdict-engine/types.ts`
-- `src/features/verdict-engine/config.ts`
-- `src/features/verdict-engine/config/verdict-config.v1.json`
+- `supabase/functions/_shared/verdict-engine/analyzeCase.ts`
+- `supabase/functions/_shared/verdict-engine/types.ts`
+- `supabase/functions/_shared/verdict-engine/config.ts`
+- `supabase/functions/_shared/verdict-engine/config/verdict-config.v1.json`
 - `src/features/verdict-engine/exampleUsage.ts`
 
 Purpose:
@@ -183,10 +201,10 @@ Use this to keep implementation aligned with intended design.
 ### Verdict engine behavior
 **Authoritative files:**
 - `docs/overthought-verdict-engine-spec.md`
-- `src/features/verdict-engine/config/verdict-config.v1.json`
+- `supabase/functions/_shared/verdict-engine/config/verdict-config.v1.json`
 
 ### Verdict engine starter code
-**Authoritative folder:** `src/features/verdict-engine/`
+**Authoritative folder:** `supabase/functions/_shared/verdict-engine/`
 
 ### Design direction
 **Authoritative file:** `design-reference/color-palette.md + design-reference/screens/`

@@ -5,6 +5,7 @@ export type UUID = string;
 export type AuthProvider = 'apple' | 'google' | 'email' | 'unknown';
 export type CaseCategory = 'romance' | 'friendship' | 'social' | 'general';
 export type OutcomeStatus = 'unknown' | 'right' | 'wrong' | 'unclear';
+export type VerdictSource = 'smart' | 'legacy_basic';
 export type VerdictLabel =
   | 'barely_delusional'
   | 'slight_reach'
@@ -34,6 +35,8 @@ export type AiVerdictFailureCode =
   | 'not_authenticated'
   | 'case_not_found'
   | 'guest_key_required'
+  | 'invalid_input'
+  | 'in_progress'
   | 'safety_routed'
   | 'global_daily_cap_exceeded'
   | 'ip_daily_cap_exceeded'
@@ -154,6 +157,7 @@ export interface AiVerdictAccessState {
   limit: number;
   quotaScope: 'daily' | 'lifetime';
   quotaBucket: string | null;
+  resetAt?: string | null;
   reason?: 'guest_lifetime_limit' | 'daily_limit' | 'fair_use' | 'global_daily_cap' | 'ip_daily_cap';
 }
 
@@ -169,6 +173,8 @@ export type AiVerdictRequestStatus =
   | 'ai_timeout'
   | 'unauthenticated'
   | 'guest_key_required'
+  | 'invalid_input'
+  | 'in_progress'
   | 'safety_routed'
   | 'case_not_found'
   | 'fair_use_exceeded'
@@ -215,7 +221,44 @@ export interface CaseRecord extends AnalysisOutput {
   updatedAt: string;
   archivedAt: string | null;
   deletedAt: string | null;
+  resultSource: VerdictSource;
+  smartVerdict?: AiVerdictOutput;
+  legacyBasicSnapshot?: AnalysisOutput;
   aiVerdict?: CaseAiVerdictSnapshot;
+}
+
+export interface SmartCaseCreationInput {
+  requestId: string;
+  category: CaseCategory;
+  inputText: string;
+  title?: string | null;
+  guestKey?: string;
+}
+
+export interface GuestSmartCaseMigrationInput {
+  guestKey: string;
+  guestVerdictId: string;
+  localCaseId: string;
+  title?: string | null;
+  category: CaseCategory;
+  inputText: string;
+  outcomeStatus: OutcomeStatus;
+  createdAt: string;
+  updatedAt: string;
+  archivedAt: string | null;
+}
+
+export type GuestSmartCaseMigrationResponse =
+  | { ok: true; caseId: UUID }
+  | { ok: false; code: 'not_authenticated' | 'case_not_found' | 'invalid_input' | 'unknown'; message: string };
+
+export interface SmartCaseCreationSuccess {
+  requestId: string;
+  caseId: UUID | null;
+  verdict: AiVerdictOutput;
+  localCalibration: AnalysisOutput;
+  cache: AiVerdictCacheMetadata;
+  access: AiVerdictAccessState;
 }
 
 export interface CaseUpdateRecord {
@@ -322,6 +365,25 @@ export type DeepReadResponse =
 
 export type AiVerdictRequest =
   | {
+      requestId: string;
+      target: {
+        targetType: 'new_case';
+        category: CaseCategory;
+        inputText: string;
+        title?: string | null;
+      };
+    }
+  | {
+      requestId: string;
+      guestKey: string;
+      target: {
+        targetType: 'new_guest_case';
+        category: CaseCategory;
+        inputText: string;
+        title?: string | null;
+      };
+    }
+  | {
       target: {
         targetType: 'case';
         caseId: UUID | string;
@@ -340,6 +402,21 @@ export type AiVerdictRequest =
         localNextMoveText: string;
         localVerdictVersion: number;
       };
+    }
+  | {
+      guestKey: string;
+      target: {
+        targetType: 'migrate_guest_case';
+        guestVerdictId: string;
+        localCaseId: string;
+        title?: string | null;
+        category: CaseCategory;
+        inputText: string;
+        outcomeStatus: OutcomeStatus;
+        createdAt: string;
+        updatedAt: string;
+        archivedAt: string | null;
+      };
     };
 
 export type AiVerdictResponse =
@@ -349,6 +426,9 @@ export type AiVerdictResponse =
       localFallback: AnalysisOutput;
       cache: AiVerdictCacheMetadata;
       access: AiVerdictAccessState;
+      requestId?: string;
+      caseId?: UUID | string | null;
+      localCalibration?: AnalysisOutput;
     }
   | {
       ok: false;

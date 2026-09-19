@@ -16,6 +16,9 @@ import type {
   AiVerdictResponse,
   AnalysisOutput,
   CaseAiVerdictSnapshot,
+  GuestSmartCaseMigrationInput,
+  GuestSmartCaseMigrationResponse,
+  SmartCaseCreationInput,
   VerdictLabel,
 } from '../../types/shared';
 import type { CaseEntity } from '../cases/types';
@@ -50,6 +53,8 @@ const aiVerdictFailureCodes = new Set<AiVerdictFailureCode>([
   'not_authenticated',
   'case_not_found',
   'guest_key_required',
+  'invalid_input',
+  'in_progress',
   'safety_routed',
   'global_daily_cap_exceeded',
   'ip_daily_cap_exceeded',
@@ -416,7 +421,7 @@ async function invokeAiVerdict(
   } catch (error) {
     const timedOut = isAbortError(error);
     return {
-      response: timedOut ? failure('ai_timeout', 'Smart Verdict timed out. Showing Basic Verdict.') : safeUnavailableFailure(),
+      response: timedOut ? failure('ai_timeout', 'Smart Verdict timed out. Your case was not added yet.') : safeUnavailableFailure(),
       elapsedMs: Date.now() - startedAt,
       timedOut,
     };
@@ -452,6 +457,98 @@ function authenticatedRequest(caseId: string): AiVerdictRequest {
 }
 
 export const aiVerdictService = {
+  async createSmartCase(input: SmartCaseCreationInput): Promise<AiVerdictResponse> {
+    const safetyAssessment = assessCaseSafety(input.inputText);
+
+    if (safetyAssessment.shouldRoute) {
+      return failure('safety_routed', CASE_SAFETY_MESSAGE);
+    }
+
+    const auth = useAuthStore.getState();
+    const authenticated = auth.sessionMode === 'authenticated';
+    const headers = authenticated ? await authenticatedHeaders() : {};
+
+    if (authenticated && !headers) {
+      return failure('not_authenticated', 'Sign in again to create a Smart Verdict.');
+    }
+
+    const body: AiVerdictRequest = authenticated
+      ? {
+          requestId: input.requestId,
+          target: {
+            targetType: 'new_case',
+            category: input.category,
+            inputText: input.inputText,
+            title: input.title,
+          },
+        }
+      : {
+          requestId: input.requestId,
+          guestKey: input.guestKey ?? useGuestStore.getState().ensureGuestAiKey(),
+          target: {
+            targetType: 'new_guest_case',
+            category: input.category,
+            inputText: input.inputText,
+            title: input.title,
+          },
+        };
+    const { response, httpStatus, elapsedMs, timedOut } = await invokeAiVerdict(body, headers ?? {});
+    logAiVerdictDiagnostic(input.requestId, response, { httpStatus, elapsedMs, timedOut });
+    return response;
+  },
+
+  async migrateGuestSmartCase(input: GuestSmartCaseMigrationInput): Promise<GuestSmartCaseMigrationResponse> {
+    if (!hasSupabaseEnv()) {
+      return { ok: false, code: 'unknown', message: 'Guest case migration is unavailable right now.' };
+    }
+
+    const headers = await authenticatedHeaders();
+
+    if (!headers) {
+      return { ok: false, code: 'not_authenticated', message: 'Sign in again before moving guest cases.' };
+    }
+
+    try {
+      const result = await fetch(functionUrl(), {
+        method: 'POST',
+        headers: {
+          apikey: env.supabaseAnonKey,
+          'Content-Type': 'application/json',
+          ...headers,
+        },
+        body: JSON.stringify({
+          guestKey: input.guestKey,
+          target: {
+            targetType: 'migrate_guest_case',
+            guestVerdictId: input.guestVerdictId,
+            localCaseId: input.localCaseId,
+            title: input.title,
+            category: input.category,
+            inputText: input.inputText,
+            outcomeStatus: input.outcomeStatus,
+            createdAt: input.createdAt,
+            updatedAt: input.updatedAt,
+            archivedAt: input.archivedAt,
+          },
+        } satisfies AiVerdictRequest),
+      });
+      const parsed = (await result.json().catch(() => null)) as GuestSmartCaseMigrationResponse | null;
+
+      if (
+        parsed &&
+        typeof parsed === 'object' &&
+        ((parsed.ok && typeof parsed.caseId === 'string') ||
+          (!parsed.ok && typeof parsed.code === 'string' && typeof parsed.message === 'string'))
+      ) {
+        return parsed;
+      }
+    } catch {
+      // Converted to a privacy-safe failure below.
+    }
+
+    return { ok: false, code: 'unknown', message: 'Guest case migration is unavailable right now.' };
+  },
+
   async loadStoredVerdictForCase(record: CaseEntity): Promise<CaseAiVerdictSnapshot | null> {
     const caseId = getCaseId(record);
 

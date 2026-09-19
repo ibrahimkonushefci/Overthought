@@ -210,6 +210,7 @@ describe('deepReadService', () => {
       updatedAt: '2026-04-29T10:00:00.000Z',
       archivedAt: null,
       deletedAt: null,
+      resultSource: 'legacy_basic',
     });
 
     expect(result?.ok).toBe(true);

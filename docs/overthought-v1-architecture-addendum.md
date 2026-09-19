@@ -4,19 +4,19 @@ This addendum clarifies three implementation decisions that should be treated as
 
 ## 1. Verdict engine execution model
 
-The deterministic verdict engine must run **fully client-side in v1**.
+The deterministic verdict engine is retained as the **legacy/internal calibration and rollback component**. Phase 2 new-case creation runs the same engine behind `ai-verdict`; its output is stored as internal calibration but is not shown as the new case result.
 
-### Why
-- instant verdicts
-- guest mode works without a network round trip
-- lower cost
-- simpler architecture
-- easier offline behavior for the core analysis flow
+### Why it remains
+- preserve historical Basic Verdicts and rollback capability
+- provide deterministic calibration metadata for Smart generation
+- keep older App Store clients compatible during rollout
+- retain regression hashes and a non-destructive rollback path
 
 ### Rule
-- Do not call Supabase or any external service to generate verdicts in v1.
-- Supabase is used for auth, profile data, synced cases, premium state, and future expansion.
-- The verdict engine remains a local deterministic module.
+- New production cases require a successful Smart Verdict response before they enter history.
+- New-case validation, safety routing, deterministic calibration, quota, provider generation, and authenticated persistence are orchestrated by `ai-verdict`.
+- Historical Basic Verdicts remain readable and may be explicitly upgraded; they are never upgraded automatically.
+- Keep the local engine and legacy endpoints dormant but intact for old clients and rollback.
 
 ## 2. Guest-mode local storage stack
 
@@ -103,11 +103,11 @@ Store/TestFlight rebuild; the constants above are the repo fallbacks used when t
 - Guest users get 2 lifetime AI verdicts per local `guestAiKey`, plus the guest daily, IP daily, and global caps.
 - `Profile -> Delete all data` clears the local `guestAiKey`; this intentionally resets guest AI access for TestFlight/v1.
 - For live hardening later, revisit guest abuse controls if IP/global caps are not enough. Do not preserve a hidden guest identifier after an explicit "Delete all data" action without changing the privacy/product copy.
-- Deep Read is locked after AI Verdict quota/cap exhaustion and after concrete AI Verdict fallback failures so a Basic fallback does not expose an extra AI generation path.
+- The Phase 2 production client does not request new Deep Reads. Existing saved Deep Reads remain readable as legacy data.
 - A one-off case save error was seen during manual testing but could not be reproduced after retry. Do not chase it unless `[case-create] case_create_supabase_insert_failed` logs show a repeatable cause.
 - `ai-verdict` now retries malformed Gemini response shapes once in strict JSON mode, uses Gemini `responseSchema`, and logs safe provider diagnostics without raw prompt, case text, or raw model output.
 - Failed provider/schema responses remain `status = failed` usage events and do not consume successful AI verdict quota.
-- Gemini AI verdict generation allows up to 2048 output tokens. The client waits up to 30 seconds for `ai-verdict`; if an authenticated request still times out locally, the case detail screen does short delayed stored-verdict checks so a late backend success can replace the Basic fallback instead of wasting visible quota.
+- Gemini AI verdict generation allows up to 2048 output tokens. The client waits up to 30 seconds for `ai-verdict`; an ambiguous retry reuses the same request ID so a late backend success is recovered without a duplicate case or second quota spend.
 
 ## 7. Auth release-hardening note
 
@@ -138,29 +138,40 @@ Store/TestFlight rebuild; the constants above are the repo fallbacks used when t
 
 ## 9. Current stabilization and build status
 
+### Smart-only rollout status
+
+- Phase 1 backend foundation was deployed to the existing production Supabase project on 2026-09-17. The App Store client remains on the backward-compatible legacy flow.
+- Migration `0009_smart_case_creation.sql` adds stable request IDs, idempotent quota reservation, transactional authenticated/guest completion, and the security-invoker `canonical_case_results` view. Migration `0010_canonical_case_results_grants.sql` removes default anonymous/broad grants and leaves `SELECT` only for `authenticated` and `service_role`.
+- Production `ai-verdict` version 24 contains the Phase 2 migration route, new creation contracts, and legacy contracts used by existing App Store builds. Supabase created version 24 automatically when the compromised default secret key was deleted; the deployed code hash is unchanged.
+- New-case validation and safety routing happen before internal deterministic calibration, quota reservation, persistence, or Gemini.
+- Phase 2 is implemented and validated locally. It uses canonical result reads, preserves drafts on every failure, exposes only Smart for new cases, and provides an explicit legacy upgrade action.
+- Migration `0011_verified_guest_smart_migration.sql` and the updated `migrate_guest_case` Edge route were deployed on 2026-09-19. They copy a guest Smart result only from the server-verified guest cache, and the transaction is executable only by `service_role`.
+- Existing Edge request targets remain supported. Basic rendering, Deep Read generation/storage, and legacy data remain intact for rollback, but the Phase 2 client cannot request a new Deep Read.
+- The Phase 2 backend is deployed. The current App Store client passed guest and signed-in compatibility checks. Local and EAS production builds use the publishable key, and a clean Metro export contains no secret-key credential. The client still requires a separate TestFlight build and physical-iPhone QA before release.
+
 This section records the late v1 stabilization pass completed before the next handoff.
 
-- AI Verdict is the main enhanced output when quota/access allows; the deterministic local Basic Verdict remains the fallback.
+- Smart Verdict is the only result for a new Phase 2 case. Generation, validation, quota, network, and persistence failures create no case and return the user to the preserved draft.
 - AI Verdict prompt version is `6`, Gemini temperature is `0.8`, and generated AI text is cleaned for markdown artifacts before display/storage.
 - Prompt version 6 hardened language matching: language markers are scored on unique distinctive words (shared stopwords like "me" no longer count), the Albanian marker set covers diacritic-free colloquial/Gheg spellings, and when detection is not high-confidence the prompt tells Gemini to mirror the case-text language itself instead of naming a possibly-wrong target language.
 - Basic Verdict input quality detects diacritic-free Albanian (and other multilingual social markers without English social context) as `unsupported_local_language`, routing to the pinned low-confidence "needs clearer context" result instead of a confident score. The generic-fallback guard also counts the two synthetic blank-slate signals as one observation, so short conclusion-only prompts cap at 70.
 - Guest Smart Verdict quota is a lifetime cap (default 2) per `guestAiKey` and intentionally never resets; only signed-in quotas reset per UTC day. "It never resets for guests" is designed behavior, not a bug.
 - `ai-verdict` was deployed after the stabilization commit containing quota, tone, and fallback fixes.
-- Guest and signed-in free quota UX now shows upgrade/retry prompts for `quota_exceeded` cases without auto-consuming AI quota when old cases are reopened.
-- Old Basic fallback cases caused by AI quota exhaustion can show "Try AI Verdict" after quota reset.
-- Deep Read is derived from durable AI Verdict request/fallback state and remains locked after restart when AI Verdict quota/cap/fallback state blocks extra AI access.
-- Case list ordering and relative time display were normalized; list score/verdict display overlays saved AI Verdict snapshots where present.
-- Guest-to-account migration preserves the visible guest AI Verdict snapshot locally where possible instead of silently downgrading the visible result to Basic.
+- Guest and signed-in quota failures return to the preserved form with tier-appropriate sign-in, paywall, reset, or temporary-limit guidance.
+- Historical Basic cases show a `Legacy Basic Verdict` label and offer an explicit Smart upgrade without automatic quota use.
+- Existing saved Deep Reads render read-only as `Saved Deep Read (legacy)`; no production screen calls the Deep Read generation service.
+- Case list, detail, and Stats use the canonical source instead of overlaying a transient Smart cache.
+- Guest-to-account migration copies verified guest Smart output from the server cache; unverifiable older records migrate losslessly as legacy Basic.
 - Auth create-account success UX now clears fields, switches back to Sign In, and avoids an error-like success alert.
 - New Case defaults back to Romance for a fresh case; category pills were tightened.
 - Paywall copy/layout was improved for TestFlight without changing RevenueCat purchase internals.
 - RevenueCat restore/purchase validation confirmed that Premium follows the App Store/RevenueCat receipt for the current Apple ID. Restoring or upgrading while signed into another Overthought account on the same Apple ID can mark that account premium too; this is accepted for v1 as normal restore behavior.
 - `sync-premium-state` successfully updates `premium_states.entitlement_status` to `premium` after RevenueCat reports an active entitlement for the currently signed-in Supabase user. Because `ai-verdict` reads `premium_states`, that user receives the premium AI Verdict tier after sync.
 - AI Verdict and Deep Read now use the same signed-in daily AI pool in both directions. Premium users get 50 total generated AI reads per UTC day by default across AI Verdict and Deep Read combined; cached AI/Deep Read results reopen without spending quota. Migration `0006_unified_ai_read_quota.sql` has been applied, and the updated `ai-verdict` Edge Function has been deployed.
-- The client-side fix that ignores stale free-tier quota locks after a premium upgrade shipped in the latest TestFlight build and was manually verified on device.
-- The minimal `display_name` profile editor shipped in the latest TestFlight build and was manually verified on device.
+- The client-side fix that ignores stale free-tier quota locks after a premium upgrade shipped in the latest pre-Phase-2 TestFlight build and was manually verified on device.
+- The minimal `display_name` profile editor shipped in the latest pre-Phase-2 TestFlight build and was manually verified on device.
 - Authenticated account deletion uses the deployed `delete-account` Supabase Edge Function for final `auth.users` deletion. Premium users see an Apple subscription warning and manage-subscription link before deletion; subscription cancellation still happens through Apple.
-- The production iOS build was rebuilt and submitted successfully to TestFlight; current physical-device TestFlight checks pass.
+- The pre-Phase-2 production iOS build was rebuilt and submitted successfully to TestFlight; its physical-device checks passed. The Phase 2 client itself has not entered TestFlight.
 - Expo SDK patch packages are aligned on the Expo 55 line. Production iOS uses Hermes V1 via `ios/Podfile.properties.json` (`expo.useHermesV1=true`) and `ios/Podfile.lock` records `hermes-engine 250829098.0.4`.
 - `babel-preset-expo` must stay on the Expo 55-compatible line (`~55.0.22`) unless the whole Expo SDK is upgraded.
 

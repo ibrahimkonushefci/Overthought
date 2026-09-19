@@ -5,11 +5,32 @@ The goal is to make the app expansion-ready without overbuilding.
 
 ## 1. High-level rule
 
-Use **local-first guest mode** and **server-backed authenticated mode**.
+### Smart-only creation contract
+
+The `ai-verdict` function accepts two new targets in addition to the legacy contracts:
+
+- Authenticated: `{ requestId, target: { targetType: 'new_case', category, inputText, title? } }`
+- Guest: `{ requestId, guestKey, target: { targetType: 'new_guest_case', category, inputText, title? } }`
+
+`requestId` is stable across ambiguous retries and must change when the draft changes. New input must use an allowed category and contain 30–400 trimmed characters. Safety routing and blocked input-quality/prompt-injection checks happen before local calibration, quota, persistence, or Gemini. Low-context but genuine social cases remain eligible for cautious Smart generation.
+
+Authenticated success creates the case, linked Smart Verdict, and successful usage event in one service-role-only database transaction. Guest success atomically creates the server-verified guest Smart cache and finalizes usage; the client must not add the guest case to local history until that response succeeds. Active duplicate requests return `in_progress`; completed duplicates replay the stored result without another quota spend. Responses include `requestId`, `caseId` (`null` for guests), Smart output, cache metadata, quota state, and the internal calibration snapshot. Raw case text is never written to logs or usage events.
+
+`canonical_case_results` is a security-invoker view. It selects the newest verified Smart row when present and otherwise exposes the stored Basic fields with `result_source = 'legacy_basic'`. Phase 2 uses this view for authenticated list, detail, and Stats reads.
+
+The authenticated `migrate_guest_case` target accepts a guest case snapshot plus `guestKey` and the server-issued guest Smart cache ID. The Edge Function hashes the guest key and calls the service-role-only `migrate_verified_guest_smart_case` transaction. AI text is copied only from the verified guest cache; client-supplied AI text is never accepted. A missing or unverifiable cache causes the client migration service to preserve the case as legacy Basic instead.
+
+Production status (2026-09-19): migrations `0009_smart_case_creation.sql`, `0010_canonical_case_results_grants.sql`, and `0011_verified_guest_smart_migration.sql` are deployed to the existing project, and `ai-verdict` version 24 is active. Version 24 was created automatically by the Supabase key-set update; its deployed code hash is unchanged. The canonical view grants `SELECT` only to `authenticated` and `service_role`; `anon` has no view privilege. The migration RPC is likewise executable only by `service_role`; a production publishable-key probe returned PostgreSQL `42501 permission denied`.
+
+Client verification status (2026-09-19): the Phase 2 contracts passed the local simulator matrix against disposable Supabase data, including guest and authenticated Smart creation, idempotent draft retry behavior after failure, verified guest Smart migration, canonical Smart reads, and legacy Basic fallback reads. This used the localhost-only mock provider and therefore does not replace Gemini-quality or physical-device TestFlight QA.
+
+The old `case` and `guest_case` targets remain operational for released clients and explicit upgrades of legacy cases. The Phase 2 production UX never calls them automatically for a new case.
+
+Use **successful-Smart-first guest mode** and **transactional server-backed authenticated mode**.
 
 That means:
-- guest users analyze and save cases on-device
-- authenticated users analyze and save cases in Supabase
+- guest users call `new_guest_case` and save locally only after Smart succeeds
+- authenticated users call `new_case`, which saves the case and Smart result atomically
 - guest cases can later be migrated to the signed-in account
 
 This avoids forcing login while preserving upgrade paths.
@@ -21,9 +42,10 @@ This avoids forcing login while preserving upgrade paths.
 ### Client app
 Owns:
 - guest case storage
-- form validation
+- draft persistence and stable request IDs
+- presentation-layer form validation (the server repeats authoritative validation)
 - routing
-- optimistic UI where useful
+- canonical result rendering
 - migration trigger after sign-in
 - share-card rendering
 
@@ -43,11 +65,13 @@ Current v1 functions:
 3. `delete-account`
 4. `sync-premium-state`
 
+Dormant/legacy functions:
+- `deep-read` remains deployed for old clients and saved-data compatibility; the Phase 2 client performs read-only loading and issues no generation request
+
 Potential future functions:
-- `migrate-guest-cases` if guest migration moves server-side
 - `revenuecat-webhook` if subscription state sync moves from app-triggered sync to webhooks
 
-If Codex prefers, the deterministic verdict engine can also run on-device for guest mode and on the server for authenticated mode. The interface should stay the same either way.
+The deterministic engine runs behind `ai-verdict` for Phase 2 new cases. Its output is internal calibration/rollback metadata, not a user-facing fallback.
 
 ---
 
@@ -106,22 +130,21 @@ Responsibilities:
 
 ### `analysisService`
 Responsibilities:
-- accept `AnalyzeCaseInput`
-- call local analysis implementation
-- return normalized `AnalysisOutput`
+- retain the local deterministic implementation for legacy rendering, regression tests, and rollback
+- never provide the visible result for a new Phase 2 case
 
 ### `caseRepository`
 Responsibilities:
-- create case
-- list cases
-- get case detail
+- create new cases through the atomic Smart creation service
+- list and fetch canonical cases with `resultSource: 'smart' | 'legacy_basic'`
+- explicitly upgrade a legacy Basic case only after user confirmation
 - archive case
 - update outcome
 - delete case (soft delete)
 
-Implementation should have two backends:
-- local backend for guest users
-- Supabase backend for authenticated users
+Implementation has two persistence backends:
+- local guest storage, written only after a verified Smart response
+- Supabase authenticated storage, written inside the server transaction
 
 ### `caseUpdateRepository`
 Responsibilities:
@@ -138,18 +161,17 @@ Responsibilities:
 - expose `isPremium`
 - remain functional even before paywall is launched
 
-### `deepReadService` (future)
+### `deepReadService` (legacy)
 Responsibilities:
-- request AI Deep Read enrichment through a backend function only
-- return cached Deep Reads without spending quota
-- keep local verdict fields canonical
-- keep guest Deep Read output local-only in v1
-- expose available, loading, cached, locked, and failed states to the result screen
+- load already-saved authenticated or guest Deep Reads read-only
+- keep the old request implementation dormant for rollback/older clients
+- expose no new-generation action in the Phase 2 production UX
 
 ### `migrationService`
 Responsibilities:
 - read all local guest cases
-- upload to server after login/signup
+- copy verified guest Smart cases through `migrate_guest_case`
+- migrate Basic-only and unverifiable historical cases as legacy without discarding them
 - map local IDs to server IDs
 - avoid duplicate migrations
 - return success/failure per case
@@ -189,19 +211,19 @@ Minimal v1 profile editing uses `profiles.display_name` only. Authenticated clie
 
 ### For guest user
 1. user submits `CreateCaseInput`
-2. app runs `analysisService.analyzeCase`
-3. app stores result in local case storage
-4. result screen opens
+2. app reuses the draft's stable `requestId` and calls `new_guest_case`
+3. server validates and safety-routes before calibration, quota, persistence, or Gemini
+4. after Smart succeeds, app stores the canonical Smart snapshot locally
+5. app clears the draft and opens the saved result
 
 ### For authenticated user
 1. user submits `CreateCaseInput`
-2. app runs `analysisService.analyzeCase`
-3. app inserts `cases` row in Supabase
-4. result screen opens
+2. app reuses the draft's stable `requestId` and calls `new_case`
+3. server validates, reserves quota idempotently, generates Smart, and atomically inserts the case and Smart row
+4. app reads the canonical case and opens the saved result
 
 ### Important
-Do not make the result screen depend on the save succeeding.
-Result should be renderable from memory immediately, then persisted.
+The case must not enter history unless Smart generation and required persistence succeed. Any validation, safety, quota, provider, timeout, network, or persistence failure returns to the prefilled form. Editing text or category invalidates the request ID; retrying an ambiguous timeout reuses it. `in_progress` must never create a duplicate or spend quota twice.
 
 ---
 
@@ -239,7 +261,10 @@ After successful sign-in or sign-up, if local guest data exists, prompt:
 - `Move your saved cases to your account?`
 
 ### Migration behavior
-- create server `cases` rows first
+- for a verified guest Smart case, pass the guest cache ID and guest key to `migrate_guest_case`
+- copy Smart text only from that server-verified cache in the authenticated transaction
+- migrate Basic-only or unverifiable historical cases as `legacy_basic`
+- create server `cases` rows first for legacy migration
 - then create `case_updates` rows per migrated case
 - preserve created timestamps where practical
 - mark local entries as migrated
@@ -268,12 +293,12 @@ Need:
 For v1 keep it simple.
 Derived values:
 - total cases
-- average delusion score
+- average canonical delusion score
 - count by category
 - count by outcome status
 - most recent cases
 
-Stats can be computed client-side at first from fetched records.
+Stats can be computed client-side from canonical fetched records. Smart cases use Smart scores; records without a verified Smart row use their visible legacy Basic score.
 No need for heavy SQL views in v1.
 
 ---
@@ -295,24 +320,24 @@ Even if all return `true` in first release, the abstraction should exist now.
 
 ---
 
-## 11. AI Deep Read contracts
+## 11. Saved Deep Read legacy contract
 
-Deep Read is the AI enrichment layer. It must not replace the deterministic local verdict engine.
+New Deep Read generation is retired from the Phase 2 production UX. Existing authenticated and guest cached Deep Reads remain readable as `Saved Deep Read (legacy)`, including after a case is explicitly upgraded to Smart.
 
 ### Product rule
-The canonical case result remains:
+The canonical case result remains the Smart result when one exists, otherwise the stored legacy Basic result:
 - `verdictLabel`
 - `delusionScore`
 - `explanationText`
 - `nextMoveText`
 - `verdictVersion`
 
-Deep Read adds a richer explanation below the local verdict. It should never override the stored local verdict fields in v1.
+Saved Deep Read is read-only supplemental history. It never overrides canonical case fields and never triggers quota use when opened.
 
 ### Backend rule
-The mobile app must not call the AI provider directly.
+Keep the `deep-read` function, tables, storage, and client request implementation intact for rollback and older clients. The Phase 2 result screen may load saved rows but must not issue a generation request. Provider secrets remain backend-only.
 
-Deep Read generation should go through a secure backend path, preferably a Supabase Edge Function. Provider secrets such as `GEMINI_API_KEY` must exist only as backend secrets.
+The remaining request/response and quota notes below document the dormant legacy contract; they are not current new-case product behavior.
 
 ### Request shape
 For a case-level Deep Read:

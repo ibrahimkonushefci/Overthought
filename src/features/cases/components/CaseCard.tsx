@@ -33,9 +33,16 @@ export function CaseCard({ item }: CaseCardProps) {
         </AppText>
       </View>
       <View style={styles.body}>
-        <AppText variant="meta">
-          {categoryIcons[item.category]} {categoryLabels[item.category]} · {relativeTime(listTimestamp)}
-        </AppText>
+        <View style={styles.metaRow}>
+          <AppText variant="meta" style={styles.metaCopy}>
+            {categoryIcons[item.category]} {categoryLabels[item.category]} · {relativeTime(listTimestamp)}
+          </AppText>
+          <View style={[styles.sourceBadge, item.resultSource === 'smart' && styles.smartSourceBadge]}>
+            <AppText variant="eyebrow" style={[styles.sourceText, item.resultSource === 'smart' && styles.smartSourceText]}>
+              {item.resultSource === 'smart' ? 'Smart' : 'Legacy'}
+            </AppText>
+          </View>
+        </View>
         <AppText variant="body" style={styles.title} numberOfLines={2}>
           {item.title ?? item.inputText}
         </AppText>
@@ -83,6 +90,32 @@ const styles = StyleSheet.create({
   body: {
     flex: 1,
     gap: 2,
+  },
+  metaRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.xs,
+  },
+  metaCopy: {
+    flex: 1,
+  },
+  sourceBadge: {
+    backgroundColor: colors.bg.muted,
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+  },
+  smartSourceBadge: {
+    backgroundColor: colors.accent.lime,
+  },
+  sourceText: {
+    color: colors.text.secondary,
+    fontSize: 7,
+    letterSpacing: 1,
+    lineHeight: 9,
+  },
+  smartSourceText: {
+    color: colors.text.onAccent,
   },
   title: {
     fontSize: 14,

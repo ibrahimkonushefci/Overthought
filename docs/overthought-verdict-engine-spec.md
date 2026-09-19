@@ -4,6 +4,8 @@
 
 This document defines the **v1 deterministic verdict engine** for Overthought.
 
+> Smart-only rollout note: for the new `new_case` and `new_guest_case` backend contracts, this engine runs inside the `ai-verdict` Edge Function as internal calibration and rollback metadata. Its result is not the user-facing verdict. The Phase 2 client uses this contract; the App Store build continues using the old local path until the new build ships. Historical Basic results remain unchanged.
+
 The goal is to give each case a result that feels:
 - funny-first
 - consistent
@@ -81,7 +83,7 @@ These labels must be configurable.
 | 91-100 | Full Clown Territory |
 
 > These bands are the current shipped values in
-> `src/features/verdict-engine/config/verdict-config.v1.json`, and they match the
+> `supabase/functions/_shared/verdict-engine/config/verdict-config.v1.json`, and they match the
 > Smart Verdict (Gemini) score→label calibration so Basic and Smart agree on labels.
 > The original 0-20 / 21-40 / 41-60 / 61-80 / 81-100 split has been superseded.
 

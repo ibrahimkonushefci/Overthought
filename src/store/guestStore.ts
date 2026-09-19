@@ -13,6 +13,7 @@ import { zustandMmkvStorage } from '../storage/mmkv';
 
 interface DraftState {
   caseText: string;
+  caseRequestId: string | null;
   updateTextByCaseId: Record<string, string>;
   preferredCategory: CaseCategory;
 }
@@ -26,8 +27,10 @@ interface GuestState {
   migrationPromptByUserId: Record<string, 'skipped' | 'completed'>;
   ensureGuestSession: () => string;
   ensureGuestAiKey: () => string;
+  ensureCaseRequestId: () => string;
   setCaseDraft: (caseText: string) => void;
   setPreferredCategory: (category: CaseCategory) => void;
+  clearCaseDraft: () => void;
   setUpdateDraft: (caseId: string, updateText: string) => void;
   addCase: (record: GuestCaseLocal) => void;
   replaceCase: (record: GuestCaseLocal) => void;
@@ -46,6 +49,7 @@ interface GuestState {
 
 const initialDrafts: DraftState = {
   caseText: '',
+  caseRequestId: null,
   updateTextByCaseId: {},
   preferredCategory: 'romance',
 };
@@ -81,11 +85,45 @@ export const useGuestStore = create<GuestState>()(
         set({ guestAiKey });
         return guestAiKey;
       },
+      ensureCaseRequestId: () => {
+        const existing = get().drafts.caseRequestId;
+
+        if (existing) {
+          return existing;
+        }
+
+        const caseRequestId = createId('smart_case');
+        set((state) => ({ drafts: { ...state.drafts, caseRequestId } }));
+        return caseRequestId;
+      },
       setCaseDraft: (caseText) => {
-        set((state) => ({ drafts: { ...state.drafts, caseText } }));
+        set((state) => ({
+          drafts: {
+            ...state.drafts,
+            caseText,
+            caseRequestId: caseText === state.drafts.caseText ? state.drafts.caseRequestId : null,
+          },
+        }));
       },
       setPreferredCategory: (preferredCategory) => {
-        set((state) => ({ drafts: { ...state.drafts, preferredCategory } }));
+        set((state) => ({
+          drafts: {
+            ...state.drafts,
+            preferredCategory,
+            caseRequestId:
+              preferredCategory === state.drafts.preferredCategory ? state.drafts.caseRequestId : null,
+          },
+        }));
+      },
+      clearCaseDraft: () => {
+        set((state) => ({
+          drafts: {
+            ...state.drafts,
+            caseText: '',
+            caseRequestId: null,
+            preferredCategory: 'romance',
+          },
+        }));
       },
       setUpdateDraft: (caseId, updateText) => {
         set((state) => ({
@@ -101,7 +139,6 @@ export const useGuestStore = create<GuestState>()(
       addCase: (record) => {
         set((state) => ({
           cases: [record, ...state.cases],
-          drafts: { ...state.drafts, caseText: '' },
         }));
       },
       replaceCase: (record) => {
@@ -113,7 +150,29 @@ export const useGuestStore = create<GuestState>()(
         const timestamp = nowIso();
         set((state) => ({
           cases: state.cases.map((item) =>
-            item.localId === caseId ? { ...item, aiVerdict, updatedAt: timestamp } : item,
+            item.localId === caseId
+              ? {
+                  ...item,
+                  legacyBasicSnapshot:
+                    item.legacyBasicSnapshot ?? {
+                      verdictLabel: item.verdictLabel,
+                      delusionScore: item.delusionScore,
+                      explanationText: item.explanationText,
+                      nextMoveText: item.nextMoveText,
+                      verdictVersion: item.verdictVersion,
+                      triggeredSignals: item.triggeredSignals,
+                    },
+                  aiVerdict,
+                  smartVerdict: aiVerdict.verdict,
+                  resultSource: 'smart',
+                  verdictLabel: aiVerdict.verdict.verdictLabel,
+                  delusionScore: aiVerdict.verdict.delusionScore,
+                  explanationText: aiVerdict.verdict.explanationText,
+                  nextMoveText: aiVerdict.verdict.nextMoveText,
+                  verdictVersion: aiVerdict.verdict.verdictVersion,
+                  updatedAt: timestamp,
+                }
+              : item,
           ),
         }));
       },
@@ -217,6 +276,21 @@ export const useGuestStore = create<GuestState>()(
     {
       name: 'overthought-guest-store',
       storage: createJSONStorage(() => zustandMmkvStorage),
+      merge: (persistedState, currentState) => {
+        const persisted = (persistedState ?? {}) as Partial<GuestState>;
+        const drafts = persisted.drafts ?? currentState.drafts;
+
+        return {
+          ...currentState,
+          ...persisted,
+          cases: (persisted.cases ?? []).map(normalizeGuestCase),
+          drafts: {
+            ...currentState.drafts,
+            ...drafts,
+            caseRequestId: drafts.caseRequestId ?? null,
+          },
+        };
+      },
       partialize: (state) => ({
         localGuestId: state.localGuestId,
         guestAiKey: state.guestAiKey,
@@ -229,8 +303,31 @@ export const useGuestStore = create<GuestState>()(
   ),
 );
 
+export function normalizeGuestCase(item: GuestCaseLocal): GuestCaseLocal {
+  if (item.resultSource) {
+    return item;
+  }
+
+  if (item.aiVerdict) {
+    return {
+      ...item,
+      legacyBasicSnapshot: item.aiVerdict.localFallback,
+      resultSource: 'smart',
+      smartVerdict: item.aiVerdict.verdict,
+      verdictLabel: item.aiVerdict.verdict.verdictLabel,
+      delusionScore: item.aiVerdict.verdict.delusionScore,
+      explanationText: item.aiVerdict.verdict.explanationText,
+      nextMoveText: item.aiVerdict.verdict.nextMoveText,
+      verdictVersion: item.aiVerdict.verdict.verdictVersion,
+    };
+  }
+
+  return { ...item, resultSource: 'legacy_basic' };
+}
+
 export function selectActiveGuestCases(state: GuestState): GuestCaseLocal[] {
   return state.cases
+    .map(normalizeGuestCase)
     .filter((item) => !item.archivedAt && !item.deletedAt)
     .sort((left, right) => new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime());
 }

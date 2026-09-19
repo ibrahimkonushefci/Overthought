@@ -1,4 +1,10 @@
-import type { CreateCaseInput, GuestCaseLocal, OutcomeStatus } from '../../../types/shared';
+import type {
+  AiVerdictResponse,
+  CreateCaseInput,
+  GuestCaseLocal,
+  OutcomeStatus,
+  SmartCaseCreationInput,
+} from '../../../types/shared';
 import { trackEvent } from '../../../lib/analytics/analyticsService';
 import { supabase } from '../../../lib/supabase/client';
 import { nowIso, parseAppTimestamp } from '../../../shared/utils/date';
@@ -6,10 +12,15 @@ import { createId } from '../../../shared/utils/id';
 import { titleFromInput } from '../../../shared/utils/verdict';
 import { useAiVerdictStore } from '../../../store/aiVerdictStore';
 import { useAuthStore } from '../../../store/authStore';
-import { selectActiveGuestCases, useGuestStore } from '../../../store/guestStore';
+import { normalizeGuestCase, selectActiveGuestCases, useGuestStore } from '../../../store/guestStore';
 import { analysisService } from '../../analysis/analysisService';
+import { aiVerdictService } from '../../ai-verdict/aiVerdictService';
 import type { CaseEntity } from '../types';
-import { mapCaseRow, type CaseRow } from './caseMappers';
+import { mapCanonicalCaseRow, mapCaseRow, type CanonicalCaseRow, type CaseRow } from './caseMappers';
+
+export type SmartCaseCreationResult =
+  | { ok: true; record: CaseEntity; response: Extract<AiVerdictResponse, { ok: true }> }
+  | { ok: false; response: Extract<AiVerdictResponse, { ok: false }> };
 
 function authenticatedCaseId(caseId: string): string {
   return useGuestStore.getState().migratedCaseMap[caseId] ?? caseId;
@@ -67,7 +78,113 @@ function sortCasesNewestFirst(records: CaseEntity[]): CaseEntity[] {
   return [...records].sort((left, right) => caseListTimestamp(right) - caseListTimestamp(left));
 }
 
+async function getCanonicalAuthenticatedCase(caseId: string, userId: string): Promise<CaseEntity | null> {
+  if (!supabase) {
+    throw new Error('Supabase is not configured.');
+  }
+
+  const { data, error } = await supabase
+    .from('canonical_case_results')
+    .select('*')
+    .eq('id', authenticatedCaseId(caseId))
+    .eq('user_id', userId)
+    .is('archived_at', null)
+    .is('deleted_at', null)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return data ? mapCanonicalCaseRow(data as CanonicalCaseRow) : null;
+}
+
 export const caseRepository = {
+  async createSmartCase(input: SmartCaseCreationInput): Promise<SmartCaseCreationResult> {
+    const auth = useAuthStore.getState();
+    const smartInput = { ...input, title: input.title ?? titleFromInput(input.inputText) };
+    const response = await aiVerdictService.createSmartCase(smartInput);
+
+    if (!response.ok) {
+      const failureEvent =
+        response.code === 'invalid_input' || response.code === 'safety_routed'
+          ? 'smart_verdict_validation_failed'
+          : response.code === 'quota_exceeded' ||
+              response.code === 'fair_use_exceeded' ||
+              response.code === 'ip_daily_cap_exceeded' ||
+              response.code === 'global_daily_cap_exceeded'
+            ? 'smart_verdict_quota_blocked'
+            : 'smart_verdict_generation_failed';
+      trackEvent(failureEvent, {
+        code: response.code,
+        tier: response.access?.accessTier ?? null,
+        scope: response.access?.quotaScope ?? null,
+        reason: response.access?.reason ?? null,
+      });
+      return { ok: false, response };
+    }
+
+    let record: CaseEntity;
+
+    if (auth.sessionMode === 'authenticated') {
+      if (!auth.user || !response.caseId) {
+        return { ok: false, response: { ok: false, code: 'cache_write_failed', message: 'The saved Smart Verdict could not be reopened yet. Retry to recover it.' } };
+      }
+
+      const canonical = await getCanonicalAuthenticatedCase(String(response.caseId), auth.user.id);
+
+      if (!canonical) {
+        return { ok: false, response: { ok: false, code: 'cache_write_failed', message: 'The saved Smart Verdict could not be reopened yet. Retry to recover it.' } };
+      }
+
+      record = canonical;
+    } else {
+      const timestamp = nowIso();
+      const localOwnerId = useGuestStore.getState().ensureGuestSession();
+      const snapshot = {
+        verdict: response.verdict,
+        localFallback: response.localCalibration ?? response.localFallback,
+        cache: response.cache,
+        access: response.access,
+        updatedAt: timestamp,
+      };
+      record = {
+        localId: createId('case'),
+        localOwnerId,
+        title: smartInput.title,
+        category: input.category,
+        inputText: input.inputText,
+        verdictLabel: response.verdict.verdictLabel,
+        delusionScore: response.verdict.delusionScore,
+        explanationText: response.verdict.explanationText,
+        nextMoveText: response.verdict.nextMoveText,
+        verdictVersion: response.verdict.verdictVersion,
+        triggeredSignals: undefined,
+        outcomeStatus: 'unknown',
+        lastAnalyzedAt: timestamp,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+        archivedAt: null,
+        deletedAt: null,
+        resultSource: 'smart',
+        smartVerdict: response.verdict,
+        legacyBasicSnapshot: snapshot.localFallback,
+        aiVerdict: snapshot,
+        updates: [],
+        syncStatus: 'local_only',
+      };
+      useGuestStore.getState().addCase(record);
+    }
+
+    trackEvent('case_analyzed', {
+      category: input.category,
+      score: response.verdict.delusionScore,
+      source: 'smart',
+    });
+    trackEvent('case_saved', { mode: auth.sessionMode === 'authenticated' ? 'authenticated' : 'guest', source: 'smart' });
+    return { ok: true, record, response };
+  },
+
   async createCase(input: CreateCaseInput): Promise<CaseEntity> {
     const analysis = await analysisService.analyzeCase(input);
     const title = input.title ?? titleFromInput(input.inputText);
@@ -164,6 +281,7 @@ export const caseRepository = {
       updatedAt: timestamp,
       archivedAt: null,
       deletedAt: null,
+      resultSource: 'legacy_basic',
       updates: [],
       syncStatus: 'local_only',
     };
@@ -185,7 +303,7 @@ export const caseRepository = {
       }
 
       const { data, error } = await supabase
-        .from('cases')
+        .from('canonical_case_results')
         .select('*')
         .eq('user_id', auth.user.id)
         .is('archived_at', null)
@@ -196,7 +314,7 @@ export const caseRepository = {
         throw error;
       }
 
-      return sortCasesNewestFirst((data as CaseRow[]).map(mapCaseRow));
+      return sortCasesNewestFirst((data as CanonicalCaseRow[]).map(mapCanonicalCaseRow));
     }
 
     return sortCasesNewestFirst(selectActiveGuestCases(useGuestStore.getState()));
@@ -208,7 +326,8 @@ export const caseRepository = {
       return (
         useGuestStore
           .getState()
-          .cases.find((item) => item.localId === caseId && !item.archivedAt && !item.deletedAt) ?? null
+          .cases.map(normalizeGuestCase)
+          .find((item) => item.localId === caseId && !item.archivedAt && !item.deletedAt) ?? null
       );
     }
 
@@ -220,20 +339,7 @@ export const caseRepository = {
       throw new Error('Authenticated session is missing a user.');
     }
 
-    const { data, error } = await supabase
-      .from('cases')
-      .select('*')
-      .eq('id', authenticatedCaseId(caseId))
-      .eq('user_id', auth.user.id)
-      .is('archived_at', null)
-      .is('deleted_at', null)
-      .maybeSingle();
-
-    if (error) {
-      throw error;
-    }
-
-    return data ? mapCaseRow(data as CaseRow) : null;
+    return getCanonicalAuthenticatedCase(caseId, auth.user.id);
   },
   async updateOutcome(caseId: string, outcomeStatus: OutcomeStatus): Promise<void> {
     const auth = useAuthStore.getState();

@@ -81,6 +81,7 @@ function guestCase(localId = 'local-case-1'): GuestCaseLocal {
     updatedAt: '2026-04-21T10:00:00.000Z',
     archivedAt: null,
     deletedAt: null,
+    resultSource: 'legacy_basic',
     updates: [],
     syncStatus: 'local_only',
   };
@@ -183,7 +184,7 @@ describe('caseUpdateRepository authenticated sync behavior', () => {
     expect(insertUpdate.insert.mock.calls[0][0]).not.toHaveProperty('explanation_text');
     expect(insertUpdate.insert.mock.calls[0][0]).not.toHaveProperty('next_move_text');
     expect(insertUpdate.insert.mock.calls[0][0]).not.toHaveProperty('verdict_version');
-    expect(mockSupabase.from.mock.calls.map((call) => call[0])).toEqual(['cases', 'case_updates']);
+    expect(mockSupabase.from.mock.calls.map((call) => call[0])).toEqual(['canonical_case_results', 'case_updates']);
     expect(mockAnalysisService.analyzeCase).not.toHaveBeenCalled();
   });
 

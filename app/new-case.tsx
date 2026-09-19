@@ -3,10 +3,9 @@ import { Alert, Animated, Keyboard, Pressable, StyleSheet, TextInput, View } fro
 import { useRouter } from 'expo-router';
 import { ArrowLeft, Sparkles } from 'lucide-react-native';
 import type { AiVerdictResponse, CaseCategory } from '../src/types/shared';
-import { aiVerdictService } from '../src/features/ai-verdict/aiVerdictService';
 import { caseRepository } from '../src/features/cases/repositories/caseRepository';
 import { pickExamplePrompts } from '../src/features/cases/examplePrompts';
-import { getCaseId, type CaseEntity } from '../src/features/cases/types';
+import { getCaseId } from '../src/features/cases/types';
 import { CategoryPill } from '../src/features/cases/components/CategoryPill';
 import { VerdictRevealOverlay, type VerdictRevealOutcome } from '../src/features/cases/components/VerdictRevealOverlay';
 import { Button } from '../src/shared/ui/Button';
@@ -19,10 +18,10 @@ import {
   CASE_SAFETY_MESSAGE,
   CaseSafetyRoutingError,
 } from '../src/shared/utils/caseSafety';
-import { getVerdictDisplayLabel } from '../src/shared/utils/verdict';
 import { useAuthStore } from '../src/store/authStore';
 import { useGuestStore } from '../src/store/guestStore';
 import { reviewPromptService } from '../src/features/reviews/reviewPromptService';
+import { trackEvent } from '../src/lib/analytics/analyticsService';
 
 const categories: CaseCategory[] = ['romance', 'friendship', 'social', 'general'];
 const MIN_REVEAL_DURATION_MS = 1600;
@@ -35,39 +34,43 @@ function wait(milliseconds: number) {
   });
 }
 
-function revealOutcomeFromResult(record: CaseEntity, aiResult: AiVerdictResponse): VerdictRevealOutcome {
-  if (aiResult.ok) {
-    return {
-      displayLabel: aiResult.verdict.displayLabel,
-      score: aiResult.verdict.delusionScore,
-      source: 'smart',
-      verdictLabel: aiResult.verdict.verdictLabel,
-    };
+function resetMessage(resetAt?: string | null): string {
+  if (!resetAt) {
+    return 'Premium fair-use protection is active. Your draft is saved—please try again later.';
   }
 
+  const reset = new Date(resetAt);
+  const readable = Number.isNaN(reset.getTime()) ? null : reset.toLocaleString();
+  return readable
+    ? `Premium fair-use protection is active. Your draft is saved. Try again after ${readable}.`
+    : 'Premium fair-use protection is active. Your draft is saved—please try again later.';
+}
+
+function revealOutcomeFromResult(aiResult: Extract<AiVerdictResponse, { ok: true }>): VerdictRevealOutcome {
   return {
-    displayLabel: getVerdictDisplayLabel(
-      record.verdictLabel,
-      `${getCaseId(record)}|${record.inputText}|${record.delusionScore}`,
-    ),
-    score: record.delusionScore,
-    source: 'basic',
-    verdictLabel: record.verdictLabel,
+    displayLabel: aiResult.verdict.displayLabel,
+    score: aiResult.verdict.delusionScore,
+    source: 'smart',
+    verdictLabel: aiResult.verdict.verdictLabel,
   };
 }
 
 export default function NewCaseRoute() {
   const router = useRouter();
   const draft = useGuestStore((state) => state.drafts.caseText);
+  const draftCategory = useGuestStore((state) => state.drafts.preferredCategory);
+  const draftRequestId = useGuestStore((state) => state.drafts.caseRequestId);
   const setCaseDraft = useGuestStore((state) => state.setCaseDraft);
+  const setPreferredCategory = useGuestStore((state) => state.setPreferredCategory);
+  const clearCaseDraft = useGuestStore((state) => state.clearCaseDraft);
   const sessionMode = useAuthStore((state) => state.sessionMode);
   const [inputText, setInputText] = useState(draft);
-  const [category, setCategory] = useState<CaseCategory>('romance');
+  const [category, setCategory] = useState<CaseCategory>(draftCategory);
   const [loading, setLoading] = useState(false);
   const [revealCategory, setRevealCategory] = useState<CaseCategory>('romance');
   const [revealOutcome, setRevealOutcome] = useState<VerdictRevealOutcome | null>(null);
   const [pendingResultRoute, setPendingResultRoute] = useState<string | null>(null);
-  const [examples, setExamples] = useState(() => pickExamplePrompts('romance', 4));
+  const [examples, setExamples] = useState(() => pickExamplePrompts(draftCategory, 4));
   const helperPulse = useRef(new Animated.Value(0)).current;
   const previousHelperAttentionKey = useRef('');
   const trimmedInput = inputText.trim();
@@ -134,7 +137,77 @@ export default function NewCaseRoute() {
 
   const selectCategory = (nextCategory: CaseCategory) => {
     setCategory(nextCategory);
+    setPreferredCategory(nextCategory);
     setExamples(pickExamplePrompts(nextCategory, 4));
+  };
+
+  const showCreationFailure = (response: Extract<AiVerdictResponse, { ok: false }>) => {
+    const retry = () => {
+      trackEvent('smart_verdict_retry', { code: response.code });
+      void submit();
+    };
+    const access = response.access;
+
+    if (response.code === 'safety_routed') {
+      Alert.alert('Your safety comes first', CASE_SAFETY_MESSAGE);
+      return;
+    }
+
+    if (response.code === 'invalid_input') {
+      Alert.alert('Check your case', response.message);
+      return;
+    }
+
+    if (response.code === 'in_progress') {
+      Alert.alert('Still working', 'Your Smart Verdict may still finish. Keep this draft and check again.', [
+        { text: 'Not now', style: 'cancel' },
+        { text: 'Check again', onPress: retry },
+      ]);
+      return;
+    }
+
+    if (response.code === 'quota_exceeded' && access?.accessTier === 'guest') {
+      Alert.alert('Free guest Smart Verdicts used', 'Sign in to get your daily Smart Verdict allowance. Your draft is still here.', [
+        { text: 'Not now', style: 'cancel' },
+        { text: 'Sign in', onPress: () => router.push('/auth') },
+      ]);
+      return;
+    }
+
+    if (response.code === 'quota_exceeded' && access?.accessTier === 'free') {
+      Alert.alert("Today's free Smart Verdicts are used", 'Your draft is still here. Premium includes more Smart Verdicts.', [
+        { text: 'Not now', style: 'cancel' },
+        { text: 'View Premium', onPress: () => router.push('/paywall') },
+      ]);
+      return;
+    }
+
+    if (response.code === 'fair_use_exceeded' || (access?.accessTier === 'premium' && access.reason === 'fair_use')) {
+      Alert.alert('Smart Verdict limit reached', resetMessage(access?.resetAt));
+      return;
+    }
+
+    if (response.code === 'ip_daily_cap_exceeded' || response.code === 'global_daily_cap_exceeded') {
+      Alert.alert('Smart Verdicts temporarily limited', 'The service limit has been reached. Your draft is saved—please try again later.');
+      return;
+    }
+
+    if (response.code === 'not_authenticated') {
+      Alert.alert('Sign in again', 'Your draft is saved. Sign in again before retrying.', [
+        { text: 'Not now', style: 'cancel' },
+        { text: 'Sign in', onPress: () => router.push('/auth') },
+      ]);
+      return;
+    }
+
+    Alert.alert(
+      'Smart Verdict not created',
+      'An internet connection is required and no case was added. Your draft is saved.',
+      [
+        { text: 'Not now', style: 'cancel' },
+        { text: 'Retry', onPress: retry },
+      ],
+    );
   };
 
   const submit = async () => {
@@ -165,20 +238,27 @@ export default function NewCaseRoute() {
     const minimumRevealTime = wait(MIN_REVEAL_DURATION_MS);
 
     try {
-      const record = await caseRepository.createCase({ inputText: trimmed, category });
-      const aiVerdictRequest = aiVerdictService.requestForCase(record);
-      setCaseDraft('');
+      const requestId = useGuestStore.getState().ensureCaseRequestId();
+
+      if (draftRequestId) {
+        trackEvent('smart_verdict_retry', { code: 'preserved_request_id' });
+      }
+      const result = await caseRepository.createSmartCase({ requestId, inputText: trimmed, category });
+
+      if (!result.ok) {
+        setLoading(false);
+        showCreationFailure(result.response);
+        return;
+      }
+
+      await minimumRevealTime;
+      reviewPromptService.recordSuccessfulSmartVerdict();
+      clearCaseDraft();
       setInputText('');
       setCategory('romance');
       setExamples(pickExamplePrompts('romance', 4));
-      const [, aiResult] = await Promise.all([minimumRevealTime, aiVerdictRequest]);
-      const outcome = revealOutcomeFromResult(record, aiResult);
-      if (outcome.source === 'smart') {
-        reviewPromptService.recordSuccessfulSmartVerdict();
-      }
-      const quotaParam = !aiResult.ok && aiResult.code === 'quota_exceeded' ? '&aiQuota=1' : '';
-      setPendingResultRoute(`/case/${getCaseId(record)}?fromAnalysis=1${quotaParam}`);
-      setRevealOutcome(outcome);
+      setPendingResultRoute(`/case/${getCaseId(result.record)}?fromAnalysis=1`);
+      setRevealOutcome(revealOutcomeFromResult(result.response));
     } catch (error) {
       setRevealOutcome(null);
       setPendingResultRoute(null);
@@ -187,7 +267,7 @@ export default function NewCaseRoute() {
         Alert.alert('Your safety comes first', CASE_SAFETY_MESSAGE);
         return;
       }
-      Alert.alert('Could not save the case', error instanceof Error ? error.message : 'Try again.');
+      Alert.alert('Smart Verdict not created', 'Your draft is saved. Check your internet connection and retry.');
     }
   };
 
@@ -295,7 +375,7 @@ export default function NewCaseRoute() {
         <Sparkles color={colors.text.secondary} size={15} strokeWidth={2.5} />
         <AppText variant="meta" color={colors.text.secondary} style={styles.aiAccessText}>
           {sessionMode === 'authenticated'
-            ? "Smart Verdict runs first when it's available. Basic Verdict has your back if not."
+            ? 'New cases are saved only after Smart Verdict succeeds.'
             : 'Your first 2 cases get the full Smart Verdict read — on us.'}
         </AppText>
       </View>

@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { useGuestStore } from '../../../store/guestStore';
 import { useAuthStore } from '../../../store/authStore';
-import { useAiVerdictStore } from '../../../store/aiVerdictStore';
 import { parseAppTimestamp } from '../../../shared/utils/date';
 import { caseRepository } from '../repositories/caseRepository';
 import { getCaseId } from '../types';
@@ -112,7 +111,6 @@ export function useCases() {
   const authMode = useAuthStore((state) => state.sessionMode);
   const authUserId = useAuthStore((state) => state.user?.id ?? null);
   const rawGuestCases = useGuestStore((state) => state.cases);
-  const aiVerdictsByCaseId = useAiVerdictStore((state) => state.byCaseId);
   const migratedCaseCount = useGuestStore((state) => Object.keys(state.migratedCaseMap).length);
   const [remoteCaseVersion, setRemoteCaseVersion] = useState(0);
   const guestCases = useMemo(
@@ -143,35 +141,18 @@ export function useCases() {
     }, [refresh]),
   );
 
-  const casesWithAiVerdicts = useMemo(() => {
-    const sourceCases =
+  const canonicalCases = useMemo(
+    () =>
       authMode === 'authenticated'
         ? authUserId && cachedRemoteUserId === authUserId
           ? cachedRemoteCases
           : []
-        : guestCases;
-
-    return sourceCases.map((item) => {
-      const caseId = getCaseId(item);
-      const aiVerdict = aiVerdictsByCaseId[caseId] ?? ('aiVerdict' in item ? item.aiVerdict : undefined);
-
-      if (!aiVerdict) {
-        return item;
-      }
-
-      return {
-        ...item,
-        verdictLabel: aiVerdict.verdict.verdictLabel,
-        delusionScore: aiVerdict.verdict.delusionScore,
-        explanationText: aiVerdict.verdict.explanationText,
-        nextMoveText: aiVerdict.verdict.nextMoveText,
-        verdictVersion: aiVerdict.verdict.verdictVersion,
-      };
-    });
-  }, [aiVerdictsByCaseId, authMode, authUserId, guestCases, remoteCaseVersion]);
+        : guestCases,
+    [authMode, authUserId, guestCases, remoteCaseVersion],
+  );
 
   return {
-    cases: casesWithAiVerdicts,
+    cases: canonicalCases,
     loading: authMode === 'authenticated' && authUserId ? cachedRemoteLoading : false,
     error: authMode === 'authenticated' && authUserId ? cachedRemoteError : null,
     refresh,

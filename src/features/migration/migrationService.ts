@@ -1,7 +1,6 @@
-import type { GuestCaseLocal, GuestMigrationPayload } from '../../types/shared';
+import type { AnalysisOutput, GuestCaseLocal, GuestMigrationPayload } from '../../types/shared';
 import { supabase } from '../../lib/supabase/client';
-import { nowIso } from '../../shared/utils/date';
-import { useAiVerdictStore } from '../../store/aiVerdictStore';
+import { aiVerdictService } from '../ai-verdict/aiVerdictService';
 import { useAuthStore } from '../../store/authStore';
 import { useGuestStore } from '../../store/guestStore';
 
@@ -69,9 +68,7 @@ export const migrationService = {
       }
 
       try {
-        const remoteCaseId = await findRemoteCaseId(auth.user.id, item.localId);
-        const caseId = remoteCaseId ?? (await createRemoteCase(auth.user.id, item));
-        preserveMigratedAiVerdict(item, caseId);
+        const caseId = await migrateCase(auth.user.id, item, guest.guestAiKey);
 
         for (const update of item.updates) {
           const { data: matchingUpdates, error: updateLookupError } = await supabase
@@ -119,22 +116,46 @@ export const migrationService = {
   },
 };
 
-function preserveMigratedAiVerdict(item: GuestCaseLocal, remoteCaseId: string) {
-  if (!item.aiVerdict) {
-    return;
+async function migrateCase(userId: string, item: GuestCaseLocal, guestAiKey: string | null): Promise<string> {
+  if (item.resultSource === 'smart' && item.aiVerdict && guestAiKey) {
+    const verified = await aiVerdictService.migrateGuestSmartCase({
+      guestKey: guestAiKey,
+      guestVerdictId: item.aiVerdict.cache.id,
+      localCaseId: item.localId,
+      title: item.title,
+      category: item.category,
+      inputText: item.inputText,
+      outcomeStatus: item.outcomeStatus,
+      createdAt: item.createdAt,
+      updatedAt: item.updatedAt,
+      archivedAt: item.archivedAt,
+    });
+
+    if (verified.ok) {
+      return verified.caseId;
+    }
+
+    if (verified.code !== 'case_not_found' && verified.code !== 'invalid_input') {
+      throw new Error(verified.message);
+    }
   }
 
-  const timestamp = nowIso();
-  useAiVerdictStore.getState().setAiVerdict(remoteCaseId, {
-    ...item.aiVerdict,
-    updatedAt: timestamp,
-  });
-  useAiVerdictStore.getState().setRequestState(remoteCaseId, {
-    status: 'cache',
-    message: 'Moved from your guest case.',
-    access: item.aiVerdict.access,
-    updatedAt: timestamp,
-  });
+  const remoteCaseId = await findRemoteCaseId(userId, item.localId);
+  return remoteCaseId ?? createRemoteCase(userId, item, legacySnapshotFor(item));
+}
+
+function legacySnapshotFor(item: GuestCaseLocal): AnalysisOutput {
+  return (
+    item.legacyBasicSnapshot ??
+    item.aiVerdict?.localFallback ?? {
+      verdictLabel: item.verdictLabel,
+      delusionScore: item.delusionScore,
+      explanationText: item.explanationText,
+      nextMoveText: item.nextMoveText,
+      verdictVersion: item.verdictVersion,
+      triggeredSignals: item.triggeredSignals,
+    }
+  );
 }
 
 async function findRemoteCaseId(userId: string, localCaseId: string): Promise<string | null> {
@@ -156,7 +177,7 @@ async function findRemoteCaseId(userId: string, localCaseId: string): Promise<st
   return data?.id ?? null;
 }
 
-async function createRemoteCase(userId: string, item: GuestCaseLocal) {
+async function createRemoteCase(userId: string, item: GuestCaseLocal, legacy: AnalysisOutput) {
   if (!supabase) {
     throw new Error('Supabase is not configured.');
   }
@@ -169,12 +190,12 @@ async function createRemoteCase(userId: string, item: GuestCaseLocal) {
       title: item.title,
       category: item.category,
       input_text: item.inputText,
-      verdict_label: item.verdictLabel,
-      delusion_score: item.delusionScore,
-      explanation_text: item.explanationText,
-      next_move_text: item.nextMoveText,
+      verdict_label: legacy.verdictLabel,
+      delusion_score: legacy.delusionScore,
+      explanation_text: legacy.explanationText,
+      next_move_text: legacy.nextMoveText,
       outcome_status: item.outcomeStatus,
-      latest_verdict_version: item.verdictVersion,
+      latest_verdict_version: legacy.verdictVersion,
       last_analyzed_at: item.lastAnalyzedAt,
       created_at: item.createdAt,
       updated_at: item.updatedAt,
