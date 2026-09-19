@@ -24,7 +24,7 @@ const baseExpo = {
   name: 'Overthought',
   slug: 'overthought',
   scheme: 'overthought',
-  version: '1.0.4',
+  version: '1.0.5',
   orientation: 'portrait',
   userInterfaceStyle: 'light',
   icon: './assets/brand/app-icon.png',
