@@ -5,7 +5,8 @@ import { getCaseId } from '../types';
 import { AppText } from '../../../shared/ui/Text';
 import { colors, radii, spacing, typography } from '../../../shared/theme/tokens';
 import { categoryIcons, categoryLabels, scoreToneBackground, scoreColor, verdictIcons, verdictLabels } from '../../../shared/utils/verdict';
-import { parseAppTimestamp, relativeTime } from '../../../shared/utils/date';
+import { relativeTime } from '../../../shared/utils/date';
+import { getCaseActivity } from '../caseActivity';
 
 interface CaseCardProps {
   item: CaseEntity;
@@ -14,9 +15,7 @@ interface CaseCardProps {
 export function CaseCard({ item }: CaseCardProps) {
   const router = useRouter();
   const id = getCaseId(item);
-  const listTimestamp = [item.updatedAt, item.createdAt, item.lastAnalyzedAt].reduce((latest, candidate) =>
-    parseAppTimestamp(candidate) > parseAppTimestamp(latest) ? candidate : latest,
-  );
+  const activity = getCaseActivity(item);
 
   return (
     <Pressable
@@ -35,7 +34,8 @@ export function CaseCard({ item }: CaseCardProps) {
       <View style={styles.body}>
         <View style={styles.metaRow}>
           <AppText variant="meta" style={styles.metaCopy}>
-            {categoryIcons[item.category]} {categoryLabels[item.category]} · {relativeTime(listTimestamp)}
+            {categoryIcons[item.category]} {categoryLabels[item.category]} · {activity.kind === 'updated' ? 'Updated' : 'Created'}{' '}
+            {relativeTime(activity.timestamp)}
           </AppText>
           <View style={[styles.sourceBadge, item.resultSource === 'smart' && styles.smartSourceBadge]}>
             <AppText variant="eyebrow" style={[styles.sourceText, item.resultSource === 'smart' && styles.smartSourceText]}>

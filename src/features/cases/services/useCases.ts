@@ -2,20 +2,10 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { useGuestStore } from '../../../store/guestStore';
 import { useAuthStore } from '../../../store/authStore';
-import { parseAppTimestamp } from '../../../shared/utils/date';
 import { caseRepository } from '../repositories/caseRepository';
+import { compareCasesByActivity } from '../caseActivity';
 import { getCaseId } from '../types';
 import type { CaseEntity } from '../types';
-
-function caseListTimestamp(record: CaseEntity): number {
-  const timestamps = [
-    parseAppTimestamp(record.updatedAt),
-    parseAppTimestamp(record.createdAt),
-    parseAppTimestamp(record.lastAnalyzedAt),
-  ].filter(Number.isFinite);
-
-  return timestamps.length > 0 ? Math.max(...timestamps) : 0;
-}
 
 let cachedRemoteCases: CaseEntity[] = [];
 let cachedRemoteUserId: string | null = null;
@@ -117,7 +107,7 @@ export function useCases() {
     () =>
       rawGuestCases
         .filter((item) => !item.archivedAt && !item.deletedAt)
-        .sort((left, right) => caseListTimestamp(right) - caseListTimestamp(left)),
+        .sort(compareCasesByActivity),
     [rawGuestCases],
   );
   useEffect(() => subscribeToRemoteCases(() => setRemoteCaseVersion((version) => version + 1)), []);

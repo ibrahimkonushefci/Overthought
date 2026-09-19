@@ -38,6 +38,12 @@ type AiVerdictFailureCode =
 
 export type AiVerdictRequest =
   | {
+      guestKey?: string;
+      target?: {
+        targetType?: 'quota_status';
+      };
+    }
+  | {
       requestId?: string;
       target?: {
         targetType?: 'new_case';
@@ -1316,6 +1322,12 @@ async function handleAuthenticatedNewCaseRequest(
         quotaScope: 'daily',
         limit: primaryLimit,
       });
+      if (!access.allowed) {
+        const code = reservationFailureCode(
+          access.reason ?? (access.accessTier === 'premium' ? 'fair_use' : undefined),
+        );
+        return failure(statusForFailure(code), code, messageForFailure(code), undefined, access);
+      }
       return responseFromRow(cached.verdict, 'cache', localFallback, access, {
         requestId: parsed.requestId,
         caseId: cached.caseId,
@@ -1449,6 +1461,10 @@ async function handleGuestNewCaseRequest(
         quotaScope: 'lifetime',
         limit: runtime.guestLifetimeLimit,
       });
+      if (!access.allowed) {
+        const code = reservationFailureCode(access.reason);
+        return failure(statusForFailure(code), code, messageForFailure(code), undefined, access);
+      }
       return responseFromRow(cached, 'cache', localFallback, access, { requestId: parsed.requestId, caseId: null });
     }
 
@@ -1595,6 +1611,63 @@ async function handleGuestSmartCaseMigration(
       : failure(404, 'case_not_found', 'The verified guest Smart Verdict was not found.');
   } catch {
     return failure(500, 'unknown', 'The guest Smart Verdict could not be moved right now.');
+  }
+}
+
+async function handleAuthenticatedQuotaStatus(
+  token: string,
+  deps: AiVerdictHandlerDeps,
+  runtime: {
+    quotaBucket: string;
+    signedInFreeDailyLimit: number;
+    premiumDailyLimit: number;
+  },
+): Promise<AiVerdictHttpResult> {
+  const userId = await deps.data.authenticate(token);
+  if (!userId) return failure(401, 'not_authenticated', 'Invalid auth token.');
+
+  try {
+    const accessTier = await deps.data.getAuthenticatedAccessTier(userId);
+    const limit = accessTier === 'premium' ? runtime.premiumDailyLimit : runtime.signedInFreeDailyLimit;
+    const access = await deps.data.getUsageAccess({
+      userId,
+      accessTier,
+      quotaBucket: runtime.quotaBucket,
+      quotaScope: 'daily',
+      limit,
+    });
+    return { status: 200, body: { ok: true, access } as unknown as AiVerdictResponse };
+  } catch {
+    return failure(500, 'unknown', messageForFailure('unknown'));
+  }
+}
+
+async function handleGuestQuotaStatus(
+  payload: AiVerdictRequest,
+  deps: AiVerdictHandlerDeps,
+  runtime: {
+    quotaBucket: string;
+    guestLifetimeLimit: number;
+    hash: (value: string) => Promise<string>;
+  },
+): Promise<AiVerdictHttpResult> {
+  const request = payload as { guestKey?: unknown };
+  if (!isValidGuestKey(request.guestKey)) {
+    return failure(400, 'guest_key_required', messageForFailure('guest_key_required'));
+  }
+
+  try {
+    const guestKeyHash = await runtime.hash(`guest-key:${request.guestKey.trim()}`);
+    const access = await deps.data.getUsageAccess({
+      guestKeyHash,
+      accessTier: 'guest',
+      quotaBucket: runtime.quotaBucket,
+      quotaScope: 'lifetime',
+      limit: runtime.guestLifetimeLimit,
+    });
+    return { status: 200, body: { ok: true, access } as unknown as AiVerdictResponse };
+  } catch {
+    return failure(500, 'unknown', messageForFailure('unknown'));
   }
 }
 
@@ -1996,6 +2069,12 @@ export async function handleAiVerdictRequest(
   }
 
   const targetType = (payload as { target?: { targetType?: unknown } }).target?.targetType;
+
+  if (targetType === 'quota_status') {
+    return token
+      ? handleAuthenticatedQuotaStatus(token, deps, runtime)
+      : handleGuestQuotaStatus(payload as AiVerdictRequest, deps, runtime);
+  }
 
   if (targetType === 'new_case') {
     if (!token) {

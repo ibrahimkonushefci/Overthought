@@ -9,26 +9,15 @@ export function parseAppTimestamp(value: string): number {
     return Number.NaN;
   }
 
-  const hasTimezone = /(?:z|[+-]\d{2}:?\d{2})$/i.test(trimmed);
+  const hasTimezone = /(?:z|[+-]\d{2}(?::?\d{2})?)$/i.test(trimmed);
   const normalized = trimmed.replace(' ', 'T');
 
   if (hasTimezone) {
-    return new Date(normalized).getTime();
+    const normalizedOffset = normalized.replace(/([+-]\d{2})$/, '$1:00');
+    return new Date(normalizedOffset).getTime();
   }
 
-  const utcTimestamp = new Date(`${normalized}Z`).getTime();
-  const localTimestamp = new Date(normalized).getTime();
-
-  if (!Number.isFinite(utcTimestamp)) {
-    return localTimestamp;
-  }
-
-  if (!Number.isFinite(localTimestamp)) {
-    return utcTimestamp;
-  }
-
-  const now = Date.now();
-  return Math.abs(now - utcTimestamp) <= Math.abs(now - localTimestamp) ? utcTimestamp : localTimestamp;
+  return new Date(`${normalized}Z`).getTime();
 }
 
 export function normalizeIsoTimestamp(value: string): string {

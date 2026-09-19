@@ -1,20 +1,20 @@
 # Overthought development and release guide
 
-iOS-first Expo React Native foundation for Overthought, a case-based app for analyzing social overthinking. The repository contains the simulator-verified Phase 2 Smart-only client plus its deployed additive backend support. The App Store build remains on the backward-compatible v1 flow until the Phase 2 client receives a separately approved TestFlight build, physical-device QA, and release approval.
+iOS-first Expo React Native foundation for Overthought, a case-based app for analyzing social overthinking. Corrective build `1.0.6 (28)` is live in TestFlight and passed the core physical-iPhone corrective flow. The App Store release is intentionally paused for the next product change and remains a separate explicit approval gate.
 
 ## Smart-only rollout boundary
 
-Phase 1 added migrations `0009` and `0010` plus a backward-compatible `ai-verdict` handler. Phase 2 added migration `0011_verified_guest_smart_migration.sql`, the `migrate_guest_case` route, and the Smart-only client. The backend portion of this sequence is complete; the client build remains pending:
+Phase 1 added migrations `0009` and `0010` plus a backward-compatible `ai-verdict` handler. Phase 2 added migration `0011_verified_guest_smart_migration.sql`, the `migrate_guest_case` route, and the Smart-only client. The corrective pass added migration `0012_timestamp_activity_integrity.sql`, the read-only quota-status route, branded allowance UX, and consistent activity timestamps. This sequence is deployed and in TestFlight:
 
-1. Apply migration `0011_verified_guest_smart_migration.sql` to the existing Supabase project.
-2. Deploy the updated backward-compatible `ai-verdict` Edge Function.
-3. Re-run legacy `case`/`guest_case`, new `new_case`/`new_guest_case`, and authenticated `migrate_guest_case` smoke tests.
-4. Confirm the current App Store build still creates and reopens cases normally.
-5. Build the Phase 2 client for TestFlight and complete the physical-iPhone matrix before App Store release.
+1. Migrations are applied through `0012` in production.
+2. Backward-compatible `ai-verdict` version 26 is active.
+3. Corrective build `1.0.6 (28)` is live in TestFlight.
+4. Physical testing confirmed the main guest, signed-in, quota, draft-protection, cached-quota, and timestamp/activity flows.
+5. Re-run the relevant matrix after the next change before requesting App Store release.
 
-Production status (2026-09-19): migrations are applied through `0011_verified_guest_smart_migration.sql`, and backward-compatible `ai-verdict` version 24 is active. Version 24 was created automatically by the Supabase key-set update; its deployed code hash is unchanged. Validation-only checks confirmed Auth health, new-case input rejection, legacy guest routing, and denial of direct public access to the service-role migration RPC. These checks generated no AI, spent no quota, and saved no cases. The current App Store client passed guest and signed-in physical-iPhone compatibility checks. The Phase 2 client remains local and unreleased.
+Production status (2026-09-19): migrations are applied through `0012_timestamp_activity_integrity.sql`; the approved, allowlisted repair corrected the confirmed two-hour historical timestamp offset without rewriting ambiguous rows; and backward-compatible `ai-verdict` version 26 is active. Build `1.0.6 (28)` is live in TestFlight but not released to the App Store.
 
-Local Phase 2 simulator status (2026-09-19): the native development build succeeded and the guest Smart, offline draft preservation, verified guest migration, signed-in Smart, and legacy Basic display flows passed using disposable local Supabase data. The localhost-only mock provider was used, so provider-quality testing still belongs in the separately approved TestFlight/physical-device phase. No Phase 2 TestFlight build has been started.
+Validation status (2026-09-19): type checking, 630 Jest tests, local migration reset through `0012`, four pgTAP checks, Expo dependency validation, and a production Release simulator build passed. Build `1.0.6 (28)` then passed its main physical-device corrective flow. A cached-result quota bypass discovered on device was fixed in Edge version 26 and confirmed without another client build.
 
 Credential status (2026-09-19): local and EAS production configuration use the Supabase publishable key. The compromised default secret key was deleted after a dependency inventory found no active consumer. A clean `expo export --clear` bundle scan found the publishable key, no exact copy of the revoked key, and no secret-key credential. Cached copies may remain in local editor/Codex history, but they are revoked and are not active build inputs.
 
@@ -159,7 +159,7 @@ The EAS `production` profile sets `APP_VARIANT=production`, which makes `app.con
 
 Local development leaves `APP_VARIANT` unset, so Expo config uses `com.ibrahim.overthought.dev` and disables premium/RevenueCat even if RevenueCat keys exist in a local `.env`. Production/TestFlight builds use `APP_VARIANT=production`; premium is only enabled there when `EXPO_PUBLIC_ENABLE_PREMIUM=true`.
 
-Production iOS builds use Hermes V1. The pre-Phase-2 post-hardening production build was created with a clean EAS cache and submitted successfully to TestFlight; no Phase 2 TestFlight build exists yet. Keep `ios/Podfile.properties.json` set to `"expo.useHermesV1": "true"` and keep `babel-preset-expo` on the Expo 55-compatible line (`~55.0.22`) until the whole Expo SDK is upgraded. After native dependency or Hermes changes, prefer a clean EAS retry:
+Production iOS builds use Hermes V1. Corrective build `1.0.6 (28)` was submitted successfully to TestFlight and physically tested, but has not been released to the App Store. Any client change after this checkpoint requires a new build number and a focused regression pass. Keep `ios/Podfile.properties.json` set to `"expo.useHermesV1": "true"` and keep `babel-preset-expo` on the Expo 55-compatible line (`~55.0.22`) until the whole Expo SDK is upgraded. After native dependency or Hermes changes, prefer a clean EAS retry:
 
 ```sh
 npx eas build --profile production --platform ios --clear-cache
@@ -244,9 +244,10 @@ npm test
 
 ## Next build pass
 
-- Phase 2 migration `0011` and `ai-verdict` version 24 are deployed to the existing production project.
-- The current App Store build passed the post-deployment and post-credential-revocation guest/signed-in compatibility checks.
-- Create a TestFlight build and complete guest, signed-in free, Premium, quota/cap, offline/timeout, legacy, guest migration, accessibility, and cross-device QA before release.
+- Migrations are deployed through `0012`, and `ai-verdict` version 26 is active.
+- TestFlight build `1.0.6 (28)` is the current corrective checkpoint; it is not an App Store release.
+- After the next product change, increment the build number, rerun automated/native preflight, and repeat the affected guest, signed-in, quota/cache, offline, timestamps/activity, legacy, migration, accessibility, and cross-device checks before release.
+- App Store submission/release remains blocked until the user gives explicit approval.
 - The existing unified AI quota migration remains deployed; no pricing or quota amount changes are part of Phase 2.
 - Keep richer profile fields as a future schema + type + repository + UI phase.
 - Investigate Supabase email deliverability/custom SMTP if confirmation emails continue going to junk.

@@ -7,7 +7,7 @@ import type {
 } from '../../../types/shared';
 import { trackEvent } from '../../../lib/analytics/analyticsService';
 import { supabase } from '../../../lib/supabase/client';
-import { nowIso, parseAppTimestamp } from '../../../shared/utils/date';
+import { nowIso } from '../../../shared/utils/date';
 import { createId } from '../../../shared/utils/id';
 import { titleFromInput } from '../../../shared/utils/verdict';
 import { useAiVerdictStore } from '../../../store/aiVerdictStore';
@@ -15,7 +15,9 @@ import { useAuthStore } from '../../../store/authStore';
 import { normalizeGuestCase, selectActiveGuestCases, useGuestStore } from '../../../store/guestStore';
 import { analysisService } from '../../analysis/analysisService';
 import { aiVerdictService } from '../../ai-verdict/aiVerdictService';
+import { publishAuthoritativeQuota } from '../../ai-verdict/aiVerdictQuotaState';
 import type { CaseEntity } from '../types';
+import { compareCasesByActivity } from '../caseActivity';
 import { mapCanonicalCaseRow, mapCaseRow, type CanonicalCaseRow, type CaseRow } from './caseMappers';
 
 export type SmartCaseCreationResult =
@@ -64,18 +66,8 @@ function logCaseCreateDiagnostic(event: string, details: Record<string, unknown>
   console.info(`[case-create] ${event}`, details);
 }
 
-function caseListTimestamp(record: CaseEntity): number {
-  const timestamps = [
-    parseAppTimestamp(record.updatedAt),
-    parseAppTimestamp(record.createdAt),
-    parseAppTimestamp(record.lastAnalyzedAt),
-  ].filter(Number.isFinite);
-
-  return timestamps.length > 0 ? Math.max(...timestamps) : 0;
-}
-
 function sortCasesNewestFirst(records: CaseEntity[]): CaseEntity[] {
-  return [...records].sort((left, right) => caseListTimestamp(right) - caseListTimestamp(left));
+  return [...records].sort(compareCasesByActivity);
 }
 
 async function getCanonicalAuthenticatedCase(caseId: string, userId: string): Promise<CaseEntity | null> {
@@ -123,6 +115,8 @@ export const caseRepository = {
       });
       return { ok: false, response };
     }
+
+    publishAuthoritativeQuota(response.access);
 
     let record: CaseEntity;
 

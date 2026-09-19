@@ -6,12 +6,11 @@ Use this document to resume work in a new chat. Treat the current repository and
 
 - Repository: `/Users/ibrahimi/Overthought`
 - Branch: `main`
-- Primary checkpoint commit: `7c3a67b691536b8749fc4c525d478202e10f7062`
-- Commit message: `Phase 2: Smart-only case creation, legacy Basic handling, local simulator verification`
-- The primary checkpoint was pushed to `origin/main`. Verify `git status`, `git log -2`, and remote state when resuming.
-- The Phase 2 client is implemented and verified in the Mac iOS simulator.
-- The Phase 2 client has **not** been built for TestFlight or released.
-- No Phase 2 App Store binary exists yet. The current App Store app is still the backward-compatible pre-Phase-2 client.
+- Original Phase 2 checkpoint: `7c3a67b691536b8749fc4c525d478202e10f7062` (`Phase 2: Smart-only case creation, legacy Basic handling, local simulator verification`).
+- The corrective implementation and this handoff form the next `main` checkpoint. Verify `git status`, `git log -2`, and `origin/main` when resuming.
+- Build `1.0.5 (27)` proved the core Smart-only flow but was held after stale quota presentation, native quota alerts, and incorrect relative timestamps were found.
+- Corrective build `1.0.6 (28)` was built, submitted, installed through TestFlight, and tested on a physical iPhone.
+- Build 28 is **not** released to the App Store. Release is intentionally paused for the next product change and a fresh regression pass.
 
 ## What is complete
 
@@ -22,10 +21,12 @@ Use this document to resume work in a new chat. Treat the current repository and
 - `canonical_case_results` is a security-invoker view that resolves the latest verified Smart result or the stored legacy Basic result.
 - The deterministic engine runs behind the Edge Function as internal calibration/rollback data for new cases.
 
-### Phase 2 backend and migration
+### Phase 2 backend and corrective migration
 
 - Migration `0011_verified_guest_smart_migration.sql` is deployed to the same production Supabase project.
-- Production `ai-verdict` version 24 contains the verified `migrate_guest_case` route while retaining older request contracts.
+- Migration `0012_timestamp_activity_integrity.sql` is deployed. It fixes new timestamp writes, adds canonical activity timestamps, and preserves authenticated/service-role-only canonical-view access.
+- The approved historical timestamp repair corrected the confirmed offset for allowlisted case, verdict, and usage rows; ambiguous rows and case updates were left untouched.
+- Production `ai-verdict` version 26 contains verified guest migration, read-only quota status, new creation contracts, legacy compatibility, and the cached-result quota gate.
 - Verified guest Smart migration copies AI content only from the server cache through a service-role-only transaction.
 - Unverifiable guest history is preserved as legacy Basic instead of being discarded.
 - Production validation confirmed Auth health, old/new request routing, canonical-view permissions, and denial of direct public access to the migration RPC.
@@ -43,12 +44,15 @@ Use this document to resume work in a new chat. Treat the current repository and
 - Guest Smart migration is durable; Basic-only/unverifiable history remains lossless.
 - New Deep Read generation is retired from the Phase 2 UX. Existing saved Deep Reads remain readable as `Saved Deep Read (legacy)`.
 - Basic engine/rendering, legacy endpoints, Deep Read code/data, and rollback paths remain in the repository.
+- New Case shows an authoritative allowance strip. Exhausted guest/free/Premium states use the branded Smart Limit modal and preserve the draft.
+- Fresh results show the current remaining allowance; reopened cases omit historical quota labels and never fall back to `SAVED`.
+- Home sorts by latest activity and labels cards `Created` or `Updated` using canonical activity timestamps.
 
 ## Credential cleanup and security state
 
 - The previously exposed Supabase default secret key was removed from active local/EAS configuration and deleted/revoked in Supabase.
 - Dependency checks found no consumer of the old secret before revocation.
-- The production Edge Function code hash did not change during the key-set update; Supabase created version 24 automatically.
+- The production Edge Function code hash did not change during the earlier key-set update; Supabase created version 24 automatically at that time. The current intentional deployment is version 26.
 - Local and EAS production client configuration use the Supabase publishable key, never a secret/service-role key.
 - A clean Metro export scan found the publishable key, no exact copy of the revoked key, and no secret-key credential.
 - `.env` and `.env.*` are ignored. Never commit them, place a service-role/secret key in an Expo variable, or paste credentials into a client bundle.
@@ -59,12 +63,13 @@ Use this document to resume work in a new chat. Treat the current repository and
 ### Automated
 
 - `npm run typecheck`: passed.
-- `npm test -- --runInBand`: 24/24 suites and 610/610 tests passed.
-- Native simulator `xcodebuild`: `BUILD SUCCEEDED`.
-- `npx supabase test db --local supabase/tests`: 1/1 pgTAP test passed.
-- Local migrations reset/applied through `0011` successfully.
+- `npm test -- --runInBand`: 27/27 suites and 630/630 tests passed after the cache-quota hotfix.
+- Production Release simulator `xcodebuild`: completed successfully.
+- `npx supabase test db --local supabase/tests`: two files and four pgTAP checks passed.
+- Local migrations reset/applied through `0012` successfully, including a non-UTC session integrity check.
 - `npx expo install --check`: dependencies are up to date.
 - `git diff --check`: passed.
+- EAS production build `1.0.6 (28)` completed successfully.
 - Secret-pattern and staged-content scans are required again before any future release build.
 
 ### Manual simulator matrix
@@ -78,10 +83,16 @@ Use this document to resume work in a new chat. Treat the current repository and
 - Server-backed legacy Basic case: opened with the legacy label, light design, explicit upgrade button, and no automatic Smart request.
 - Final disposable local database state was three Smart cases plus one Basic-only legacy case.
 
-## Not yet verified for Phase 2
+### Physical TestFlight matrix
 
-- A real Gemini response generated by the Phase 2 client in TestFlight.
-- Phase 2 behavior on a physical iPhone.
+- Guest allowance started at 2/2; two Smart successes reached zero; the third attempt showed the correct branded Sign-in limit and preserved the draft.
+- Signed-in allowance, Smart generation, and quota blocking were exercised on device.
+- Result quota presentation, removal of stale `SAVED`, and timestamp/activity behavior were checked during the corrective pass.
+- Repeating an exact cached prompt at zero allowance initially bypassed the limit for both guest and signed-in identities. Edge version 26 now blocks cached results at zero, and the user confirmed the production fix.
+- New prompts at zero and cached prompts at zero now follow the same quota path and create no case.
+
+## Not yet fully verified after corrective work
+
 - Premium fair-use behavior, RevenueCat purchase, and restore with the Phase 2 client.
 - Every free/Premium/IP/global quota message on device.
 - Timeout with a late backend success on device.
@@ -89,7 +100,7 @@ Use this document to resume work in a new chat. Treat the current repository and
 - Manual legacy Basic-to-Smart upgrade in the final client.
 - Manual saved legacy Deep Read display after optional Smart upgrade.
 - VoiceOver, Dynamic Type, Reduce Motion, and long multilingual input on device.
-- Account switching and deletion regression in the Phase 2 TestFlight build.
+- Full account switching and deletion regression in build 28.
 
 ## Known issues and risks
 
@@ -103,15 +114,12 @@ Use this document to resume work in a new chat. Treat the current repository and
 
 ## Next steps, in order
 
-1. Verify the checkpoint commit is present on `origin/main` and the worktree is clean.
-2. Review the Expo Doctor native/config synchronization warning and confirm production native settings match `app.config.js`.
-3. Perform a release preflight: production environment variable names, bundle identifier, build number/version, RevenueCat configuration, and Supabase URLs. Do not expose or rotate secrets during this review.
-4. With explicit approval, create the Phase 2 TestFlight build.
-5. Submit the build to App Store Connect/TestFlight if the build succeeds.
-6. Run the physical-iPhone QA matrix: guest, signed-in free, Premium, all quota states, offline/timeout/retry, migration, fresh install/cross-device, legacy Basic/upgrade, saved Deep Read, purchases/restore, accessibility, account switching, and deletion.
-7. Fix any TestFlight defects, rerun automated checks, and issue another approved build if needed.
-8. Release only after the full device matrix passes and the user explicitly approves release.
-9. After a stable monitoring window, consider a separate cleanup project for dormant Basic calibration and Deep Read generation. Do not delete them as part of Phase 2.
+1. Verify the corrective checkpoint is present on `origin/main` and the worktree is clean.
+2. Start the separately scoped next product change in a new task; inspect this handoff and current source before editing.
+3. If that change affects the client, increment from build 28 and repeat automated, local database, native Release, EAS, and focused physical-device validation.
+4. Recheck the still-open Premium, purchase/restore, timeout, cross-device, accessibility, account-switching, deletion, legacy-upgrade, and saved-Deep-Read items as relevant to release risk.
+5. Do not release build 28 or a successor to the App Store until the user explicitly approves release after the final regression matrix.
+6. After a stable monitoring window, consider a separate cleanup project for dormant Basic calibration and Deep Read generation. Do not delete them as part of Phase 2.
 
 ## Work the user can reasonably do with guidance
 

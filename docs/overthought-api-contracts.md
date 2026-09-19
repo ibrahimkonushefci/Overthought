@@ -20,9 +20,13 @@ Authenticated success creates the case, linked Smart Verdict, and successful usa
 
 The authenticated `migrate_guest_case` target accepts a guest case snapshot plus `guestKey` and the server-issued guest Smart cache ID. The Edge Function hashes the guest key and calls the service-role-only `migrate_verified_guest_smart_case` transaction. AI text is copied only from the verified guest cache; client-supplied AI text is never accepted. A missing or unverifiable cache causes the client migration service to preserve the case as legacy Basic instead.
 
-Production status (2026-09-19): migrations `0009_smart_case_creation.sql`, `0010_canonical_case_results_grants.sql`, and `0011_verified_guest_smart_migration.sql` are deployed to the existing project, and `ai-verdict` version 24 is active. Version 24 was created automatically by the Supabase key-set update; its deployed code hash is unchanged. The canonical view grants `SELECT` only to `authenticated` and `service_role`; `anon` has no view privilege. The migration RPC is likewise executable only by `service_role`; a production publishable-key probe returned PostgreSQL `42501 permission denied`.
+Production status (2026-09-19): migrations are deployed through `0012_timestamp_activity_integrity.sql`, and `ai-verdict` version 26 is active. The canonical view remains authenticated/service-role only. The approved historical repair corrected the confirmed offset for allowlisted rows; ambiguous historical rows were left untouched.
 
-Client verification status (2026-09-19): the Phase 2 contracts passed the local simulator matrix against disposable Supabase data, including guest and authenticated Smart creation, idempotent draft retry behavior after failure, verified guest Smart migration, canonical Smart reads, and legacy Basic fallback reads. This used the localhost-only mock provider and therefore does not replace Gemini-quality or physical-device TestFlight QA.
+Client verification status (2026-09-19): corrective build `1.0.6 (28)` was built, submitted, installed, and physically tested. Smart-only generation, saving, quota presentation/blocking, draft protection, no-Basic fallback, and timestamp/activity behavior passed the main acceptance flow. A cached-result quota bypass found during testing was fixed in Edge version 26 and confirmed on device. Build 28 is not released to the App Store.
+
+The repository contract now includes read-only target `{ "target": { "targetType": "quota_status" } }`; guest requests also carry the installation guest key. Success returns `{ "ok": true, "access": AiVerdictAccessState }`. The route authenticates or hashes identity, reads existing usage state, and performs no reservation, AI generation, case creation, or usage write. Signed-in access is daily with a UTC reset instant; guest access is lifetime and has no reset.
+
+New-case cache reuse is gated by the authoritative allowance. A cached Smart result may be returned without another provider call only while `access.allowed` is true. At zero guest lifetime or signed-in daily allowance, the request returns the same quota failure as an uncached prompt and creates no case. A replay using the same completed `requestId` remains idempotent and does not spend quota twice.
 
 The old `case` and `guest_case` targets remain operational for released clients and explicit upgrades of legacy cases. The Phase 2 production UX never calls them automatically for a new case.
 
@@ -472,7 +476,7 @@ Important fields:
 - timestamps for reservation, finalization, and expiry
 
 ### Quota rules
-Cache hits should return before spending quota.
+Under this dormant Deep Read contract, cache hits return before spending quota.
 
 AI Verdict and Deep Read use the same signed-in daily AI pool. For authenticated users, both Edge paths count successful and active reserved events from both `ai_case_verdict_usage_events` and `ai_deep_read_usage_events`:
 - free signed-in: same daily limit as AI Verdict, default 2 total AI reads per UTC day

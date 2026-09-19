@@ -10,6 +10,7 @@ import type {
   AiVerdictCacheMetadata,
   AiVerdictFailureCode,
   AiVerdictOutput,
+  AiVerdictQuotaStatusResponse,
   AiVerdictRequest,
   AiVerdictRequestState,
   AiVerdictRequestStatus,
@@ -194,6 +195,20 @@ function isValidAiVerdictResponse(value: unknown): value is AiVerdictResponse {
     isCacheMetadata(response.cache) &&
     isAccessState(response.access)
   );
+}
+
+function isValidQuotaStatusResponse(value: unknown): value is AiVerdictQuotaStatusResponse {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const response = value as AiVerdictQuotaStatusResponse;
+
+  if (!response.ok) {
+    return aiVerdictFailureCodes.has(response.code) && typeof response.message === 'string';
+  }
+
+  return isAccessState(response.access);
 }
 
 function snapshotFromSuccess(response: Extract<AiVerdictResponse, { ok: true }>): CaseAiVerdictSnapshot {
@@ -457,6 +472,48 @@ function authenticatedRequest(caseId: string): AiVerdictRequest {
 }
 
 export const aiVerdictService = {
+  async getQuotaStatus(): Promise<AiVerdictQuotaStatusResponse> {
+    if (!hasSupabaseEnv()) {
+      return { ok: false, code: 'unknown', message: 'Smart allowance is unavailable right now.' };
+    }
+
+    const auth = useAuthStore.getState();
+    const authenticated = auth.sessionMode === 'authenticated';
+    const headers = authenticated ? await authenticatedHeaders() : {};
+
+    if (authenticated && !headers) {
+      return { ok: false, code: 'not_authenticated', message: 'Sign in again to check your Smart allowance.' };
+    }
+
+    if (auth.sessionMode !== 'authenticated' && auth.sessionMode !== 'guest') {
+      return { ok: false, code: 'unknown', message: 'Smart allowance is unavailable right now.' };
+    }
+
+    const body: AiVerdictRequest = {
+      ...(authenticated ? {} : { guestKey: useGuestStore.getState().ensureGuestAiKey() }),
+      target: { targetType: 'quota_status' },
+    };
+
+    try {
+      const result = await fetch(functionUrl(), {
+        method: 'POST',
+        headers: {
+          apikey: env.supabaseAnonKey,
+          'Content-Type': 'application/json',
+          ...(headers ?? {}),
+        },
+        body: JSON.stringify(body),
+      });
+      const parsed = (await result.json().catch(() => null)) as unknown;
+
+      return isValidQuotaStatusResponse(parsed)
+        ? parsed
+        : { ok: false, code: 'invalid_ai_response', message: 'Smart allowance returned an invalid response.' };
+    } catch {
+      return { ok: false, code: 'unknown', message: 'Smart allowance is unavailable right now.' };
+    }
+  },
+
   async createSmartCase(input: SmartCaseCreationInput): Promise<AiVerdictResponse> {
     const safetyAssessment = assessCaseSafety(input.inputText);
 

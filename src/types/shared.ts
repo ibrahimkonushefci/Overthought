@@ -161,6 +161,10 @@ export interface AiVerdictAccessState {
   reason?: 'guest_lifetime_limit' | 'daily_limit' | 'fair_use' | 'global_daily_cap' | 'ip_daily_cap';
 }
 
+export type AiVerdictQuotaStatusResponse =
+  | { ok: true; access: AiVerdictAccessState }
+  | { ok: false; code: AiVerdictFailureCode; message: string };
+
 export type AiVerdictRequestStatus =
   | 'idle'
   | 'loading'
@@ -219,6 +223,8 @@ export interface CaseRecord extends AnalysisOutput {
   lastAnalyzedAt: string;
   createdAt: string;
   updatedAt: string;
+  latestUpdateAt?: string | null;
+  latestActivityAt?: string;
   archivedAt: string | null;
   deletedAt: string | null;
   resultSource: VerdictSource;
@@ -364,6 +370,12 @@ export type DeepReadResponse =
     };
 
 export type AiVerdictRequest =
+  | {
+      guestKey?: string;
+      target: {
+        targetType: 'quota_status';
+      };
+    }
   | {
       requestId: string;
       target: {

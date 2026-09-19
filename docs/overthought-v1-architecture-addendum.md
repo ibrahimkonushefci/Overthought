@@ -142,12 +142,12 @@ Store/TestFlight rebuild; the constants above are the repo fallbacks used when t
 
 - Phase 1 backend foundation was deployed to the existing production Supabase project on 2026-09-17. The App Store client remains on the backward-compatible legacy flow.
 - Migration `0009_smart_case_creation.sql` adds stable request IDs, idempotent quota reservation, transactional authenticated/guest completion, and the security-invoker `canonical_case_results` view. Migration `0010_canonical_case_results_grants.sql` removes default anonymous/broad grants and leaves `SELECT` only for `authenticated` and `service_role`.
-- Production `ai-verdict` version 24 contains the Phase 2 migration route, new creation contracts, and legacy contracts used by existing App Store builds. Supabase created version 24 automatically when the compromised default secret key was deleted; the deployed code hash is unchanged.
+- Production `ai-verdict` version 26 contains the Phase 2 migration route, new creation and quota-status contracts, legacy compatibility, and the cached-result quota gate verified during build-28 testing.
 - New-case validation and safety routing happen before internal deterministic calibration, quota reservation, persistence, or Gemini.
 - Phase 2 is implemented and validated locally. It uses canonical result reads, preserves drafts on every failure, exposes only Smart for new cases, and provides an explicit legacy upgrade action.
 - Migration `0011_verified_guest_smart_migration.sql` and the updated `migrate_guest_case` Edge route were deployed on 2026-09-19. They copy a guest Smart result only from the server-verified guest cache, and the transaction is executable only by `service_role`.
 - Existing Edge request targets remain supported. Basic rendering, Deep Read generation/storage, and legacy data remain intact for rollback, but the Phase 2 client cannot request a new Deep Read.
-- The Phase 2 backend is deployed. The current App Store client passed guest and signed-in compatibility checks. Local and EAS production builds use the publishable key, and a clean Metro export contains no secret-key credential. The client still requires a separate TestFlight build and physical-iPhone QA before release.
+- The backend is deployed through migration `0012`. Corrective TestFlight build `1.0.6 (28)` passed the main physical-iPhone flow and remains unreleased. The approved historical timestamp repair is complete. A cached-result quota bypass discovered during testing was corrected in Edge version 26 and confirmed without another client build.
 
 This section records the late v1 stabilization pass completed before the next handoff.
 
@@ -171,7 +171,7 @@ This section records the late v1 stabilization pass completed before the next ha
 - The client-side fix that ignores stale free-tier quota locks after a premium upgrade shipped in the latest pre-Phase-2 TestFlight build and was manually verified on device.
 - The minimal `display_name` profile editor shipped in the latest pre-Phase-2 TestFlight build and was manually verified on device.
 - Authenticated account deletion uses the deployed `delete-account` Supabase Edge Function for final `auth.users` deletion. Premium users see an Apple subscription warning and manage-subscription link before deletion; subscription cancellation still happens through Apple.
-- The pre-Phase-2 production iOS build was rebuilt and submitted successfully to TestFlight; its physical-device checks passed. The Phase 2 client itself has not entered TestFlight.
+- Corrective build `1.0.6 (28)` was submitted successfully to TestFlight and physically tested. It is the current unreleased checkpoint; App Store release is paused for the next product change and a new regression decision.
 - Expo SDK patch packages are aligned on the Expo 55 line. Production iOS uses Hermes V1 via `ios/Podfile.properties.json` (`expo.useHermesV1=true`) and `ios/Podfile.lock` records `hermes-engine 250829098.0.4`.
 - `babel-preset-expo` must stay on the Expo 55-compatible line (`~55.0.22`) unless the whole Expo SDK is upgraded.
 

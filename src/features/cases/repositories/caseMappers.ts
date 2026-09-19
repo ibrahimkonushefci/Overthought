@@ -49,6 +49,8 @@ export interface CanonicalCaseRow extends Omit<CaseRow, 'latest_verdict_version'
   what_matters_text: string | null;
   smart_verdict_id: string | null;
   smart_created_at: string | null;
+  latest_update_at?: string | null;
+  latest_activity_at?: string;
 }
 
 export function mapCaseRow(row: CaseRow): CaseRecord {
@@ -68,6 +70,8 @@ export function mapCaseRow(row: CaseRow): CaseRecord {
     lastAnalyzedAt: normalizeIsoTimestamp(row.last_analyzed_at),
     createdAt: normalizeIsoTimestamp(row.created_at),
     updatedAt: normalizeIsoTimestamp(row.updated_at),
+    latestUpdateAt: null,
+    latestActivityAt: normalizeIsoTimestamp(row.updated_at),
     archivedAt: row.archived_at ? normalizeIsoTimestamp(row.archived_at) : null,
     deletedAt: row.deleted_at ? normalizeIsoTimestamp(row.deleted_at) : null,
     resultSource: 'legacy_basic',
@@ -111,6 +115,8 @@ export function mapCanonicalCaseRow(row: CanonicalCaseRow): CaseRecord {
     lastAnalyzedAt: normalizeIsoTimestamp(row.last_analyzed_at),
     createdAt: normalizeIsoTimestamp(row.created_at),
     updatedAt: normalizeIsoTimestamp(row.updated_at),
+    latestUpdateAt: row.latest_update_at ? normalizeIsoTimestamp(row.latest_update_at) : null,
+    latestActivityAt: normalizeIsoTimestamp(row.latest_activity_at ?? row.updated_at),
     archivedAt: row.archived_at ? normalizeIsoTimestamp(row.archived_at) : null,
     deletedAt: row.deleted_at ? normalizeIsoTimestamp(row.deleted_at) : null,
     resultSource: row.result_source,

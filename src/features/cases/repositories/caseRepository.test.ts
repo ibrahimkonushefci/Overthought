@@ -48,6 +48,8 @@ function caseRow(overrides: Partial<CaseRow & CanonicalCaseRow> = {}): CaseRow &
     what_matters_text: null,
     smart_verdict_id: null,
     smart_created_at: null,
+    latest_update_at: null,
+    latest_activity_at: '2026-04-22T10:00:00.000Z',
     last_analyzed_at: '2026-04-22T10:00:00.000Z',
     created_at: '2026-04-22T10:00:00.000Z',
     updated_at: '2026-04-22T10:00:00.000Z',

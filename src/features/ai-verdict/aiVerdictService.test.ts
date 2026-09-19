@@ -194,6 +194,59 @@ describe('aiVerdictService', () => {
     });
   });
 
+  it('loads guest quota status with the persisted guest key and no Authorization header', async () => {
+    useAuthStore.getState().setGuest();
+    global.fetch = jest.fn(async () => ({
+      status: 200,
+      json: async () => ({
+        ok: true,
+        access: {
+          accessTier: 'guest',
+          allowed: true,
+          used: 1,
+          remaining: 1,
+          limit: 2,
+          quotaScope: 'lifetime',
+          quotaBucket: null,
+        },
+      }),
+    })) as unknown as typeof fetch;
+
+    const result = await aiVerdictService.getQuotaStatus();
+
+    expect(result).toMatchObject({ ok: true, access: { accessTier: 'guest', remaining: 1 } });
+    const body = JSON.parse((global.fetch as jest.Mock).mock.calls[0][1].body);
+    expect(body).toMatchObject({ guestKey: expect.stringMatching(/^guest_ai_/), target: { targetType: 'quota_status' } });
+    expect((global.fetch as jest.Mock).mock.calls[0][1].headers.Authorization).toBeUndefined();
+  });
+
+  it('loads signed-in quota status with the session token', async () => {
+    useAuthStore.getState().setAuthenticated({ id: 'user-1', email: 'person@example.com', provider: 'email' });
+    global.fetch = jest.fn(async () => ({
+      status: 200,
+      json: async () => ({
+        ok: true,
+        access: {
+          accessTier: 'free',
+          allowed: false,
+          used: 2,
+          remaining: 0,
+          limit: 2,
+          quotaScope: 'daily',
+          quotaBucket: '2026-09-19',
+          resetAt: '2026-09-20T00:00:00.000Z',
+        },
+      }),
+    })) as unknown as typeof fetch;
+
+    const result = await aiVerdictService.getQuotaStatus();
+
+    expect(result).toMatchObject({ ok: true, access: { accessTier: 'free', remaining: 0 } });
+    const [, init] = (global.fetch as jest.Mock).mock.calls[0];
+    expect(init.headers.Authorization).toBe('Bearer user-token');
+    expect(JSON.parse(init.body)).toEqual({ target: { targetType: 'quota_status' } });
+  });
+
   it('migrates a guest Smart case without sending any AI-generated text', async () => {
     useAuthStore.getState().setAuthenticated({ id: 'user-1', email: 'person@example.com', provider: 'email' });
     global.fetch = jest.fn(async () => ({

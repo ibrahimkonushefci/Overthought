@@ -2,12 +2,16 @@ import { useEffect, useRef, useState } from 'react';
 import { Alert, Animated, Keyboard, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, Sparkles } from 'lucide-react-native';
-import type { AiVerdictResponse, CaseCategory } from '../src/types/shared';
+import type { AiVerdictAccessState, AiVerdictResponse, CaseCategory } from '../src/types/shared';
 import { caseRepository } from '../src/features/cases/repositories/caseRepository';
 import { pickExamplePrompts } from '../src/features/cases/examplePrompts';
 import { getCaseId } from '../src/features/cases/types';
 import { CategoryPill } from '../src/features/cases/components/CategoryPill';
 import { VerdictRevealOverlay, type VerdictRevealOutcome } from '../src/features/cases/components/VerdictRevealOverlay';
+import { SmartAllowanceStrip } from '../src/features/ai-verdict/components/SmartAllowanceStrip';
+import { SmartVerdictLimitModal } from '../src/features/ai-verdict/components/SmartVerdictLimitModal';
+import type { SmartLimitVariant } from '../src/features/ai-verdict/smartVerdictPresentation';
+import { useSmartAllowance } from '../src/features/ai-verdict/useSmartAllowance';
 import { Button } from '../src/shared/ui/Button';
 import { AppText } from '../src/shared/ui/Text';
 import { Screen } from '../src/shared/ui/Screen';
@@ -18,7 +22,6 @@ import {
   CASE_SAFETY_MESSAGE,
   CaseSafetyRoutingError,
 } from '../src/shared/utils/caseSafety';
-import { useAuthStore } from '../src/store/authStore';
 import { useGuestStore } from '../src/store/guestStore';
 import { reviewPromptService } from '../src/features/reviews/reviewPromptService';
 import { trackEvent } from '../src/lib/analytics/analyticsService';
@@ -32,18 +35,6 @@ function wait(milliseconds: number) {
   return new Promise((resolve) => {
     setTimeout(resolve, milliseconds);
   });
-}
-
-function resetMessage(resetAt?: string | null): string {
-  if (!resetAt) {
-    return 'Premium fair-use protection is active. Your draft is saved—please try again later.';
-  }
-
-  const reset = new Date(resetAt);
-  const readable = Number.isNaN(reset.getTime()) ? null : reset.toLocaleString();
-  return readable
-    ? `Premium fair-use protection is active. Your draft is saved. Try again after ${readable}.`
-    : 'Premium fair-use protection is active. Your draft is saved—please try again later.';
 }
 
 function revealOutcomeFromResult(aiResult: Extract<AiVerdictResponse, { ok: true }>): VerdictRevealOutcome {
@@ -63,7 +54,7 @@ export default function NewCaseRoute() {
   const setCaseDraft = useGuestStore((state) => state.setCaseDraft);
   const setPreferredCategory = useGuestStore((state) => state.setPreferredCategory);
   const clearCaseDraft = useGuestStore((state) => state.clearCaseDraft);
-  const sessionMode = useAuthStore((state) => state.sessionMode);
+  const allowance = useSmartAllowance();
   const [inputText, setInputText] = useState(draft);
   const [category, setCategory] = useState<CaseCategory>(draftCategory);
   const [loading, setLoading] = useState(false);
@@ -71,6 +62,10 @@ export default function NewCaseRoute() {
   const [revealOutcome, setRevealOutcome] = useState<VerdictRevealOutcome | null>(null);
   const [pendingResultRoute, setPendingResultRoute] = useState<string | null>(null);
   const [examples, setExamples] = useState(() => pickExamplePrompts(draftCategory, 4));
+  const [limitModal, setLimitModal] = useState<{
+    variant: SmartLimitVariant;
+    access: AiVerdictAccessState | null;
+  } | null>(null);
   const helperPulse = useRef(new Animated.Value(0)).current;
   const previousHelperAttentionKey = useRef('');
   const trimmedInput = inputText.trim();
@@ -167,28 +162,22 @@ export default function NewCaseRoute() {
     }
 
     if (response.code === 'quota_exceeded' && access?.accessTier === 'guest') {
-      Alert.alert('Free guest Smart Verdicts used', 'Sign in to get your daily Smart Verdict allowance. Your draft is still here.', [
-        { text: 'Not now', style: 'cancel' },
-        { text: 'Sign in', onPress: () => router.push('/auth') },
-      ]);
+      setLimitModal({ variant: 'guest', access });
       return;
     }
 
     if (response.code === 'quota_exceeded' && access?.accessTier === 'free') {
-      Alert.alert("Today's free Smart Verdicts are used", 'Your draft is still here. Premium includes more Smart Verdicts.', [
-        { text: 'Not now', style: 'cancel' },
-        { text: 'View Premium', onPress: () => router.push('/paywall') },
-      ]);
+      setLimitModal({ variant: 'free', access });
       return;
     }
 
     if (response.code === 'fair_use_exceeded' || (access?.accessTier === 'premium' && access.reason === 'fair_use')) {
-      Alert.alert('Smart Verdict limit reached', resetMessage(access?.resetAt));
+      setLimitModal({ variant: 'premium', access: access ?? null });
       return;
     }
 
     if (response.code === 'ip_daily_cap_exceeded' || response.code === 'global_daily_cap_exceeded') {
-      Alert.alert('Smart Verdicts temporarily limited', 'The service limit has been reached. Your draft is saved—please try again later.');
+      setLimitModal({ variant: 'service', access: access ?? null });
       return;
     }
 
@@ -371,14 +360,12 @@ export default function NewCaseRoute() {
         ))}
       </View>
 
-      <View style={styles.aiAccessNote}>
-        <Sparkles color={colors.text.secondary} size={15} strokeWidth={2.5} />
-        <AppText variant="meta" color={colors.text.secondary} style={styles.aiAccessText}>
-          {sessionMode === 'authenticated'
-            ? 'New cases are saved only after Smart Verdict succeeds.'
-            : 'Your first 2 cases get the full Smart Verdict read — on us.'}
-        </AppText>
-      </View>
+      <SmartAllowanceStrip
+        status={allowance.status}
+        access={allowance.access}
+        onSignIn={() => router.push('/auth')}
+        onUpgrade={() => router.push('/paywall')}
+      />
 
       <View style={styles.submitWrap}>
         <Button
@@ -389,6 +376,22 @@ export default function NewCaseRoute() {
           onPress={() => void submit()}
         />
       </View>
+
+      <SmartVerdictLimitModal
+        visible={Boolean(limitModal)}
+        variant={limitModal?.variant ?? 'service'}
+        access={limitModal?.access}
+        onDismiss={() => setLimitModal(null)}
+        onPrimary={() => {
+          const variant = limitModal?.variant;
+          setLimitModal(null);
+          if (variant === 'guest') {
+            router.push('/auth');
+          } else if (variant === 'free') {
+            router.push('/paywall');
+          }
+        }}
+      />
     </Screen>
   );
 }
@@ -427,19 +430,6 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: spacing.sm,
     marginTop: spacing.lg,
-  },
-  aiAccessNote: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginTop: spacing.xl,
-    paddingHorizontal: spacing.xs,
-  },
-  aiAccessText: {
-    flex: 1,
-    fontFamily: typography.family.bodyMedium,
-    fontSize: 12,
-    lineHeight: 17,
   },
   inputWrap: {
     backgroundColor: colors.bg.surface,

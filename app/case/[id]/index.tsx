@@ -22,6 +22,7 @@ import {
 import type { LucideIcon } from 'lucide-react-native';
 import type {
   AnalysisOutput,
+  AiVerdictAccessState,
   AiVerdictOutput,
   AiVerdictResponse,
   DeepReadResponse,
@@ -30,6 +31,11 @@ import type {
 import { caseRepository } from '../../../src/features/cases/repositories/caseRepository';
 import { caseUpdateRepository } from '../../../src/features/cases/repositories/caseUpdateRepository';
 import { aiVerdictService } from '../../../src/features/ai-verdict/aiVerdictService';
+import { SmartVerdictLimitModal } from '../../../src/features/ai-verdict/components/SmartVerdictLimitModal';
+import type { SmartLimitVariant } from '../../../src/features/ai-verdict/smartVerdictPresentation';
+import { smartResultQuotaLabel } from '../../../src/features/ai-verdict/smartVerdictPresentation';
+import { publishAuthoritativeQuota } from '../../../src/features/ai-verdict/aiVerdictQuotaState';
+import { useSmartAllowance } from '../../../src/features/ai-verdict/useSmartAllowance';
 import { getCachedCaseById } from '../../../src/features/cases/services/useCases';
 import { deepReadService } from '../../../src/features/deep-read/deepReadService';
 import type { CaseEntity, CaseUpdateEntity } from '../../../src/features/cases/types';
@@ -73,6 +79,11 @@ export default function CaseDetailRoute() {
   const [sharePreviewVisible, setSharePreviewVisible] = useState(false);
   const [shareInProgress, setShareInProgress] = useState(false);
   const [legacyUpgradeLoading, setLegacyUpgradeLoading] = useState(false);
+  const [limitModal, setLimitModal] = useState<{
+    variant: SmartLimitVariant;
+    access: AiVerdictAccessState | null;
+  } | null>(null);
+  const allowance = useSmartAllowance();
   const shareCardRef = useRef<ViewShot | null>(null);
   const recordRef = useRef<CaseEntity | null>(initialCachedRecord);
   const shouldPresentNewResult = fromAnalysis === '1';
@@ -265,13 +276,20 @@ export default function CaseDetailRoute() {
     const result = await aiVerdictService.requestForCase(record);
 
     if (result.ok) {
+      publishAuthoritativeQuota(result.access);
       await refresh();
       setLegacyUpgradeLoading(false);
       return;
     }
 
     setLegacyUpgradeLoading(false);
-    showLegacyUpgradeFailure(result, router);
+    const variant = smartLimitVariantFromFailure(result);
+    if (variant) {
+      setLimitModal({ variant, access: result.access ?? null });
+      return;
+    }
+
+    Alert.alert('Could not upgrade', 'The Legacy Basic Verdict is unchanged. Check your internet connection and try again.');
   };
 
   const confirmLegacyUpgrade = () => {
@@ -377,7 +395,7 @@ export default function CaseDetailRoute() {
           <AiVerdictPremiumCard
             verdict={smartVerdict}
             displayLabel={heroDisplayLabel}
-            remainingLabel={record.aiVerdict?.access ? aiVerdictAccessLabel(record.aiVerdict.access, isGuestCase(record)) : 'Saved'}
+            remainingLabel={smartResultQuotaLabel(allowance.access, shouldPresentNewResult)}
           />
         ) : (
           <>
@@ -508,6 +526,22 @@ export default function CaseDetailRoute() {
         onClose={() => setSharePreviewVisible(false)}
         onShare={() => void shareCard()}
       />
+      <SmartVerdictLimitModal
+        visible={Boolean(limitModal)}
+        variant={limitModal?.variant ?? 'service'}
+        access={limitModal?.access}
+        protectedContent="legacy"
+        onDismiss={() => setLimitModal(null)}
+        onPrimary={() => {
+          const variant = limitModal?.variant;
+          setLimitModal(null);
+          if (variant === 'guest') {
+            router.push('/auth');
+          } else if (variant === 'free') {
+            router.push('/paywall');
+          }
+        }}
+      />
     </Screen>
   );
 }
@@ -602,18 +636,6 @@ function LegacyBasicVerdictBanner({ loading, onUpgrade }: { loading: boolean; on
   );
 }
 
-function aiVerdictAccessLabel(access: { remaining: number; accessTier?: string } | undefined, isGuest: boolean): string {
-  if (!access) {
-    return isGuest ? '2 free' : '2/day';
-  }
-
-  if (access.accessTier === 'guest') {
-    return `${access.remaining} left`;
-  }
-
-  return `${access.remaining} left today`;
-}
-
 function AiVerdictPremiumCard({
   verdict,
   displayLabel,
@@ -621,7 +643,7 @@ function AiVerdictPremiumCard({
 }: {
   verdict: AiVerdictOutput;
   displayLabel: string;
-  remainingLabel: string;
+  remainingLabel?: string;
 }) {
   const [openSection, setOpenSection] = useState<AiVerdictInsightKey>('evidenceCheck');
   const stroke = scoreColor(verdict.delusionScore);
@@ -659,9 +681,11 @@ function AiVerdictPremiumCard({
             </AppText>
           </View>
         </View>
-        <AppText variant="eyebrow" color="rgba(255, 255, 255, 0.5)" style={styles.aiPremiumRemainingReads}>
-          {remainingLabel}
-        </AppText>
+        {remainingLabel ? (
+          <AppText variant="eyebrow" color="rgba(255, 255, 255, 0.5)" style={styles.aiPremiumRemainingReads}>
+            {remainingLabel}
+          </AppText>
+        ) : null}
       </View>
 
       <View style={styles.aiPremiumHero}>
@@ -738,37 +762,26 @@ function AiVerdictPremiumCard({
   );
 }
 
-function showLegacyUpgradeFailure(
+function smartLimitVariantFromFailure(
   result: Extract<AiVerdictResponse, { ok: false }>,
-  router: ReturnType<typeof useRouter>,
-) {
+): SmartLimitVariant | null {
   if (result.code === 'quota_exceeded' && result.access?.accessTier === 'guest') {
-    Alert.alert('Free guest Smart Verdicts used', 'Sign in to get a daily Smart Verdict allowance.', [
-      { text: 'Not now', style: 'cancel' },
-      { text: 'Sign in', onPress: () => router.push('/auth') },
-    ]);
-    return;
+    return 'guest';
   }
 
   if (result.code === 'quota_exceeded' && result.access?.accessTier === 'free') {
-    Alert.alert("Today's free Smart Verdicts are used", 'You can keep this Legacy Basic Verdict or view Premium.', [
-      { text: 'Keep legacy result', style: 'cancel' },
-      { text: 'View Premium', onPress: () => router.push('/paywall') },
-    ]);
-    return;
+    return 'free';
   }
 
   if (result.code === 'fair_use_exceeded') {
-    Alert.alert('Smart Verdict limit reached', 'Premium fair-use protection is active. Try again after the reset.');
-    return;
+    return 'premium';
   }
 
   if (result.code === 'ip_daily_cap_exceeded' || result.code === 'global_daily_cap_exceeded') {
-    Alert.alert('Smart Verdicts temporarily limited', 'The service limit has been reached. Try again later.');
-    return;
+    return 'service';
   }
 
-  Alert.alert('Could not upgrade', 'The Legacy Basic Verdict is unchanged. Check your internet connection and try again.');
+  return null;
 }
 
 type AiVerdictInsightKey = 'none' | 'evidenceCheck' | 'youreOverreading' | 'whatMatters';

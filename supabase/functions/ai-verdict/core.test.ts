@@ -341,6 +341,49 @@ function handlerDeps(adapter: AiVerdictDataAdapter, generateVerdict = successPro
 }
 
 describe('ai-verdict core authenticated path', () => {
+  it('returns signed-in quota status without reserving usage or generating a verdict', async () => {
+    const adapter = createAdapter({
+      getUsageAccess: jest.fn(async () => generatedAccess({ used: 2, remaining: 0, allowed: false })),
+    });
+    const generateVerdict = successProvider();
+
+    const result = await handleAiVerdictRequest(
+      'token',
+      { target: { targetType: 'quota_status' } },
+      handlerDeps(adapter, generateVerdict),
+    );
+
+    expect(result.status).toBe(200);
+    expect(result.body).toEqual({ ok: true, access: generatedAccess({ used: 2, remaining: 0, allowed: false }) });
+    expect(adapter.getUsageAccess).toHaveBeenCalledWith({
+      userId: 'user-1',
+      accessTier: 'free',
+      quotaBucket: '2026-05-16',
+      quotaScope: 'daily',
+      limit: 2,
+    });
+    expect(adapter.reserveUsage).not.toHaveBeenCalled();
+    expect(adapter.reserveSmartCreation).not.toHaveBeenCalled();
+    expect(generateVerdict).not.toHaveBeenCalled();
+  });
+
+  it('uses the Premium limit for signed-in quota status', async () => {
+    const adapter = createAdapter({
+      getAuthenticatedAccessTier: jest.fn(async () => 'premium'),
+    });
+
+    await handleAiVerdictRequest('token', { target: { targetType: 'quota_status' } }, handlerDeps(adapter));
+
+    expect(adapter.getUsageAccess).toHaveBeenCalledWith(expect.objectContaining({ accessTier: 'premium', limit: 50 }));
+  });
+
+  it('rejects an invalid token when checking quota status', async () => {
+    const adapter = createAdapter({ authenticate: jest.fn(async () => null) });
+    const result = await handleAiVerdictRequest('bad-token', { target: { targetType: 'quota_status' } }, handlerDeps(adapter));
+    expect(result.status).toBe(401);
+    expect(adapter.getUsageAccess).not.toHaveBeenCalled();
+  });
+
   it('rejects invalid auth tokens when an authorization header is present', async () => {
     const adapter = createAdapter({
       authenticate: jest.fn(async () => null),
@@ -665,6 +708,78 @@ describe('Smart-only new case creation', () => {
     expect(adapter.completeSmartCaseCreation).toHaveBeenCalledTimes(1);
     expect(adapter.insertVerdict).not.toHaveBeenCalled();
     expect(provider).toHaveBeenCalledTimes(1);
+  });
+
+  it('blocks an authenticated cached case when the daily allowance is exhausted', async () => {
+    const adapter = createAdapter({
+      getExistingSmartCase: jest.fn(async () => ({
+        caseId: 'smart-case-existing',
+        verdict: aiVerdictRow(),
+      })),
+      getUsageAccess: jest.fn(async () => generatedAccess({
+        allowed: false,
+        used: 2,
+        remaining: 0,
+        limit: 2,
+      })),
+    });
+    const provider = successProvider();
+
+    const result = await handleAiVerdictRequest(
+      'valid-token',
+      newCasePayload(),
+      handlerDeps(adapter, provider),
+    );
+
+    expect(result).toMatchObject({
+      status: 429,
+      body: {
+        ok: false,
+        code: 'quota_exceeded',
+        access: { accessTier: 'free', allowed: false, remaining: 0 },
+      },
+    });
+    expect(adapter.reserveSmartCreation).not.toHaveBeenCalled();
+    expect(adapter.completeSmartCaseCreation).not.toHaveBeenCalled();
+    expect(provider).not.toHaveBeenCalled();
+  });
+
+  it('blocks a guest cached case when the lifetime allowance is exhausted', async () => {
+    const adapter = createAdapter({
+      getCachedGuestVerdict: jest.fn(async () => aiVerdictRow({
+        id: 'guest-cache-1',
+        target_fingerprint: 'fingerprint-new-guest-case-1',
+      })),
+      getUsageAccess: jest.fn(async () => generatedAccess({
+        accessTier: 'guest',
+        allowed: false,
+        used: 2,
+        remaining: 0,
+        limit: 2,
+        quotaScope: 'lifetime',
+        quotaBucket: null,
+        reason: 'guest_lifetime_limit',
+      })),
+    });
+    const provider = successProvider();
+
+    const result = await handleAiVerdictRequest(
+      null,
+      newGuestCasePayload(),
+      handlerDeps(adapter, provider),
+    );
+
+    expect(result).toMatchObject({
+      status: 429,
+      body: {
+        ok: false,
+        code: 'quota_exceeded',
+        access: { accessTier: 'guest', allowed: false, remaining: 0 },
+      },
+    });
+    expect(adapter.reserveSmartCreation).not.toHaveBeenCalled();
+    expect(adapter.completeGuestSmartCaseCreation).not.toHaveBeenCalled();
+    expect(provider).not.toHaveBeenCalled();
   });
 
   it('rejects prompt injection as invalid input before calibration, quota, or persistence', async () => {
@@ -1004,6 +1119,50 @@ describe('ai-verdict safety routing', () => {
 });
 
 describe('ai-verdict core guest path', () => {
+  it('returns guest lifetime quota status without reserving or generating', async () => {
+    const adapter = createAdapter({
+      getUsageAccess: jest.fn(async () => generatedAccess({
+        accessTier: 'guest',
+        allowed: false,
+        used: 2,
+        remaining: 0,
+        limit: 2,
+        quotaScope: 'lifetime',
+        quotaBucket: null,
+      })),
+    });
+    const generateVerdict = successProvider();
+
+    const result = await handleAiVerdictRequest(
+      null,
+      { guestKey: 'guest-key-1234567890', target: { targetType: 'quota_status' } },
+      handlerDeps(adapter, generateVerdict),
+    );
+
+    expect(result.status).toBe(200);
+    expect(adapter.getUsageAccess).toHaveBeenCalledWith({
+      guestKeyHash: 'hashed-guest-key',
+      accessTier: 'guest',
+      quotaBucket: '2026-05-16',
+      quotaScope: 'lifetime',
+      limit: 2,
+    });
+    expect(adapter.reserveUsage).not.toHaveBeenCalled();
+    expect(adapter.reserveSmartCreation).not.toHaveBeenCalled();
+    expect(generateVerdict).not.toHaveBeenCalled();
+  });
+
+  it('requires a valid guest key for quota status', async () => {
+    const adapter = createAdapter();
+    const result = await handleAiVerdictRequest(
+      null,
+      { guestKey: 'short', target: { targetType: 'quota_status' } },
+      handlerDeps(adapter),
+    );
+    expect(result.status).toBe(400);
+    expect(adapter.getUsageAccess).not.toHaveBeenCalled();
+  });
+
   it('rejects guest requests without a valid guest key', async () => {
     const adapter = createAdapter();
 

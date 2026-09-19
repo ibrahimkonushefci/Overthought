@@ -10,13 +10,10 @@ describe('date utilities', () => {
     jest.useRealTimers();
   });
 
-  it('treats timezone-less local timestamps as local time when that is closer to now', () => {
-    jest.useFakeTimers().setSystemTime(new Date('2026-05-21T18:08:00.000Z'));
-
-    expect(relativeTime('2026-05-21T20:08:00')).toBe('just now');
-    expect(relativeTime('2026-05-21T18:08:00')).toBe('just now');
-
-    jest.useRealTimers();
+  it('uses explicit timezone offsets without applying the device offset twice', () => {
+    expect(parseAppTimestamp('2026-09-19T19:00:00+02:00')).toBe(Date.parse('2026-09-19T17:00:00.000Z'));
+    expect(parseAppTimestamp('2026-09-19T19:00:00+0200')).toBe(Date.parse('2026-09-19T17:00:00.000Z'));
+    expect(parseAppTimestamp('2026-09-19T17:00:00+00')).toBe(Date.parse('2026-09-19T17:00:00.000Z'));
   });
 
   it('does not show future timestamps as negative relative time', () => {
