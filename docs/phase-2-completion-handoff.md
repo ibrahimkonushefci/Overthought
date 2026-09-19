@@ -99,7 +99,7 @@ Use this document to resume work in a new chat. Treat the current repository and
 - Email confirmation deliverability/custom SMTP remains an operational follow-up if messages continue going to junk.
 - RevenueCat entitlement sharing follows the Apple ID receipt; one Apple subscription may mark another Overthought account premium after restore. This is accepted for v1 unless product policy changes.
 - Richer profile fields and stricter one-subscription-to-one-account transfer rules remain deferred.
-- GitHub reported 47 open dependency alerts on the default branch during the primary push: 31 high, 13 moderate, and 3 low. They have not been triaged, and the push summary does not prove whether this phase introduced them.
+- GitHub reported outstanding dependency alerts on the default branch. Push-time totals changed from 47 to 41 while Dependabot refreshed; the latest observed summary was 26 high, 12 moderate, and 3 low. They have not been triaged, and the push summary does not prove whether this phase introduced them.
 
 ## Next steps, in order
 
