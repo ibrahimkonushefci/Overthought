@@ -6,8 +6,9 @@ Use this document to resume work in a new chat. Treat the current repository and
 
 - Repository: `/Users/ibrahimi/Overthought`
 - Branch: `main`
-- Checkpoint commit message: `Phase 2: Smart-only case creation, legacy Basic handling, local simulator verification`
-- This checkpoint is intended to be committed and pushed to `origin/main`; verify `git status` and `git log -1` when resuming.
+- Primary checkpoint commit: `7c3a67b691536b8749fc4c525d478202e10f7062`
+- Commit message: `Phase 2: Smart-only case creation, legacy Basic handling, local simulator verification`
+- The primary checkpoint was pushed to `origin/main`. Verify `git status`, `git log -2`, and remote state when resuming.
 - The Phase 2 client is implemented and verified in the Mac iOS simulator.
 - The Phase 2 client has **not** been built for TestFlight or released.
 - No Phase 2 App Store binary exists yet. The current App Store app is still the backward-compatible pre-Phase-2 client.
@@ -98,6 +99,7 @@ Use this document to resume work in a new chat. Treat the current repository and
 - Email confirmation deliverability/custom SMTP remains an operational follow-up if messages continue going to junk.
 - RevenueCat entitlement sharing follows the Apple ID receipt; one Apple subscription may mark another Overthought account premium after restore. This is accepted for v1 unless product policy changes.
 - Richer profile fields and stricter one-subscription-to-one-account transfer rules remain deferred.
+- GitHub reported 47 open dependency alerts on the default branch during the primary push: 31 high, 13 moderate, and 3 low. They have not been triaged, and the push summary does not prove whether this phase introduced them.
 
 ## Next steps, in order
 

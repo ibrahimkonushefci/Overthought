@@ -26,6 +26,8 @@ Production backend status (2026-09-19): migrations are applied through `0011`, a
 
 Local simulator status (2026-09-19): the Phase 2 development build completed successfully and the full Smart-only matrix passed against disposable local Supabase data. Verified flows were guest Smart creation and reopening, failed submission with draft persistence and no Basic case, verified guest-to-account Smart migration, signed-in atomic Smart creation, and opening a server-backed `legacy_basic` case without automatic generation. The simulator used the localhost-only deterministic Smart provider, so this proves client/backend flow and persistence—not Gemini response quality. TypeScript, 24 Jest suites/610 tests, the pgTAP migration test, dependency alignment, and the native Xcode build passed. TestFlight and physical-iPhone Phase 2 QA remain unstarted and require separate approval.
 
+Repository checkpoint (2026-09-19): primary Phase 2 commit `7c3a67b691536b8749fc4c525d478202e10f7062` was pushed to `origin/main`. GitHub reported 47 open dependency alerts on the default branch (31 high, 13 moderate, 3 low) during the push; they have not been triaged, and the push output alone does not establish whether this phase introduced them.
+
 For a concise, pasteable continuation brief, read [`docs/phase-2-completion-handoff.md`](phase-2-completion-handoff.md) before starting new work.
 
 ---
