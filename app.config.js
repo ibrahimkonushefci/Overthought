@@ -24,7 +24,7 @@ const baseExpo = {
   name: 'Overthought',
   slug: 'overthought',
   scheme: 'overthought',
-  version: '1.0.6',
+  version: '1.0.7',
   orientation: 'portrait',
   userInterfaceStyle: 'light',
   icon: './assets/brand/app-icon.png',
@@ -33,6 +33,19 @@ const baseExpo = {
     supportsTablet: false,
     bundleIdentifier: 'com.ibrahim.overthought',
     icon: './assets/brand/app-icon.png',
+    infoPlist: {
+      UIApplicationSceneManifest: {
+        UIApplicationSupportsMultipleScenes: false,
+        UISceneConfigurations: {
+          UIWindowSceneSessionRoleApplication: [
+            {
+              UISceneConfigurationName: 'Default Configuration',
+              UISceneDelegateClassName: '$(PRODUCT_MODULE_NAME).SceneDelegate',
+            },
+          ],
+        },
+      },
+    },
   },
   plugins: [
     'expo-router',

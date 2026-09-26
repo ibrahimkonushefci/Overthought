@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { Alert, Animated, Keyboard, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, Sparkles } from 'lucide-react-native';
+import { ArrowLeft, RefreshCw, Sparkles } from 'lucide-react-native';
 import type { AiVerdictAccessState, AiVerdictResponse, CaseCategory } from '../src/types/shared';
 import { caseRepository } from '../src/features/cases/repositories/caseRepository';
-import { pickExamplePrompts } from '../src/features/cases/examplePrompts';
+import { useExamplePrompts } from '../src/features/cases/useExamplePrompts';
 import { getCaseId } from '../src/features/cases/types';
 import { CategoryPill } from '../src/features/cases/components/CategoryPill';
 import { VerdictRevealOverlay, type VerdictRevealOutcome } from '../src/features/cases/components/VerdictRevealOverlay';
@@ -61,7 +61,7 @@ export default function NewCaseRoute() {
   const [revealCategory, setRevealCategory] = useState<CaseCategory>('romance');
   const [revealOutcome, setRevealOutcome] = useState<VerdictRevealOutcome | null>(null);
   const [pendingResultRoute, setPendingResultRoute] = useState<string | null>(null);
-  const [examples, setExamples] = useState(() => pickExamplePrompts(draftCategory, 4));
+  const { examples, refresh: refreshExamples } = useExamplePrompts(category, !loading);
   const [limitModal, setLimitModal] = useState<{
     variant: SmartLimitVariant;
     access: AiVerdictAccessState | null;
@@ -131,9 +131,12 @@ export default function NewCaseRoute() {
   };
 
   const selectCategory = (nextCategory: CaseCategory) => {
+    if (nextCategory === category) {
+      refreshExamples();
+      return;
+    }
     setCategory(nextCategory);
     setPreferredCategory(nextCategory);
-    setExamples(pickExamplePrompts(nextCategory, 4));
   };
 
   const showCreationFailure = (response: Extract<AiVerdictResponse, { ok: false }>) => {
@@ -245,7 +248,6 @@ export default function NewCaseRoute() {
       clearCaseDraft();
       setInputText('');
       setCategory('romance');
-      setExamples(pickExamplePrompts('romance', 4));
       setPendingResultRoute(`/case/${getCaseId(result.record)}?fromAnalysis=1`);
       setRevealOutcome(revealOutcomeFromResult(result.response));
     } catch (error) {
@@ -339,9 +341,20 @@ export default function NewCaseRoute() {
         </View>
       </View>
 
-      <AppText variant="eyebrow" style={styles.examplesTitle}>
-        Try one of these
-      </AppText>
+      <View style={styles.examplesHeader}>
+        <AppText variant="eyebrow" style={styles.examplesTitle}>
+          Try one of these
+        </AppText>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Show four more ideas"
+          onPress={refreshExamples}
+          style={styles.moreIdeas}
+        >
+          <RefreshCw color={colors.text.primary} size={14} />
+          <AppText style={styles.moreIdeasText}>More ideas</AppText>
+        </Pressable>
+      </View>
       <View style={styles.examples}>
         {examples.map((item) => (
           <Pressable
@@ -462,11 +475,30 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xs,
     paddingVertical: spacing.xs,
   },
-  examplesTitle: {
+  examplesHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: spacing.xs,
     marginTop: spacing.xl,
     marginBottom: spacing.md,
+  },
+  examplesTitle: {
     fontSize: 10,
     letterSpacing: 1.8,
+  },
+  moreIdeas: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.xs,
+    minHeight: 44,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
+  },
+  moreIdeasText: {
+    fontFamily: typography.family.bodySemiBold,
+    fontSize: 13,
   },
   examples: {
     gap: spacing.sm,

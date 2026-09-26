@@ -1,23 +1,21 @@
-import { EXAMPLE_PROMPTS, pickExamplePrompts } from './examplePrompts';
+import { EXAMPLE_PROMPTS } from './examplePrompts';
+import { assessCaseInputQuality } from '../../shared/utils/caseInputQuality';
+import { assessCaseSafety } from '../../shared/utils/caseSafety';
 
-describe('example prompts', () => {
-  it('shows only prompts for the selected category', () => {
-    const prompts = pickExamplePrompts('romance', 4, () => 0.42);
-    const romancePrompts = EXAMPLE_PROMPTS.filter((prompt) => prompt.category === 'romance').map((prompt) => prompt.text);
-
-    expect(romancePrompts).toHaveLength(5);
-    expect(prompts).toHaveLength(4);
-    expect(new Set(prompts).size).toBe(4);
-    prompts.forEach((prompt) => {
-      expect(romancePrompts).toContain(prompt);
-    });
+describe('example prompt catalog', () => {
+  it('provides sixteen distinct situations for each category with unique stable IDs', () => {
+    expect(EXAMPLE_PROMPTS).toHaveLength(64);
+    expect(new Set(EXAMPLE_PROMPTS.map((prompt) => prompt.id)).size).toBe(64);
+    expect(new Set(EXAMPLE_PROMPTS.map((prompt) => prompt.text)).size).toBe(64);
+    for (const category of ['romance', 'friendship', 'social', 'general']) {
+      expect(EXAMPLE_PROMPTS.filter((prompt) => prompt.category === category)).toHaveLength(16);
+    }
   });
 
-  it('caps the requested count to the available prompt pool', () => {
-    const prompts = pickExamplePrompts('friendship', 100, () => 0.1);
-    const friendshipPrompts = EXAMPLE_PROMPTS.filter((prompt) => prompt.category === 'friendship');
-
-    expect(prompts).toHaveLength(friendshipPrompts.length);
-    expect(new Set(prompts).size).toBe(friendshipPrompts.length);
+  it.each(EXAMPLE_PROMPTS)('$id is usable directly without input-quality or safety warnings', ({ text }) => {
+    expect(text.length).toBeGreaterThanOrEqual(30);
+    expect(text.length).toBeLessThanOrEqual(400);
+    expect(assessCaseInputQuality(text).status).toBe('ok');
+    expect(assessCaseSafety(text).shouldRoute).toBe(false);
   });
 });

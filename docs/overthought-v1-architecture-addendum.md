@@ -175,9 +175,9 @@ This section records the late v1 stabilization pass completed before the next ha
 - Expo SDK patch packages are aligned on the Expo 55 line. Production iOS uses Hermes V1 via `ios/Podfile.properties.json` (`expo.useHermesV1=true`) and `ios/Podfile.lock` records `hermes-engine 250829098.0.4`.
 - `babel-preset-expo` must stay on the Expo 55-compatible line (`~55.0.22`) unless the whole Expo SDK is upgraded.
 
-Known remaining open items:
-- Release blocker: repeated guest submissions of the same cached prompt can create extra local Smart cases without consuming the remaining allowance until the identity is fully exhausted.
-- Release blocker: after a legacy Basic case is explicitly upgraded, the saved Deep Read lookup uses the canonical Smart score instead of the original Basic snapshot and can hide the saved legacy result.
+Audit findings and follow-ups:
+- Pending, deferred for future work by product decision (2026-09-26), accepted for this release: repeated guest submissions of the same cached prompt can create extra local Smart cases without consuming the remaining allowance until the identity is fully exhausted.
+- Closed by product decision (2026-09-26)—legacy compatibility not required because there are no existing users. Historical behavior, not technically fixed: after a legacy Basic case is explicitly upgraded, the saved Deep Read lookup uses the canonical Smart score instead of the original Basic snapshot and can hide the saved legacy result.
 - Medium follow-ups from the final audit: preserve compatibility presentation for older Smart rows whose expanded detail fields are null, harden allowance refresh across identity changes, and make the branded limit modal usable at very large text sizes.
 - Lower-risk follow-ups from the final audit: add a timeout to the read-only allowance request and preserve future production repair scripts as reviewed, allowlisted artifacts.
 - Email confirmation messages going to junk are likely Supabase email deliverability/custom SMTP/DNS work, not an app-code bug unless redirect URLs are wrong.

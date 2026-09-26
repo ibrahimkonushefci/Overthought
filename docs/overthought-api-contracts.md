@@ -26,7 +26,7 @@ Client verification status (2026-09-19): corrective build `1.0.6 (28)` was built
 
 The repository contract now includes read-only target `{ "target": { "targetType": "quota_status" } }`; guest requests also carry the installation guest key. Success returns `{ "ok": true, "access": AiVerdictAccessState }`. The route authenticates or hashes identity, reads existing usage state, and performs no reservation, AI generation, case creation, or usage write. Signed-in access is daily with a UTC reset instant; guest access is lifetime and has no reset.
 
-New-case cache reuse is gated by the authoritative allowance. A cached Smart result may be returned without another provider call only while `access.allowed` is true. At zero guest lifetime or signed-in daily allowance, the request returns the same quota failure as an uncached prompt and creates no case. A replay using the same completed `requestId` remains idempotent and does not spend quota twice. Known release blocker: before guest exhaustion, a new request ID for the same cached prompt can still create another local case without consuming the remaining allowance. Resolve whether this should spend allowance or reopen/deduplicate the existing guest result, then enforce that decision atomically.
+New-case cache reuse is gated by the authoritative allowance. A cached Smart result may be returned without another provider call only while `access.allowed` is true. At zero guest lifetime or signed-in daily allowance, the request returns the same quota failure as an uncached prompt and creates no case. A replay using the same completed `requestId` remains idempotent and does not spend quota twice. Known issue, pending future work by product decision (2026-09-26): before guest exhaustion, a new request ID for the same cached prompt can still create another local case without consuming the remaining allowance. The product owner accepts this behavior for the current release and defers the fix. Quota charging versus reopening/deduplication remains a future decision; no backend behavior was changed.
 
 The old `case` and `guest_case` targets remain operational for released clients and explicit upgrades of legacy cases. The Phase 2 production UX never calls them automatically for a new case.
 
@@ -326,7 +326,7 @@ Even if all return `true` in first release, the abstraction should exist now.
 
 ## 11. Saved Deep Read legacy contract
 
-New Deep Read generation is retired from the Phase 2 production UX. Existing authenticated and guest cached Deep Reads must remain readable as `Saved Deep Read (legacy)`, including after a case is explicitly upgraded to Smart. Known release blocker: the current client queries stored Deep Reads with the canonical Smart score after upgrade, while the saved row is keyed to the original Basic result, so the saved section can disappear.
+New Deep Read generation is retired from the Phase 2 production UX. The former requirement to preserve cached Deep Reads after legacy upgrades is closed by product decision (2026-09-26): legacy compatibility is not required because the product owner confirms there are no existing users. The historical issue remains technically unchanged: the current client queries stored Deep Reads with the canonical Smart score after upgrade, while the saved row is keyed to the original Basic result, so the saved section can disappear.
 
 ### Product rule
 The canonical case result remains the Smart result when one exists, otherwise the stored legacy Basic result:

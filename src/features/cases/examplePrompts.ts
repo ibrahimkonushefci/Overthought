@@ -1,45 +1,78 @@
 import type { CaseCategory } from '../../types/shared';
 
 export interface ExamplePrompt {
+  id: string;
   category: CaseCategory;
   text: string;
 }
 
+// Keep IDs stable when editing copy; bump the catalog version when changing the catalog.
+export const EXAMPLE_PROMPT_CATALOG_VERSION = 1;
+export const EXAMPLE_PROMPT_BATCH_SIZE = 3;
+
 export const EXAMPLE_PROMPTS: readonly ExamplePrompt[] = [
-  { category: 'romance', text: 'He asked if I was free Friday, then never made a plan.' },
-  { category: 'romance', text: 'He watches every story but takes a day to reply.' },
-  { category: 'romance', text: 'My ex came back saying he misses me but still avoids commitment.' },
-  { category: 'romance', text: 'We had a great date, but his dating profile is still active.' },
-  { category: 'romance', text: 'He says he likes me, but only texts after 11 p.m.' },
-  { category: 'friendship', text: 'My best friend left me on read for two days but keeps posting.' },
-  { category: 'friendship', text: 'My friend keeps canceling plans but says everything is fine.' },
-  { category: 'friendship', text: 'They are warm in person but suddenly dry in our messages.' },
-  { category: 'friendship', text: 'My friend stopped initiating but still replies right away.' },
-  { category: 'friendship', text: 'The group chat went quiet right after I joined the conversation.' },
-  { category: 'social', text: 'They added me to Close Friends but never talk to me directly.' },
-  { category: 'social', text: 'My coworker checks in every morning and always uses heart emojis.' },
-  { category: 'social', text: 'They laughed at every joke I made during the meeting.' },
-  { category: 'social', text: 'Someone keeps standing near me at the gym but never says hello.' },
-  { category: 'social', text: 'They followed me back immediately but have not sent a message.' },
-  { category: 'general', text: 'My roommate was unusually quiet this morning. Are they mad at me?' },
-  { category: 'general', text: 'My manager said we need to talk tomorrow without explaining why.' },
-  { category: 'general', text: 'Someone replied “sure” and now I cannot tell if they are annoyed.' },
-  { category: 'general', text: 'I made one awkward comment and keep replaying it hours later.' },
-  { category: 'general', text: 'They changed the plan at the last minute and I think it was personal.' },
+  { id: 'romance-01', category: 'romance', text: "They asked if I was free Friday, but it's Thursday and they still haven't suggested a plan." },
+  { id: 'romance-02', category: 'romance', text: "Our date went well and she said we should do it again. I've started every conversation since." },
+  { id: 'romance-03', category: 'romance', text: "He remembers tiny things I mention, but only asks to see me late at night." },
+  { id: 'romance-04', category: 'romance', text: "We've been seeing each other for a month. They introduce me to everyone as a friend." },
+  { id: 'romance-05', category: 'romance', text: "My ex says they miss me, but changes the subject whenever I ask what would be different." },
+  { id: 'romance-06', category: 'romance', text: "She canceled our second date, then suggested a new day before I even replied." },
+  { id: 'romance-07', category: 'romance', text: "He sends me good-morning texts every day, but says he's not looking for a relationship." },
+  { id: 'romance-08', category: 'romance', text: "They invited me to meet their friends, then barely spoke to me all evening." },
+  { id: 'romance-09', category: 'romance', text: "She takes a day to reply, but when we're together she puts her phone away and makes plans." },
+  { id: 'romance-10', category: 'romance', text: "I told him I wanted to take things slowly. He's been quieter since, but still checks in." },
+  { id: 'romance-11', category: 'romance', text: "They keep mentioning trips we could take together, but won't commit to dinner next week." },
+  { id: 'romance-12', category: 'romance', text: "We had one great date. Their dating profile changed the next morning and I took it personally." },
+  { id: 'romance-13', category: 'romance', text: "He said he had a busy week and didn't text much, then called on Sunday to arrange a date." },
+  { id: 'romance-14', category: 'romance', text: "She jokes that we'd make a good couple, but says she's only teasing when I ask about it." },
+  { id: 'romance-15', category: 'romance', text: "They asked whether I'm seeing anyone else, but avoided answering when I asked them back." },
+  { id: 'romance-16', category: 'romance', text: "Our dates feel easy in person. Over text, I feel like I'm interviewing them." },
+  { id: 'friendship-01', category: 'friendship', text: "My friend canceled twice without suggesting another day. They're still making plans in the group chat." },
+  { id: 'friendship-02', category: 'friendship', text: "I stopped texting first to see what would happen. We haven't talked in a week." },
+  { id: 'friendship-03', category: 'friendship', text: "My friends posted photos from dinner together. Nobody mentioned it to me beforehand." },
+  { id: 'friendship-04', category: 'friendship', text: "I told a friend I couldn't lend them money. Their replies have been much shorter since." },
+  { id: 'friendship-05', category: 'friendship', text: "My friend forgot my birthday, then sent a long apology the next day. I'm still hurt." },
+  { id: 'friendship-06', category: 'friendship', text: "They call whenever they need to vent, but change the subject when I talk about my own week." },
+  { id: 'friendship-07', category: 'friendship', text: "My best friend has a new friend and sees them constantly. Our plans keep getting postponed." },
+  { id: 'friendship-08', category: 'friendship', text: "I shared good news and my friend immediately talked about someone doing even better." },
+  { id: 'friendship-09', category: 'friendship', text: "My friend teased me in front of everyone. I laughed along, but it bothered me afterward." },
+  { id: 'friendship-10', category: 'friendship', text: "They didn't answer my message for two days, then called and talked to me for an hour." },
+  { id: 'friendship-11', category: 'friendship', text: "I said I needed a quiet weekend. My friend keeps asking if they've done something wrong." },
+  { id: 'friendship-12', category: 'friendship', text: "We used to talk every day. Since they started a new job, they only send a few messages a week." },
+  { id: 'friendship-13', category: 'friendship', text: "My friend always asks me to come to their place, but never wants to travel to mine." },
+  { id: 'friendship-14', category: 'friendship', text: "I told a friend something private and another friend brought it up the next day." },
+  { id: 'friendship-15', category: 'friendship', text: "They said our trip sounded fun, but haven't booked anything while the rest of us have." },
+  { id: 'friendship-16', category: 'friendship', text: "My friend apologized for snapping at me, but made the same joke again the following day." },
+  { id: 'social-01', category: 'social', text: "I suggested a plan in the group chat and nobody answered. An hour later, everyone replied to a meme." },
+  { id: 'social-02', category: 'social', text: "Someone I met at a party remembered my name and came over to talk at the next one." },
+  { id: 'social-03', category: 'social', text: "I waved at an acquaintance across the street. They looked in my direction but didn't wave back." },
+  { id: 'social-04', category: 'social', text: "A coworker chats with everyone at lunch, but our conversations always seem to end quickly." },
+  { id: 'social-05', category: 'social', text: "I told a joke at dinner and only one person laughed. I keep wondering if I offended the others." },
+  { id: 'social-06', category: 'social', text: "Someone added me to Close Friends after we met once, but hasn't replied to my message." },
+  { id: 'social-07', category: 'social', text: "I joined a conversation and the group went quiet. A minute later they started a different topic." },
+  { id: 'social-08', category: 'social', text: "My neighbor used to stop and chat. This week they've just nodded and kept walking." },
+  { id: 'social-09', category: 'social', text: "A classmate saves me a seat every week, but we've never spoken outside class." },
+  { id: 'social-10', category: 'social', text: "I left a party early and the host replied 'already?' when I said goodbye." },
+  { id: 'social-11', category: 'social', text: "I invited a few acquaintances out. One asked who else was going before giving me an answer." },
+  { id: 'social-12', category: 'social', text: "Someone keeps reacting to my posts but barely acknowledges me when we meet in a group." },
+  { id: 'social-13', category: 'social', text: "At a meetup, I talked for a while and someone checked their phone. I worry I bored everyone." },
+  { id: 'social-14', category: 'social', text: "A person I barely know complimented my outfit, then asked where I bought it." },
+  { id: 'social-15', category: 'social', text: "I sent a follow-up after meeting someone at an event. They replied warmly but asked no questions." },
+  { id: 'social-16', category: 'social', text: "I was tagged in a group photo, then the tag disappeared. The photo is still up." },
+  { id: 'general-01', category: 'general', text: "My manager said 'let's talk tomorrow' without any context. I can't stop thinking I've messed up." },
+  { id: 'general-02', category: 'general', text: "My roommate washed only their own dishes after I forgot mine in the sink overnight." },
+  { id: 'general-03', category: 'general', text: "I asked a question in a meeting and my manager said we'd cover it later. They never did." },
+  { id: 'general-04', category: 'general', text: "I declined a family invitation and got a thumbs-up reply instead of the usual long message." },
+  { id: 'general-05', category: 'general', text: "My coworker rewrote part of my work without mentioning it. Now I wonder if they trust me." },
+  { id: 'general-06', category: 'general', text: "I sent a detailed update and my manager replied 'fine'. I can't tell if that's approval or annoyance." },
+  { id: 'general-07', category: 'general', text: "My sibling made plans with our cousins and I found out from someone else." },
+  { id: 'general-08', category: 'general', text: "I asked my roommate to turn the music down. They did, but haven't spoken to me all evening." },
+  { id: 'general-09', category: 'general', text: "I corrected a small mistake during a meeting. The person got quiet and I worry I embarrassed them." },
+  { id: 'general-10', category: 'general', text: "A family member keeps asking about my job search, even after I said I'd share news when I had it." },
+  { id: 'general-11', category: 'general', text: "My manager praised the team but didn't mention the part I worked on all week." },
+  { id: 'general-12', category: 'general', text: "I said no to an extra shift and my next message from the manager felt unusually formal." },
+  { id: 'general-13', category: 'general', text: "My roommate moved things in the kitchen without asking. When I asked why, they said it made more sense." },
+  { id: 'general-14', category: 'general', text: "I apologized for a late reply and they said 'no worries'. I'm still tempted to explain myself again." },
+  { id: 'general-15', category: 'general', text: "A relative said I looked tired at dinner. I've been wondering whether it was a dig at my appearance." },
+  { id: 'general-16', category: 'general', text: "I made a small mistake at work and fixed it immediately, but keep expecting someone to bring it up." },
 ];
-
-export function pickExamplePrompts(
-  category: CaseCategory,
-  count = 4,
-  random: () => number = Math.random,
-): string[] {
-  const pool = EXAMPLE_PROMPTS.filter((prompt) => prompt.category === category).map((prompt) => prompt.text);
-
-  for (let index = pool.length - 1; index > 0; index -= 1) {
-    const randomIndex = Math.floor(random() * (index + 1));
-    const swapIndex = Math.min(index, Math.max(0, randomIndex));
-    [pool[index], pool[swapIndex]] = [pool[swapIndex], pool[index]];
-  }
-
-  return pool.slice(0, Math.min(count, pool.length));
-}

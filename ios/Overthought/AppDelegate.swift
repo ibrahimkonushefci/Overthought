@@ -8,6 +8,7 @@ class AppDelegate: ExpoAppDelegate {
 
   var reactNativeDelegate: ExpoReactNativeFactoryDelegate?
   var reactNativeFactory: RCTReactNativeFactory?
+  var initialLaunchOptions: [UIApplication.LaunchOptionsKey: Any]?
 
   public override func application(
     _ application: UIApplication,
@@ -19,14 +20,10 @@ class AppDelegate: ExpoAppDelegate {
 
     reactNativeDelegate = delegate
     reactNativeFactory = factory
+    initialLaunchOptions = launchOptions
 
-#if os(iOS) || os(tvOS)
-    window = UIWindow(frame: UIScreen.main.bounds)
-    factory.startReactNative(
-      withModuleName: "main",
-      in: window,
-      launchOptions: launchOptions)
-#endif
+    // SceneDelegate owns window creation and starts React Native when UIKit
+    // supplies the window scene. Required when building with the iOS 27 SDK.
 
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }

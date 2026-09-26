@@ -1,6 +1,14 @@
 # Overthought development and release guide
 
-iOS-first Expo React Native foundation for Overthought, a case-based app for analyzing social overthinking. Corrective build `1.0.6 (28)` is live in TestFlight and passed the core physical-iPhone corrective flow. The App Store release is intentionally paused. A final repository review found release blockers in cached guest duplicate handling before exhaustion and saved Deep Read lookup after a legacy case is upgraded; fix and regress those in a separate task before requesting release approval.
+## Logo and example prompts — 1.0.7 (local preparation, 2026-09-26)
+
+Version `1.0.7` contains the approved Still Typing app icon and welcome-screen symbol, plus 64 refreshed New Case examples with remembered rotation and a “More ideas” control. This is a locally prepared update; no EAS production build, TestFlight submission, or App Store release has been performed for it. The `1.0.6 (28)` statements below record the historical 2026-09-19 checkpoint, not a fresh check of live distribution status.
+
+Verification update (2026-09-26): the iOS 27 startup failure is fixed with a native single-window SceneDelegate. The local Release simulator build, cold launch/relaunch, installed icon, and welcome-screen visual checks passed, as did type checking and all 710 tests. The owner confirmed New Case interactions work. Cold/warm custom-scheme links and background/resume passed on the installed simulator build; the later three-suggestion change passed 82 focused tests and type checking, with another visual check waived by the owner. Production build [1.0.7 (29)](https://expo.dev/accounts/alexremington/projects/overthought/builds/a2f76d95-9ee3-4408-a028-2d1bca13215b) was started with owner approval and is queued on EAS. No TestFlight submission was performed. See the 1.0.7 checklist for evidence and remaining checks.
+
+Product decisions (2026-09-26): cached guest duplicate cases are **pending—deferred for future work**, with current behavior accepted for this release. Saved Deep Read compatibility after legacy upgrade is **closed by product decision—legacy compatibility not required**, because the product owner confirms there are no existing users. Neither issue was technically fixed; legacy code remains in place. See the [1.0.7 release checklist](marketing/app-store/1.0.7/en-US/release-checklist.md) for verification results and the remaining release steps.
+
+iOS-first Expo React Native foundation for Overthought, a case-based app for analyzing social overthinking. Corrective build `1.0.6 (28)` is live in TestFlight and passed the core physical-iPhone corrective flow. The App Store release is intentionally paused. The final audit findings for guest duplicates and legacy Deep Read lookup follow the product decisions above. Remaining native verification and relevant product regression checks still apply before requesting release approval.
 
 ## Smart-only rollout boundary
 
@@ -108,6 +116,12 @@ This app does **not** target Expo Go. It uses `react-native-mmkv` v4, which depe
    ```sh
    npm run start:clear
    ```
+
+### iOS 27 native startup compatibility
+
+The tracked iOS app uses an app-owned `SceneDelegate.swift` to create its window and start React Native under the iOS 27 scene lifecycle. AppDelegate retains Expo setup and existing linking handlers; SceneDelegate forwards URL/user-activity and lifecycle events. This is a targeted adaptation for the pinned Expo 55 app, not an SDK upgrade.
+
+Do not run `npm run prebuild:ios` without preserving/reapplying the SceneDelegate, AppDelegate startup change, and Xcode source registration. Clean prebuild uses the older Expo template; the scene manifest in Expo config alone is insufficient. After regeneration or an SDK upgrade, repeat a Release simulator launch, cold/warm link checks, and background/foreground checks. Current verification evidence and gaps are in the [1.0.7 checklist](marketing/app-store/1.0.7/en-US/release-checklist.md).
 
 ### Local Smart-only simulator verification
 

@@ -34,3 +34,7 @@ subfolder; both are ignored by Git.
 - App Store product name becomes `Overthought: Dating Verdicts`.
 - No website, Search Console, backend, Supabase, RevenueCat, or database change is part of this package.
 - No App Preview video, Apple Search Ads, Product Page Optimization, or third-party analytics is included.
+
+## Historical branding
+
+This package retains the pre-1.0.7 logo in `screenshots/assets/app-logo-transparent.png`. Its template uses that local copy so later shared-app logo changes do not alter this historical artwork. Existing captures and copy are unchanged. Refresh screenshots showing the old logo before using them for the new branding release.

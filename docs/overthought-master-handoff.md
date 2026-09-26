@@ -1,5 +1,13 @@
 # Overthought - Master Handoff for Codex
 
+## Logo and example prompts — 1.0.7 (local preparation, 2026-09-26)
+
+Version `1.0.7` contains the approved Still Typing app icon and welcome-screen symbol, plus 64 refreshed New Case examples with remembered rotation and a “More ideas” control. This is a locally prepared update; no EAS production build, TestFlight submission, or App Store release has been performed for it. The `1.0.6 (28)` statements below record the historical 2026-09-19 checkpoint, not a fresh check of live distribution status.
+
+Verification update (2026-09-26): the iOS 27 startup failure is fixed with a native single-window SceneDelegate. The local Release simulator build, cold launch/relaunch, installed icon, and welcome-screen visual checks passed, as did type checking and all 710 tests. The owner confirmed New Case interactions work. Cold/warm custom-scheme links and background/resume passed on the installed simulator build; the later three-suggestion change passed 82 focused tests and type checking, with another visual check waived by the owner. Production build [1.0.7 (29)](https://expo.dev/accounts/alexremington/projects/overthought/builds/a2f76d95-9ee3-4408-a028-2d1bca13215b) was started with owner approval and is queued on EAS. No TestFlight submission was performed. See the 1.0.7 checklist for evidence and remaining checks.
+
+Product decisions (2026-09-26): cached guest duplicate cases are **pending—deferred for future work**, with current behavior accepted for this release. Saved Deep Read compatibility after legacy upgrade is **closed by product decision—legacy compatibility not required**, because the product owner confirms there are no existing users. Neither issue was technically fixed; legacy code remains in place. See the [1.0.7 release checklist](marketing/app-store/1.0.7/en-US/release-checklist.md) for verification results and the remaining release steps.
+
 This file is the **entry point** for implementation.
 It tells Codex:
 - what the product is
@@ -18,7 +26,7 @@ The approved Smart-only plan supersedes the original deterministic-only directio
 
 - Phase 1's additive backend, atomic creation RPCs, canonical result view, and backward-compatible Edge Function were deployed to the existing production Supabase project on 2026-09-17.
 - Phase 2 is implemented and validated locally. New cases expose only Smart Verdict and enter history only after Smart generation and persistence succeed. Failed submissions return to a preserved draft with a stable retry ID.
-- Canonical reads carry `resultSource: 'smart' | 'legacy_basic'`. Historical Basic results stay labeled and unchanged until the user explicitly upgrades them. Saved Deep Reads are intended to remain readable as legacy data, but the final audit found that lookup currently fails after a Basic case is upgraded to Smart. The production UX cannot request new Deep Reads.
+- Canonical reads carry `resultSource: 'smart' | 'legacy_basic'`. Historical Basic results stay labeled and unchanged until the user explicitly upgrades them. The final audit found that saved Deep Read lookup fails after a Basic case is upgraded to Smart; compatibility is no longer a release requirement under the 2026-09-26 product decision. The production UX cannot request new Deep Reads.
 - Verified guest Smart migration is handled by migration `0011` and a service-role-only transaction that copies AI text only from the server-verified guest cache. Unverifiable older guest records are preserved as legacy Basic cases.
 - The canonical engine source now lives in `supabase/functions/_shared/verdict-engine/`; `src/features/verdict-engine/` contains app-compatible re-export entrypoints.
 
@@ -33,9 +41,9 @@ Permanent verification record:
 - The disposable local matrix passed guest Smart creation/reopen, offline draft preservation with no Basic fallback, retry after backend recovery, verified guest-to-account migration, signed-in Smart creation, and historical Basic display.
 - The corrective automated pass completed 630 Jest tests, TypeScript checks, local migrations through `0012`, four pgTAP checks, Expo dependency validation, and a production Release simulator build.
 - Physical TestFlight testing covered the main guest and signed-in Smart-only flows, authoritative allowance display, branded quota blocking, preserved drafts, no new Basic fallback, timestamps/activity ordering, and the cached-result quota hotfix.
-- Final code review found two release blockers: cached guest prompts can create extra local cases without spending the remaining allowance before exhaustion, and a saved Deep Read is looked up using Smart fields after a legacy upgrade instead of its original Basic fields.
+- Historical final code review found two issues (guest duplicates are now deferred; legacy compatibility is closed by product decision): cached guest prompts can create extra local cases without spending the remaining allowance before exhaustion, and a saved Deep Read is looked up using Smart fields after a legacy upgrade instead of its original Basic fields.
 - Medium follow-ups are compatibility presentation for older Smart rows with nullable detail fields, allowance-refresh races during identity changes, and large-text scrolling in the branded limit modal. Lower-risk follow-ups are a quota-status request timeout and preserving the exact historical repair script for auditability.
-- Still-open release coverage includes Premium fair-use and purchase/restore, every service-cap message, late timeout recovery, fresh-install/cross-device hydration, explicit legacy upgrade, saved Deep Read after upgrade, full accessibility, account switching, and account deletion.
+- Still-open release coverage includes Premium fair-use and purchase/restore, every service-cap message, late timeout recovery, fresh-install/cross-device hydration, full accessibility, account switching, and account deletion.
 - Do not deploy production services, modify production data or credentials, create/submit a build, or release to the App Store without separate explicit approval.
 
 ---
